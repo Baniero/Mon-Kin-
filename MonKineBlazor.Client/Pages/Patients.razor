@@ -2,6 +2,7 @@
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <h1>Patients</h1>
 
@@ -170,6 +171,7 @@ else
                                         <th>Durée</th>
                                         <th>Date début</th>
                                         <th>Statut</th>
+                                        <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -182,6 +184,10 @@ else
                                             <td>@program.DureeSeanceMinutes</td>
                                             <td>@program.DateDebut</td>
                                             <td>@program.Statut</td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditProgram(program)">Modifier</button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteProgram(program.Id)">Supprimer</button>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -191,9 +197,9 @@ else
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Ajouter un programme</div>
+                    <div class="card-header">@(isEditingProgram ? "Modifier le programme" : "Ajouter un programme")</div>
                     <div class="card-body">
-                        <EditForm Model="newProgram" OnValidSubmit="AddProgramAsync">
+                        <EditForm Model="newProgram" OnValidSubmit="SaveProgramAsync">
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Titre</label>
@@ -276,8 +282,12 @@ else
                                     <InputText class="form-control" @bind-Value="newProgram.Remarques" />
                                 </div>
                                 <div class="col-md-12 d-flex gap-2">
-                                    <button class="btn btn-success" type="submit">Ajouter le programme</button>
+                                    <button class="btn btn-success" type="submit">@(isEditingProgram ? "Enregistrer les modifications" : "Ajouter le programme")</button>
                                     <button class="btn btn-outline-secondary" type="button" @onclick="ResetProgramForm">Réinitialiser</button>
+                                    @if (isEditingProgram)
+                                    {
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="CancelProgramEdit">Annuler</button>
+                                    }
                                 </div>
                             </div>
                         </EditForm>
@@ -327,6 +337,8 @@ else
         MontantTVA = 0,
         PrixTTC = 0,
     };
+    private bool isEditingProgram;
+    private PatientProgramDto? editingProgram;
     private string? statusMessage;
     private string? errorMessage;
 
@@ -444,7 +456,7 @@ else
         programs = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{selectedPatient.Id}");
     }
 
-    private async Task AddProgramAsync()
+    private async Task SaveProgramAsync()
     {
         if (selectedPatient == null)
         {
@@ -454,8 +466,25 @@ else
 
         RecalculateProgram();
         newProgram.PatientId = selectedPatient.Id;
-        var response = await Http.PostAsJsonAsync("api/patientprograms", newProgram);
-        if (response.IsSuccessStatusCode)
+
+        if (isEditingProgram && editingProgram != null)
+        {
+            var response = await Http.PutAsJsonAsync($"api/patientprograms/{editingProgram.Id}", newProgram);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadPrograms();
+                ResetProgramForm();
+                statusMessage = "Programme mis à jour avec succès.";
+            }
+            else
+            {
+                statusMessage = "Erreur lors de la mise à jour du programme.";
+            }
+            return;
+        }
+
+        var addResponse = await Http.PostAsJsonAsync("api/patientprograms", newProgram);
+        if (addResponse.IsSuccessStatusCode)
         {
             await LoadPrograms();
             ResetProgramForm();
@@ -465,6 +494,63 @@ else
         {
             statusMessage = "Erreur lors de l'ajout du programme.";
         }
+    }
+
+    private void EditProgram(PatientProgramDto program)
+    {
+        isEditingProgram = true;
+        editingProgram = program;
+        newProgram = new PatientProgramDto
+        {
+            Id = program.Id,
+            PatientId = program.PatientId,
+            Titre = program.Titre,
+            NatureSeances = program.NatureSeances,
+            NbSeances = program.NbSeances,
+            NbSeancesParSemaine = program.NbSeancesParSemaine,
+            DureeSeanceMinutes = program.DureeSeanceMinutes,
+            DateDebut = program.DateDebut,
+            DateFin = program.DateFin,
+            CodeBureau = program.CodeBureau,
+            Annee = program.Annee,
+            NumeroDecision = program.NumeroDecision,
+            NumeroOrdre = program.NumeroOrdre,
+            PrixUnitaire = program.PrixUnitaire,
+            PrixHT = program.PrixHT,
+            TVA = program.TVA,
+            MontantTVA = program.MontantTVA,
+            PrixTTC = program.PrixTTC,
+            Statut = program.Statut,
+            Objectifs = program.Objectifs,
+            Remarques = program.Remarques
+        };
+    }
+
+    private async Task DeleteProgram(int programId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer ce programme ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/patientprograms/{programId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadPrograms();
+            statusMessage = "Programme supprimé avec succès.";
+        }
+        else
+        {
+            statusMessage = "Erreur lors de la suppression du programme.";
+        }
+    }
+
+    private void CancelProgramEdit()
+    {
+        ResetProgramForm();
+        isEditingProgram = false;
+        editingProgram = null;
+        statusMessage = null;
     }
 
     private void RecalculateProgram()

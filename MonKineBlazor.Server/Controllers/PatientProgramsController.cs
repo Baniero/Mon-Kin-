@@ -190,4 +190,23 @@ public class PatientProgramsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM patient_programs WHERE id = @id";
+        cmd.Parameters.AddWithValue("@id", id);
+
+        var rowsDeleted = cmd.ExecuteNonQuery();
+        if (rowsDeleted == 0)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
 }

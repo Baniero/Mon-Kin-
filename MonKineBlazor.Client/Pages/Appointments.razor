@@ -7,11 +7,11 @@
 <h1>Rendez-vous</h1>
 
 <div class="btn-group mb-4" role="group">
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.ProgramPlanning ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.ProgramPlanning)">Planification par programme</button>
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.NewAppointment ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.NewAppointment)">Nouveau rendez-vous</button>
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.Today ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.Today)">Rendez-vous du jour</button>
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.Weekly ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.Weekly)">Planning hebdo</button>
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.List ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.List)">Liste</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.ProgramPlanning ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.ProgramPlanning)">Planification par programme</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.NewAppointment ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.NewAppointment)">Nouveau rendez-vous</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Today ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Today)">Rendez-vous du jour</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Weekly ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Weekly)">Planning hebdo</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.List ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.List)">Liste</button>
 </div>
 
 <div class="row mb-3">
@@ -73,7 +73,15 @@
                             @selectedProgramPatient.Couverture
                         </div>
                     }
-                    @if (selectedProgramPatient != null && patientPrograms.Any())
+                    @if (isLoadingPrograms)
+                    {
+                        <div class="alert alert-info">Chargement des programmes...</div>
+                    }
+                    else if (!string.IsNullOrEmpty(programLoadError))
+                    {
+                        <div class="alert alert-danger">@programLoadError</div>
+                    }
+                    else if (selectedProgramPatient != null && patientPrograms.Any())
                     {
                         <div class="list-group">
                             @foreach (var program in patientPrograms)
@@ -440,6 +448,8 @@
     private string programRoom = "Salle 1";
     private int programSelectedKineId;
     private List<AppointmentDto> programPreview = new();
+    private bool isLoadingPrograms;
+    private string? programLoadError;
     private bool selectedNewPatientHasPrograms;
 
     private bool isEditing;
@@ -486,10 +496,26 @@
         }
     }
 
-    private void SetSubmodule(AppointmentSubmodule submodule)
+    private async Task SetSubmodule(AppointmentSubmodule submodule)
     {
         activeSubmodule = submodule;
         showAppointmentForm = submodule == AppointmentSubmodule.NewAppointment;
+
+        if (submodule == AppointmentSubmodule.ProgramPlanning && patients.Any())
+        {
+            if (selectedProgramPatientId == 0)
+            {
+                selectedProgramPatientId = patients[0].Id;
+                selectedProgramPatient = patients[0];
+            }
+
+            await LoadProgramsForPatient(selectedProgramPatientId);
+            if (patientPrograms.Any() && selectedProgram == null)
+            {
+                selectedProgram = patientPrograms[0];
+                RefreshProgramPreview();
+            }
+        }
     }
 
     private async Task OnProgramPatientChanged(ChangeEventArgs e)
@@ -526,7 +552,30 @@
 
     private async Task LoadProgramsForPatient(int patientId)
     {
-        patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+        patientPrograms.Clear();
+        selectedProgram = null;
+        programPreview.Clear();
+        programLoadError = null;
+
+        if (patientId <= 0)
+        {
+            return;
+        }
+
+        isLoadingPrograms = true;
+        try
+        {
+            patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+        }
+        catch (Exception ex)
+        {
+            programLoadError = "Impossible de charger les programmes : " + ex.Message;
+            patientPrograms = new List<PatientProgramDto>();
+        }
+        finally
+        {
+            isLoadingPrograms = false;
+        }
     }
 
     private void SelectProgram(PatientProgramDto program)
