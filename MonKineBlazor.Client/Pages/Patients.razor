@@ -1,8 +1,14 @@
 @page "/patients"
 @using MonKineBlazor.Shared.Models
+@using System.Net.Http.Json
 @inject HttpClient Http
 
 <h1>Patients</h1>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
 
 <div class="row mb-4">
     <div class="col-md-12 d-flex gap-2">
@@ -207,6 +213,7 @@ else
         DureeSeanceMinutes = 30,
     };
     private string? statusMessage;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,19 +222,28 @@ else
 
     private async Task LoadPatients()
     {
-        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients");
-        if (selectedPatient != null)
+        errorMessage = null;
+        try
         {
-            selectedPatient = patients?.FirstOrDefault(p => p.Id == selectedPatient.Id);
+            patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients");
             if (selectedPatient != null)
             {
-                CopyPatientToForm(selectedPatient);
-                await LoadPrograms();
+                selectedPatient = patients?.FirstOrDefault(p => p.Id == selectedPatient.Id);
+                if (selectedPatient != null)
+                {
+                    CopyPatientToForm(selectedPatient);
+                    await LoadPrograms();
+                }
+                else
+                {
+                    programs = null;
+                }
             }
-            else
-            {
-                programs = null;
-            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des patients : " + ex.Message;
+            patients = new List<PatientDto>();
         }
     }
 
