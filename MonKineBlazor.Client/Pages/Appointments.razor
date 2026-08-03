@@ -98,6 +98,10 @@
                     {
                         <div class="alert alert-danger">@programLoadError</div>
                     }
+                    else if (!string.IsNullOrEmpty(programInfoMessage))
+                    {
+                        <div class="alert alert-info">@programInfoMessage</div>
+                    }
                     else if (selectedProgramPatient != null && patientPrograms.Any())
                     {
                         <div class="list-group">
@@ -479,6 +483,7 @@
     private List<AppointmentDto> programPreview = new();
     private bool isLoadingPrograms;
     private string? programLoadError;
+    private string? programInfoMessage;
     private bool selectedNewPatientHasPrograms;
 
     private bool isEditing;
@@ -587,11 +592,13 @@
         try
         {
             patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+            ApplyProgramSchedulingFilter(patientId);
         }
         catch (Exception ex)
         {
             programLoadError = "Impossible de charger les programmes : " + ex.Message;
             patientPrograms = new List<PatientProgramDto>();
+            programInfoMessage = null;
         }
         finally
         {
@@ -623,6 +630,38 @@
         programSelectedKineId = 0;
         selectedProgramWeekDays = GetDefaultWeekDays(program.NbSeancesParSemaine, programStartDate.DayOfWeek);
         RefreshProgramPreview();
+    }
+
+    private void ApplyProgramSchedulingFilter(int patientId)
+    {
+        programInfoMessage = null;
+        if (appointments == null || !appointments.Any())
+        {
+            return;
+        }
+
+        var scheduledProgramTitles = appointments
+            .Where(a => a.PatientId == patientId && !string.IsNullOrEmpty(a.Notes) && a.Notes.StartsWith("Programme ", StringComparison.OrdinalIgnoreCase))
+            .Select(a => a.Notes.Substring("Programme ".Length).Trim())
+            .Where(title => !string.IsNullOrEmpty(title))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (!scheduledProgramTitles.Any())
+        {
+            return;
+        }
+
+        var initialCount = patientPrograms.Count;
+        patientPrograms = patientPrograms
+            .Where(p => !scheduledProgramTitles.Contains(p.Titre ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        var hiddenCount = initialCount - patientPrograms.Count;
+        if (hiddenCount > 0)
+        {
+            programInfoMessage = $"{hiddenCount} programme(s) déjà planifié(s) ont été exclus de la liste.";
+        }
     }
 
     private async Task StartProgram()
