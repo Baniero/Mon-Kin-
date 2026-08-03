@@ -25,8 +25,8 @@ public class PatientsController : ControllerBase
                 nom,
                 COALESCE(prenom, ''),
                 CASE
-                    WHEN date_naissance IS NOT NULL AND date_naissance <> ''
-                        THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, NULLIF(date_naissance, '')::date)) AS INTEGER)
+                    WHEN date_naissance IS NOT NULL
+                        THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
                     ELSE COALESCE(age, 0)
                 END AS age,
                 date_naissance,
@@ -85,8 +85,8 @@ public class PatientsController : ControllerBase
                 nom,
                 COALESCE(prenom, ''),
                 CASE
-                    WHEN date_naissance IS NOT NULL AND date_naissance <> ''
-                        THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, NULLIF(date_naissance, '')::date)) AS INTEGER)
+                    WHEN date_naissance IS NOT NULL
+                        THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
                     ELSE COALESCE(age, 0)
                 END AS age,
                 date_naissance,
@@ -95,10 +95,10 @@ public class PatientsController : ControllerBase
                 COALESCE(telephone2, ''),
                 COALESCE(adresse, ''),
                 COALESCE(couverture, ''),
-            COALESCE(racine, ''),
-            COALESCE(cle, ''),
-            COALESCE(qualite, ''),
-            COALESCE(n_assuree, '')
+                COALESCE(racine, ''),
+                COALESCE(cle, ''),
+                COALESCE(qualite, ''),
+                COALESCE(n_assuree, '')
             FROM patients
             WHERE id = @id
         ";

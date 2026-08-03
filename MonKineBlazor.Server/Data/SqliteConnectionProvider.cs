@@ -14,7 +14,7 @@ public static class DatabaseConnectionProvider
         }
 
         var config = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
+            .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
             .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false)
             .AddEnvironmentVariables()
@@ -24,6 +24,8 @@ public static class DatabaseConnectionProvider
         connectionString ??= Environment.GetEnvironmentVariable("DefaultConnection");
         connectionString ??= config["DATABASE_URL"];
         connectionString ??= config["DefaultConnection"];
+        connectionString ??= config["ConnectionStrings:DefaultConnection"];
+        connectionString ??= config["ConnectionStrings:DATABASE_URL"];
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
