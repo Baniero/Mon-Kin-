@@ -25,7 +25,7 @@ public class PatientProgramsController : ControllerBase
                 COALESCE(nature_seances, ''),
                 COALESCE(nb_seances, 0),
                 COALESCE(duree_seance_minutes, 0),
-                COALESCE(date_debut, ''),
+                date_debut,
                 COALESCE(statut, ''),
                 COALESCE(objectifs, ''),
                 COALESCE(remarques, '')
