@@ -1,7 +1,15 @@
 ﻿@page "/"
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Redirection...</h1>
 
-Welcome to your new app.
+<p>Vous allez être redirigé vers la gestion des patients.</p>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/patients", true);
+    }
+}
