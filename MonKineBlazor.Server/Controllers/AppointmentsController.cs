@@ -101,4 +101,91 @@ public class AppointmentsController : ControllerBase
         appointment.Id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetAll), new { id = appointment.Id }, appointment);
     }
+
+    [HttpPut("{id}")]
+    public IActionResult Update(int id, AppointmentDto appointment)
+    {
+        if (id != appointment.Id)
+        {
+            return BadRequest("L'ID du rendez-vous ne correspond pas.");
+        }
+
+        if (appointment.KineId.HasValue && appointment.Start.HasValue && appointment.End.HasValue)
+        {
+            if (HasConflict(appointment.KineId.Value, appointment.Start.Value, appointment.End.Value, id))
+            {
+                return BadRequest("Conflit de planning pour ce kiné.");
+            }
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE appointments SET
+                patient_id = @patient_id,
+                kine_id = @kine_id,
+                start_datetime = @start_datetime,
+                end_datetime = @end_datetime,
+                acte = @acte,
+                room = @room,
+                status = @status,
+                payment_status = @payment_status,
+                amount = @amount,
+                paid_amount = @paid_amount,
+                cnam_covered = @cnam_covered,
+                notes = @notes
+            WHERE id = @id
+        ";
+        cmd.Parameters.AddWithValue("@patient_id", appointment.PatientId);
+        cmd.Parameters.AddWithValue("@kine_id", appointment.KineId.HasValue ? (object)appointment.KineId.Value : DBNull.Value);
+        cmd.Parameters.AddWithValue("@start_datetime", appointment.Start ?? DateTime.UtcNow);
+        cmd.Parameters.AddWithValue("@end_datetime", appointment.End.HasValue ? (object)appointment.End.Value : DBNull.Value);
+        cmd.Parameters.AddWithValue("@acte", (object?)appointment.Acte ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@room", (object?)appointment.Room ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@status", (object?)appointment.Status ?? "planifie");
+        cmd.Parameters.AddWithValue("@payment_status", (object?)appointment.PaymentStatus ?? "non_paye");
+        cmd.Parameters.AddWithValue("@amount", appointment.Amount);
+        cmd.Parameters.AddWithValue("@paid_amount", appointment.PaidAmount);
+        cmd.Parameters.AddWithValue("@cnam_covered", appointment.CnamCovered);
+        cmd.Parameters.AddWithValue("@notes", (object?)appointment.Notes ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", id);
+
+        var rows = cmd.ExecuteNonQuery();
+        if (rows == 0)
+        {
+            return NotFound();
+        }
+
+        return NoContent();
+    }
+
+    private bool HasConflict(int kineId, DateTime start, DateTime end, int? ignoreAppointmentId = null)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        var sql = @"
+            SELECT COUNT(*)
+            FROM appointments
+            WHERE kine_id = @kine_id
+              AND @start < COALESCE(end_datetime, start_datetime)
+              AND start_datetime < @end
+        ";
+        if (ignoreAppointmentId.HasValue)
+        {
+            sql += " AND id <> @ignore_id";
+            cmd.Parameters.AddWithValue("@ignore_id", ignoreAppointmentId.Value);
+        }
+
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue("@kine_id", kineId);
+        cmd.Parameters.AddWithValue("@start", start);
+        cmd.Parameters.AddWithValue("@end", end);
+
+        var count = Convert.ToInt32(cmd.ExecuteScalar());
+        return count > 0;
+    }
 }
