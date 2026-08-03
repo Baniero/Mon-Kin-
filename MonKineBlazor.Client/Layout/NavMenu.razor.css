@@ -46,6 +46,10 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1H0V4zm0 2h16v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6zm12 2.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z'/%3E%3C/svg%3E");
 }
 
+.bi-file-earmark-medical {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h6.5L14 4.5z'/%3E%3Cpath d='M10 1v3a1 1 0 0 0 1 1h3'/%3E%3Cpath d='M9.5 7h-3v1h3v3h1v-3h3V8h-3v-3h-1v3z'/%3E%3C/svg%3E");
+}
+
 .bi-building {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M6 0a1 1 0 0 0-1 1v1H2a1 1 0 0 0-1 1v12H0v1h16v-1h-1V3a1 1 0 0 0-1-1H11V1a1 1 0 0 0-1-1H6zm1 2v1H9V2H7z'/%3E%3Cpath d='M3 5h2v2H3V5zm0 3h2v2H3V8zm3-3h2v2H6V5zm0 3h2v2H6V8zm3-3h2v2H9V5zm0 3h2v2H9V8z'/%3E%3C/svg%3E");
 }

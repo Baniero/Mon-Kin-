@@ -255,7 +255,7 @@
                         <InputTextArea class="form-control" @bind-Value="newAppointment.Notes" Rows="3" />
                     </div>
                     <div class="col-md-12 d-flex gap-2">
-                        <button class="btn btn-success" type="submit">Enregistrer</button>
+                        <button class="btn btn-success" type="submit">@(isEditing ? "Mettre à jour" : "Enregistrer")</button>
                         <button class="btn btn-outline-secondary" type="button" @onclick="HideAddAppointment">Annuler</button>
                     </div>
                 </div>
@@ -500,6 +500,11 @@
             if (patientId > 0)
             {
                 await LoadProgramsForPatient(patientId);
+                if (patientPrograms.Any())
+                {
+                    selectedProgram = patientPrograms[0];
+                    RefreshProgramPreview();
+                }
             }
         }
     }
@@ -642,6 +647,12 @@
         newAppointment.Start = newAppointment.Start.Value.Date + parsedStartTime;
         newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes > 0 ? durationMinutes : 30);
 
+        if (isEditing && editingAppointment != null)
+        {
+            await UpdateAppointmentFromForm();
+            return;
+        }
+
         var response = await Http.PostAsJsonAsync("api/appointments", newAppointment);
         if (response.IsSuccessStatusCode)
         {
@@ -651,6 +662,45 @@
         else
         {
             errorMessage = "Impossible de créer le rendez-vous.";
+        }
+    }
+
+    private async Task UpdateAppointmentFromForm()
+    {
+        if (editingAppointment == null)
+        {
+            errorMessage = "Aucun rendez-vous sélectionné pour la mise à jour.";
+            return;
+        }
+
+        var update = new AppointmentDto
+        {
+            Id = editingAppointment.Id,
+            PatientId = newAppointment.PatientId,
+            PatientName = newAppointment.PatientName,
+            KineId = newAppointment.KineId,
+            KineName = newAppointment.KineName,
+            Start = newAppointment.Start,
+            End = newAppointment.End,
+            Acte = newAppointment.Acte,
+            Room = newAppointment.Room,
+            Status = newAppointment.Status,
+            PaymentStatus = newAppointment.PaymentStatus,
+            Amount = newAppointment.Amount,
+            PaidAmount = newAppointment.PaidAmount,
+            CnamCovered = newAppointment.CnamCovered,
+            Notes = newAppointment.Notes
+        };
+
+        var response = await Http.PutAsJsonAsync($"api/appointments/{editingAppointment.Id}", update);
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAppointments();
+            HideAddAppointment();
+        }
+        else
+        {
+            errorMessage = "Impossible de mettre à jour le rendez-vous.";
         }
     }
 
@@ -756,6 +806,7 @@
     {
         editingAppointment = appointment;
         isEditing = true;
+        activeSubmodule = AppointmentSubmodule.NewAppointment;
         showAppointmentForm = true;
         newAppointment = new AppointmentDto
         {
