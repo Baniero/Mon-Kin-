@@ -1,11 +1,10 @@
 services:
   - type: web
     name: mon-kine-blazor
-    env: dotnet
-    branch: master
+    env: docker
+    branch: main
     repo: https://github.com/Baniero/Mon-Kin-.git
-    buildCommand: dotnet publish MonKineBlazor.Server/MonKineBlazor.Server.csproj -c Release -o publish
-    startCommand: dotnet publish/MonKineBlazor.Server.dll
+    dockerfilePath: Dockerfile
     envVars:
       - key: DATABASE_URL
         value: "postgres://<username>:<password>@<host>:<port>/<database>"
