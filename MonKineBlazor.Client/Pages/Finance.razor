@@ -52,9 +52,9 @@
                             {
                                 <tr>
                                     <td>@row.DateJour.ToString("yyyy-MM-dd")</td>
-                                    <td>@row.ExpectedAmount:F2</td>
-                                    <td>@row.ActualAmount:F2</td>
-                                    <td>@row.Diff:F2</td>
+                                    <td>@($"{row.ExpectedAmount:F2} DT")</td>
+                                    <td>@($"{row.ActualAmount:F2} DT")</td>
+                                    <td>@($"{row.Diff:F2} DT")</td>
                                     <td>@(row.Validated ? "Oui" : "Non")</td>
                                     <td>@row.ValidatedBy</td>
                                 </tr>
@@ -95,8 +95,8 @@
                 @if (patientFinance is not null)
                 {
                     <div class="mb-3">
-                        <strong>Solde avance:</strong> @patientFinance.AdvanceBalance:F2<br />
-                        <strong>Total avances reçues:</strong> @patientFinance.TotalAdvancePaid:F2
+                        <strong>Solde avance:</strong> @($"{patientFinance.AdvanceBalance:F2} DT")<br />
+                        <strong>Total avances reçues:</strong> @($"{patientFinance.TotalAdvancePaid:F2} DT")
                     </div>
                 }
                 @if (advanceTransactions.Any())
@@ -116,7 +116,7 @@
                                 {
                                     <tr>
                                         <td>@transaction.TransactionDate.ToString("yyyy-MM-dd HH:mm")</td>
-                                        <td>@transaction.Amount:F2</td>
+                                        <td>@($"{transaction.Amount:F2} DT")</td>
                                         <td>@transaction.Note</td>
                                         <td>@transaction.CreatedBy</td>
                                     </tr>

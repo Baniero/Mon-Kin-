@@ -57,14 +57,14 @@
                                 <td>@row.PatientName</td>
                                 <td>@row.Couverture</td>
                                 <td>@row.NbSeances</td>
-                                <td>@row.MontantCnam:F2</td>
+                                <td>@($"{row.MontantCnam:F2} DT")</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
             <div class="mt-3">
-                <strong>Total CNAM à réclamer:</strong> @cnamRecovery.Sum(r => r.MontantCnam):F2
+                <strong>Total CNAM à réclamer:</strong> @($"{cnamRecovery.Sum(r => r.MontantCnam):F2} DT")
             </div>
         }
     </div>

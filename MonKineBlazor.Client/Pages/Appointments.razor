@@ -169,7 +169,7 @@
                         <div class="mb-3">
                             <strong>Programme :</strong> @selectedProgram.Titre<br />
                             <strong>Durée séance :</strong> @selectedProgram.DureeSeanceMinutes min<br />
-                            <strong>Prix unitaire :</strong> @selectedProgram.PrixUnitaire:F2
+                            <strong>Prix unitaire :</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")
                         </div>
                         <div class="table-responsive mb-3">
                             <table class="table table-sm table-striped">
@@ -429,7 +429,7 @@
                         <td>@appointment.KineName</td>
                         <td>@appointment.Acte</td>
                         <td>@appointment.Room</td>
-                        <td>@appointment.Amount:F2</td>
+                        <td>@($"{appointment.Amount:F2} DT")</td>
                         <td>@appointment.Status</td>
                         <td>@appointment.PaymentStatus</td>
                         <td>
