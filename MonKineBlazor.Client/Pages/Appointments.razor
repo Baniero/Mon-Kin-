@@ -1,4 +1,4 @@
-@page "/appointments"
+﻿@page "/appointments"
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
@@ -6,15 +6,14 @@
 
 <h1>Rendez-vous</h1>
 
-<div class="row mb-3">
-    <div class="col-md-12 d-flex flex-wrap gap-2">
-        <button class="btn btn-primary" @onclick="LoadAppointments">Rafraîchir</button>
-        <button class="btn btn-success" @onclick="ShowAddAppointment">Nouveau rendez-vous</button>
-        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.Week)">Semaine</button>
-        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.Month)">Mois</button>
-        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.List)">Liste</button>
-    </div>
+<div class="btn-group mb-4" role="group">
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.ProgramPlanning ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.ProgramPlanning)">Planification par programme</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.NewAppointment ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.NewAppointment)">Nouveau rendez-vous</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Today ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.Today)">Rendez-vous du jour</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Weekly ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.Weekly)">Planning hebdo</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.List ? "btn-primary" : "btn-outline-secondary")" @onclick="() => SetSubmodule(AppointmentSubmodule.List)">Liste</button>
 </div>
+
 <div class="row mb-3">
     <div class="col-md-4">
         <label class="form-label">Rechercher</label>
@@ -35,9 +34,13 @@
         <InputSelect class="form-select" @bind-Value="appointmentStatusFilter">
             <option value="">Tous</option>
             <option value="planifie">planifie</option>
+            <option value="present">present</option>
             <option value="termine">termine</option>
             <option value="annule">annule</option>
         </InputSelect>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-secondary w-100" @onclick="LoadAppointments">Rafraîchir</button>
     </div>
 </div>
 
@@ -46,136 +49,145 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-@if (appointments is null)
+@if (activeSubmodule == AppointmentSubmodule.ProgramPlanning)
 {
-    <p><em>Chargement...</em></p>
-}
-else if (!appointments.Any())
-{
-    <div class="alert alert-info">Aucun rendez-vous trouvé.</div>
-}
-else if (calendarView != CalendarView.List)
-{
-    @if (calendarView == CalendarView.Week)
-    {
-        <div class="table-responsive">
-            <table class="table table-bordered calendar-table">
-                <thead>
-                    <tr>
-                        @foreach (var day in GetWeekDays())
-                        {
-                            <th>@day.ToString("ddd dd/MM")</th>
-                        }
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        @foreach (var day in GetWeekDays())
-                        {
-                            <td>
-                                @foreach (var appt in appointments.Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start))
-                                {
-                                    <div class="mb-2 p-2 border rounded">
-                                        <strong>@appt.Start:HH:mm</strong><br />
-                                        <span>@appt.PatientName</span><br />
-                                        <span>@appt.KineName</span><br />
-                                        <span>@appt.Acte</span>
-                                    </div>
-                                }
-                            </td>
-                        }
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-bordered calendar-table">
-                <thead>
-                    <tr>
-                        <th>Lun</th>
-                        <th>Mar</th>
-                        <th>Mer</th>
-                        <th>Jeu</th>
-                        <th>Ven</th>
-                        <th>Sam</th>
-                        <th>Dim</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var week in GetMonthWeeks())
-                    {
-                        <tr>
-                            @foreach (var day in week)
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">Patients / Programmes</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Patient</label>
+                        <InputSelect class="form-select" @bind-Value="selectedProgramPatientId" @onchange="OnProgramPatientChanged">
+                            <option value="0">-- Sélectionnez --</option>
+                            @foreach (var patient in patients)
                             {
-                                <td class="align-top" style="min-height: 120px; vertical-align: top;">
-                                    <div class="fw-bold">@day.Day</div>
-                                    @foreach (var appt in appointments.Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start).Take(3))
-                                    {
-                                        <div class="mb-1 p-1 border rounded small">
-                                            <strong>@appt.Start:HH:mm</strong> @appt.KineName
-                                        </div>
-                                    }
-                                    @if (appointments.Count(a => a.Start.HasValue && a.Start.Value.Date == day.Date) > 3)
-                                    {
-                                        <div class="small text-muted">+ autres</div>
-                                    }
-                                </td>
+                                <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
                             }
-                        </tr>
+                        </InputSelect>
+                    </div>
+                    @if (selectedProgramPatient != null)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <strong>@selectedProgramPatient.Nom @selectedProgramPatient.Prenom</strong><br />
+                            @selectedProgramPatient.Couverture
+                        </div>
                     }
-                </tbody>
-            </table>
+                    @if (selectedProgramPatient != null && patientPrograms.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var program in patientPrograms)
+                            {
+                                <button class="list-group-item list-group-item-action @(selectedProgram?.Id == program.Id ? "active" : "")" @onclick="() => SelectProgram(program)">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <strong>@program.Titre</strong><br />
+                                            <small>@program.NatureSeances</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span>@program.NbSeances séances</span><br />
+                                            <span>@program.NbSeancesParSemaine / semaine</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+                    else if (selectedProgramPatient != null)
+                    {
+                        <div class="alert alert-warning">Aucun programme trouvé pour ce patient.</div>
+                    }
+                </div>
+            </div>
         </div>
-    }
-}
-else
-{
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>Date début</th>
-                <th>Patient</th>
-                <th>Kiné</th>
-                <th>Acte</th>
-                <th>Salle</th>
-                <th>Montant</th>
-                <th>Statut</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var appointment in appointments)
+        <div class="col-md-8">
+            @if (selectedProgram != null)
             {
-                <tr>
-                    <td>@appointment.Start</td>
-                    <td>@appointment.PatientName</td>
-                    <td>@appointment.KineName</td>
-                    <td>@appointment.Acte</td>
-                    <td>@appointment.Room</td>
-                    <td>@appointment.Amount</td>
-                    <td>@appointment.Status</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary me-2" @onclick="() => EditAppointment(appointment)">Modifier</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supprimer</button>
-                    </td>
-                </tr>
+                <div class="card mb-4">
+                    <div class="card-header">Planification du programme</div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Date de début</label>
+                                <InputDate class="form-control" @bind-Value="programStartDate" @onchange="_ => RefreshProgramPreview()" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Heure de début</label>
+                                <InputText class="form-control" @bind-Value="programStartTime" @onchange="_ => RefreshProgramPreview()" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Salle</label>
+                                <InputText class="form-control" @bind-Value="programRoom" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Kiné</label>
+                                <InputSelect class="form-select" @bind-Value="programSelectedKineId">
+                                    <option value="0">-- Non défini --</option>
+                                    @foreach (var kine in kines)
+                                    {
+                                        <option value="@kine.Id">@((kine.FullName ?? kine.Username))</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Programme :</strong> @selectedProgram.Titre<br />
+                            <strong>Durée séance :</strong> @selectedProgram.DureeSeanceMinutes min<br />
+                            <strong>Prix unitaire :</strong> @selectedProgram.PrixUnitaire:F2
+                        </div>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Date</th>
+                                        <th>Heure</th>
+                                        <th>Durée</th>
+                                        <th>Kiné</th>
+                                        <th>Salle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < programPreview.Count; i++)
+                                    {
+                                        var appointment = programPreview[i];
+                                        <tr>
+                                            <td>@(i + 1)</td>
+                                            <td>@appointment.Start?.ToString("yyyy-MM-dd")</td>
+                                            <td>@appointment.Start?.ToString("HH:mm")</td>
+                                            <td>@((appointment.End - appointment.Start)?.TotalMinutes ?? 0) min</td>
+                                            <td>@(appointment.KineId.HasValue ? kines.FirstOrDefault(k => k.Id == appointment.KineId)?.FullName ?? kines.FirstOrDefault(k => k.Id == appointment.KineId)?.Username : "-")</td>
+                                            <td>@appointment.Room</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-success" @onclick="CreateProgramAppointments" disabled="@(programPreview.Count == 0)">Créer les rendez-vous</button>
+                    </div>
+                </div>
             }
-        </tbody>
-    </table>
+            else if (selectedProgramPatient != null)
+            {
+                <div class="alert alert-secondary">Sélectionnez un programme pour générer les rendez-vous.</div>
+            }
+        </div>
+    </div>
 }
 
-@if (showAppointmentForm)
+@if (activeSubmodule == AppointmentSubmodule.NewAppointment)
 {
-    <div class="card mt-4">
+    <div class="card mb-4">
         <div class="card-header">Nouveau rendez-vous</div>
         <div class="card-body">
+            <div class="mb-3">
+                <strong>Ce mode est destiné aux patients sans programme créé.</strong>
+            </div>
             <EditForm Model="newAppointment" OnValidSubmit="CreateAppointmentAsync">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Patient</label>
-                        <InputSelect class="form-select" @bind-Value="newAppointment.PatientId">
+                        <InputSelect class="form-select" @bind-Value="newAppointment.PatientId" @onchange="OnNewAppointmentPatientChanged">
                             <option value="">-- Sélectionnez --</option>
                             @foreach (var patient in patients)
                             {
@@ -222,18 +234,10 @@ else
                         <InputNumber class="form-control" @bind-Value="newAppointment.CnamCovered" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Kinés disponibles</label>
-                        <div class="form-control" style="height: auto; min-height: 110px;">
-                            @foreach (var available in AvailableKines())
-                            {
-                                <div>@((available.FullName ?? available.Username))</div>
-                            }
-                        </div>
-                    </div>
-                    <div class="col-md-4">
                         <label class="form-label">Statut</label>
                         <InputSelect class="form-select" @bind-Value="newAppointment.Status">
                             <option value="planifie">planifie</option>
+                            <option value="present">present</option>
                             <option value="termine">termine</option>
                             <option value="annule">annule</option>
                         </InputSelect>
@@ -256,7 +260,147 @@ else
                     </div>
                 </div>
             </EditForm>
+            @if (selectedNewPatientHasPrograms)
+            {
+                <div class="alert alert-warning mt-3">Ce patient a déjà un programme. Utilisez l’onglet "Planification par programme".</div>
+            }
         </div>
+    </div>
+}
+
+@if (activeSubmodule == AppointmentSubmodule.Today)
+{
+    <div class="card mb-4">
+        <div class="card-header">Rendez-vous du jour</div>
+        <div class="card-body">
+            @if (!todayAppointments.Any())
+            {
+                <div class="alert alert-info">Aucun rendez-vous planifié pour aujourd'hui.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Heure</th>
+                                <th>Patient</th>
+                                <th>Kiné</th>
+                                <th>Acte</th>
+                                <th>Salle</th>
+                                <th>Statut</th>
+                                <th>Paiement</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in todayAppointments.OrderBy(a => a.Start))
+                            {
+                                <tr>
+                                    <td>@appointment.Start?.ToString("HH:mm")</td>
+                                    <td>@appointment.PatientName</td>
+                                    <td>@appointment.KineName</td>
+                                    <td>@appointment.Acte</td>
+                                    <td>@appointment.Room</td>
+                                    <td>@appointment.Status</td>
+                                    <td>@appointment.PaymentStatus</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success me-1" @onclick="() => MarkAppointmentPresent(appointment)">Présent</button>
+                                        <button class="btn btn-sm btn-primary me-1" @onclick="() => MarkAppointmentPaid(appointment)">Payé</button>
+                                        <button class="btn btn-sm btn-warning" @onclick="() => MarkAppointmentUnpaid(appointment)">Non payé</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (activeSubmodule == AppointmentSubmodule.Weekly)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Planning hebdomadaire</span>
+            <div>
+                <button class="btn btn-outline-secondary btn-sm me-2" @onclick="PreviousWeek">Semaine précédente</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="NextWeek">Semaine suivante</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered calendar-table">
+                    <thead>
+                        <tr>
+                            @foreach (var day in GetWeekDays())
+                            {
+                                <th>@day.ToString("ddd dd/MM")</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            @foreach (var day in GetWeekDays())
+                            {
+                                <td>
+                                    @foreach (var appt in FilteredAppointments().Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start))
+                                    {
+                                        <div class="mb-2 p-2 border rounded">
+                                            <strong>@appt.Start:HH:mm</strong><br />
+                                            <span>@appt.PatientName</span><br />
+                                            <span>@appt.KineName</span><br />
+                                            <span>@appt.Status</span>
+                                        </div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@if (activeSubmodule == AppointmentSubmodule.List)
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Date début</th>
+                    <th>Patient</th>
+                    <th>Kiné</th>
+                    <th>Acte</th>
+                    <th>Salle</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Paiement</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var appointment in FilteredAppointments())
+                {
+                    <tr>
+                        <td>@appointment.Start</td>
+                        <td>@appointment.PatientName</td>
+                        <td>@appointment.KineName</td>
+                        <td>@appointment.Acte</td>
+                        <td>@appointment.Room</td>
+                        <td>@appointment.Amount:F2</td>
+                        <td>@appointment.Status</td>
+                        <td>@appointment.PaymentStatus</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => EditAppointment(appointment)">Modifier</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supprimer</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 }
 
@@ -281,6 +425,23 @@ else
     private string appointmentSearch = string.Empty;
     private string appointmentStatusFilter = string.Empty;
     private int selectedKineFilter = 0;
+
+    private AppointmentSubmodule activeSubmodule = AppointmentSubmodule.List;
+
+    private int selectedProgramPatientId;
+    private PatientDto? selectedProgramPatient;
+    private List<PatientProgramDto> patientPrograms = new();
+    private PatientProgramDto? selectedProgram;
+    private DateTime programStartDate = DateTime.Today;
+    private string programStartTime = "08:00";
+    private string programRoom = "Salle 1";
+    private int programSelectedKineId;
+    private List<AppointmentDto> programPreview = new();
+    private bool selectedNewPatientHasPrograms;
+
+    private bool isEditing;
+    private AppointmentDto? editingAppointment;
+    private DateTime currentDate = DateTime.Today;
 
     protected override async Task OnInitializedAsync()
     {
@@ -322,21 +483,164 @@ else
         }
     }
 
-    private void ShowAddAppointment()
+    private void SetSubmodule(AppointmentSubmodule submodule)
     {
-        showAppointmentForm = true;
+        activeSubmodule = submodule;
+        showAppointmentForm = submodule == AppointmentSubmodule.NewAppointment;
+    }
+
+    private async Task OnProgramPatientChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var patientId))
+        {
+            selectedProgramPatientId = patientId;
+            selectedProgramPatient = patients.FirstOrDefault(p => p.Id == patientId);
+            selectedProgram = null;
+            programPreview.Clear();
+            if (patientId > 0)
+            {
+                await LoadProgramsForPatient(patientId);
+            }
+        }
+    }
+
+    private async Task LoadProgramsForPatient(int patientId)
+    {
+        patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+    }
+
+    private void SelectProgram(PatientProgramDto program)
+    {
+        selectedProgram = program;
+        programStartDate = program.DateDebut ?? DateTime.Today;
+        programStartTime = "08:00";
+        programRoom = "Salle 1";
+        programSelectedKineId = 0;
+        RefreshProgramPreview();
+    }
+
+    private void RefreshProgramPreview()
+    {
+        if (selectedProgram == null)
+        {
+            programPreview = new();
+            return;
+        }
+        programPreview = GenerateProgramAppointments(selectedProgram);
+    }
+
+    private List<AppointmentDto> GenerateProgramAppointments(PatientProgramDto program)
+    {
+        var totalSessions = Math.Max(1, program.NbSeances);
+        var perWeek = Math.Max(1, program.NbSeancesParSemaine);
+        var startDate = programStartDate.Date;
+        if (!TimeSpan.TryParse(programStartTime, out var startTimeSpan))
+        {
+            startTimeSpan = TimeSpan.FromHours(8);
+        }
+
+        var result = new List<AppointmentDto>();
+        var currentDate = startDate;
+        var sessionsScheduledThisWeek = 0;
+
+        for (var i = 0; i < totalSessions; i++)
+        {
+            if (sessionsScheduledThisWeek >= perWeek)
+            {
+                currentDate = currentDate.AddDays(1);
+                while (currentDate.DayOfWeek != DayOfWeek.Monday)
+                {
+                    currentDate = currentDate.AddDays(1);
+                }
+                sessionsScheduledThisWeek = 0;
+            }
+
+            var startDateTime = currentDate + startTimeSpan;
+            var endDateTime = startDateTime.AddMinutes(program.DureeSeanceMinutes > 0 ? program.DureeSeanceMinutes : 30);
+            result.Add(new AppointmentDto
+            {
+                PatientId = program.PatientId,
+                PatientName = selectedProgramPatient?.Nom + " " + selectedProgramPatient?.Prenom,
+                KineId = programSelectedKineId > 0 ? programSelectedKineId : null,
+                Start = startDateTime,
+                End = endDateTime,
+                Acte = program.NatureSeances,
+                Room = programRoom,
+                Status = "planifie",
+                PaymentStatus = "non_paye",
+                Amount = program.PrixUnitaire,
+                CnamCovered = 0,
+                Notes = $"Programme {program.Titre}"
+            });
+
+            currentDate = currentDate.AddDays(1);
+            sessionsScheduledThisWeek++;
+        }
+
+        return result;
+    }
+
+    private async Task CreateProgramAppointments()
+    {
+        if (!programPreview.Any())
+        {
+            return;
+        }
+
+        errorMessage = null;
+        foreach (var appointment in programPreview)
+        {
+            var response = await Http.PostAsJsonAsync("api/appointments", appointment);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = "Erreur lors de la création des rendez-vous du programme.";
+                return;
+            }
+        }
+        await LoadAppointments();
+        programPreview.Clear();
+        errorMessage = "Rendez-vous du programme créés avec succès.";
+    }
+
+    private async Task OnNewAppointmentPatientChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var patientId))
+        {
+            newAppointment.PatientId = patientId;
+            if (patientId > 0)
+            {
+                var programs = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+                selectedNewPatientHasPrograms = programs.Any();
+            }
+            else
+            {
+                selectedNewPatientHasPrograms = false;
+            }
+        }
+        else
+        {
+            selectedNewPatientHasPrograms = false;
+        }
     }
 
     private async Task CreateAppointmentAsync()
     {
-        if (newAppointment.Start.HasValue)
+        errorMessage = null;
+
+        if (!newAppointment.Start.HasValue)
         {
-            if (TimeSpan.TryParse(startTime, out var parsedTime))
-            {
-                newAppointment.Start = newAppointment.Start.Value.Date + parsedTime;
-                newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes);
-            }
+            errorMessage = "La date de début est requise.";
+            return;
         }
+
+        if (!TimeSpan.TryParse(startTime, out var parsedStartTime))
+        {
+            errorMessage = "Heure de début invalide.";
+            return;
+        }
+
+        newAppointment.Start = newAppointment.Start.Value.Date + parsedStartTime;
+        newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes > 0 ? durationMinutes : 30);
 
         var response = await Http.PostAsJsonAsync("api/appointments", newAppointment);
         if (response.IsSuccessStatusCode)
@@ -346,14 +650,11 @@ else
         }
         else
         {
-            errorMessage = "Erreur lors de l'enregistrement du rendez-vous.";
+            errorMessage = "Impossible de créer le rendez-vous.";
         }
     }
 
-    private CalendarView calendarView = CalendarView.List;
-    private DateTime currentDate = DateTime.Today;
-    private bool isEditing;
-    private AppointmentDto? editingAppointment;
+    private IEnumerable<AppointmentDto> todayAppointments => FilteredAppointments().Where(a => a.Start.HasValue && a.Start.Value.Date == DateTime.Today);
 
     private IEnumerable<AppointmentDto> FilteredAppointments()
     {
@@ -363,7 +664,6 @@ else
         }
 
         var filtered = appointments.AsEnumerable();
-
         if (!string.IsNullOrWhiteSpace(appointmentSearch))
         {
             var keyword = appointmentSearch.Trim().ToLowerInvariant();
@@ -387,32 +687,72 @@ else
         return filtered;
     }
 
-    private void SetCalendarView(CalendarView view)
+    private async Task MarkAppointmentPresent(AppointmentDto appointment)
     {
-        calendarView = view;
+        await UpdateAppointmentStatus(appointment, "present", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
     }
 
-    private IEnumerable<DateTime> GetWeekDays()
+    private async Task MarkAppointmentPaid(AppointmentDto appointment)
     {
-        var startOfWeek = currentDate.AddDays(-((int)currentDate.DayOfWeek + 6) % 7);
-        return Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i));
+        await UpdateAppointmentStatus(appointment, appointment.Status ?? "present", "paye", appointment.Amount);
     }
 
-    private IEnumerable<List<DateTime>> GetMonthWeeks()
+    private async Task MarkAppointmentUnpaid(AppointmentDto appointment)
     {
-        var firstOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
-        var firstDay = firstOfMonth.AddDays(-((int)firstOfMonth.DayOfWeek + 6) % 7);
-        var weeks = new List<List<DateTime>>();
+        await UpdateAppointmentStatus(appointment, appointment.Status ?? "planifie", "non_paye", 0);
+    }
 
-        for (var weekStart = firstDay; weekStart < firstOfMonth.AddMonths(1) || weeks.Count < 5; weekStart = weekStart.AddDays(7))
+    private async Task UpdateAppointmentStatus(AppointmentDto appointment, string status, string paymentStatus, decimal paidAmount)
+    {
+        var update = new AppointmentDto
         {
-            weeks.Add(Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList());
+            Id = appointment.Id,
+            PatientId = appointment.PatientId,
+            PatientName = appointment.PatientName,
+            KineId = appointment.KineId,
+            KineName = appointment.KineName,
+            Start = appointment.Start,
+            End = appointment.End,
+            Acte = appointment.Acte,
+            Room = appointment.Room,
+            Status = status,
+            PaymentStatus = paymentStatus,
+            Amount = appointment.Amount,
+            PaidAmount = paidAmount,
+            CnamCovered = appointment.CnamCovered,
+            Notes = appointment.Notes
+        };
+
+        var response = await Http.PutAsJsonAsync($"api/appointments/{appointment.Id}", update);
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAppointments();
+        }
+        else
+        {
+            errorMessage = "Impossible de mettre à jour le rendez-vous.";
+        }
+    }
+
+    private IEnumerable<UserDto> AvailableKines()
+    {
+        if (!newAppointment.Start.HasValue || durationMinutes <= 0)
+        {
+            return kines;
         }
 
-        return weeks;
+        if (!TimeSpan.TryParse(startTime, out var parsedTime))
+        {
+            return kines;
+        }
+
+        var start = newAppointment.Start.Value.Date + parsedTime;
+        var end = start.AddMinutes(durationMinutes);
+        return kines.Where(k => appointments == null || !appointments.Any(a => a.KineId == k.Id && a.Id != newAppointment.Id &&
+            a.Start.HasValue && a.End.HasValue && (start < a.End.Value && a.Start.Value < end))).ToList();
     }
 
-    private void EditAppointment(AppointmentDto appointment)
+    private async Task EditAppointment(AppointmentDto appointment)
     {
         editingAppointment = appointment;
         isEditing = true;
@@ -460,59 +800,12 @@ else
         }
     }
 
-    private IEnumerable<UserDto> AvailableKines()
-    {
-        if (!newAppointment.Start.HasValue || durationMinutes <= 0)
-        {
-            return kines;
-        }
-
-        var start = newAppointment.Start.Value.Date + TimeSpan.Parse(startTime);
-        var end = start.AddMinutes(durationMinutes);
-        return kines.Where(k => !appointments?.Any(a => a.KineId == k.Id && a.Id != newAppointment.Id &&
-            a.Start.HasValue && (start < (a.End ?? a.Start) && a.Start < end)) == true).ToList();
-    }
-
-    private async Task SaveAppointmentAsync()
-    {
-        errorMessage = null;
-        if (newAppointment.Start.HasValue)
-        {
-            if (TimeSpan.TryParse(startTime, out var parsedTime))
-            {
-                newAppointment.Start = newAppointment.Start.Value.Date + parsedTime;
-                newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes);
-            }
-        }
-
-        HttpResponseMessage response;
-        if (isEditing && editingAppointment != null)
-        {
-            response = await Http.PutAsJsonAsync($"api/appointments/{newAppointment.Id}", newAppointment);
-        }
-        else
-        {
-            response = await Http.PostAsJsonAsync("api/appointments", newAppointment);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            await LoadAppointments();
-            HideAddAppointment();
-            isEditing = false;
-            editingAppointment = null;
-        }
-        else
-        {
-            errorMessage = "Erreur lors de l'enregistrement du rendez-vous.";
-        }
-    }
-
     private void HideAddAppointment()
     {
         showAppointmentForm = false;
         isEditing = false;
         editingAppointment = null;
+        selectedNewPatientHasPrograms = false;
         newAppointment = new AppointmentDto
         {
             Status = "planifie",
@@ -527,10 +820,40 @@ else
         durationMinutes = 30;
     }
 
-    private enum CalendarView
+    private void PreviousWeek()
     {
-        List,
-        Week,
-        Month
+        currentDate = currentDate.AddDays(-7);
+    }
+
+    private void NextWeek()
+    {
+        currentDate = currentDate.AddDays(7);
+    }
+
+    private IEnumerable<DateTime> GetWeekDays()
+    {
+        var startOfWeek = currentDate.AddDays(-((int)currentDate.DayOfWeek + 6) % 7);
+        return Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i));
+    }
+
+    private IEnumerable<List<DateTime>> GetMonthWeeks()
+    {
+        var firstOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var firstDay = firstOfMonth.AddDays(-((int)firstOfMonth.DayOfWeek + 6) % 7);
+        var weeks = new List<List<DateTime>>();
+        for (var weekStart = firstDay; weekStart < firstOfMonth.AddMonths(1) || weeks.Count < 5; weekStart = weekStart.AddDays(7))
+        {
+            weeks.Add(Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList());
+        }
+        return weeks;
+    }
+
+    private enum AppointmentSubmodule
+    {
+        ProgramPlanning,
+        NewAppointment,
+        Today,
+        Weekly,
+        List
     }
 }
