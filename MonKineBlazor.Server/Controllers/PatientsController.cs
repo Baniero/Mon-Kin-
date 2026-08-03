@@ -34,7 +34,11 @@ public class PatientsController : ControllerBase
                 COALESCE(telephone1, ''),
                 COALESCE(telephone2, ''),
                 COALESCE(adresse, ''),
-                COALESCE(couverture, '')
+                COALESCE(couverture, ''),
+                COALESCE(racine, ''),
+                COALESCE(cle, ''),
+                COALESCE(qualite, ''),
+                COALESCE(n_assuree, '')
             FROM patients
             ORDER BY nom, prenom
         ";
@@ -56,6 +60,10 @@ public class PatientsController : ControllerBase
                 Telephone2 = reader.GetString(9),
                 Adresse = reader.GetString(10),
                 Couverture = reader.GetString(11),
+                Racine = reader.GetString(12),
+                Cle = reader.GetString(13),
+                Qualite = reader.GetString(14),
+                NumeroAssuree = reader.GetString(15),
             });
         }
 
@@ -86,7 +94,11 @@ public class PatientsController : ControllerBase
                 COALESCE(telephone1, ''),
                 COALESCE(telephone2, ''),
                 COALESCE(adresse, ''),
-                COALESCE(couverture, '')
+                COALESCE(couverture, ''),
+            COALESCE(racine, ''),
+            COALESCE(cle, ''),
+            COALESCE(qualite, ''),
+            COALESCE(n_assuree, '')
             FROM patients
             WHERE id = @id
         ";
@@ -112,6 +124,10 @@ public class PatientsController : ControllerBase
             Telephone2 = reader.GetString(9),
             Adresse = reader.GetString(10),
             Couverture = reader.GetString(11),
+            Racine = reader.GetString(12),
+            Cle = reader.GetString(13),
+            Qualite = reader.GetString(14),
+            NumeroAssuree = reader.GetString(15),
         };
 
         return Ok(patient);
@@ -145,6 +161,10 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@telephone2", (object?)patient.Telephone2 ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@adresse", (object?)patient.Adresse ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@couverture", (object?)patient.Couverture ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n_assuree", (object?)patient.NumeroAssuree ?? DBNull.Value);
 
         var createdId = Convert.ToInt32(cmd.ExecuteScalar());
         patient.Id = createdId;
@@ -177,7 +197,11 @@ public class PatientsController : ControllerBase
                 telephone1 = @telephone1,
                 telephone2 = @telephone2,
                 adresse = @adresse,
-                couverture = @couverture
+                couverture = @couverture,
+                racine = @racine,
+                cle = @cle,
+                qualite = @qualite,
+                n_assuree = @n_assuree
             WHERE id = @id
         ";
         cmd.Parameters.AddWithValue("@code_patient", (object?)patient.CodePatient ?? DBNull.Value);
@@ -191,6 +215,10 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@telephone2", (object?)patient.Telephone2 ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@adresse", (object?)patient.Adresse ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@couverture", (object?)patient.Couverture ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n_assuree", (object?)patient.NumeroAssuree ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         var rowsUpdated = cmd.ExecuteNonQuery();

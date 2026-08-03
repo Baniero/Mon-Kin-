@@ -1,15 +1,131 @@
 ﻿@page "/"
-@inject NavigationManager Navigation
+@using MonKineBlazor.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Tableau de bord</PageTitle>
 
-<h1>Redirection...</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="display-6">Tableau de bord professionnel</h1>
+        <p class="text-muted">Vue d'ensemble des patients et des indicateurs clés.</p>
+    </div>
+    <div>
+        <a class="btn btn-primary" href="patients">Gérer les patients</a>
+    </div>
+</div>
 
-<p>Vous allez être redirigé vers la gestion des patients.</p>
+@if (isLoading)
+{
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Chargement...</span>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
+                    <h2 class="card-text">@totalPatients</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
+                    <h2 class="card-text">@cnamPatients</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
+                    <h2 class="card-text">@averagePatientAge</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
+                    <p class="mb-0">@lastUpdated</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Patients récents</div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Nom</th>
+                        <th>Prénom</th>
+                        <th>Couverture</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var patient in recentPatients)
+                    {
+                        <tr>
+                            <td>@patient.CodePatient</td>
+                            <td>@patient.Nom</td>
+                            <td>@patient.Prenom</td>
+                            <td>@patient.Couverture</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
 
 @code {
-    protected override void OnInitialized()
+    private bool isLoading = true;
+    private string? errorMessage;
+    private List<PatientDto> patients = new();
+    private List<PatientDto> recentPatients = new();
+    private int totalPatients;
+    private int cnamPatients;
+    private string averagePatientAge = "-";
+    private string lastUpdated = "-";
+
+    protected override async Task OnInitializedAsync()
     {
-        Navigation.NavigateTo("/patients", true);
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
+            totalPatients = patients.Count;
+            cnamPatients = patients.Count(p => string.Equals(p.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase));
+            averagePatientAge = patients.Any() ? Math.Round(patients.Average(p => p.Age)).ToString() : "-";
+            recentPatients = patients.OrderByDescending(p => p.Id).Take(5).ToList();
+            lastUpdated = DateTime.Now.ToString("dd MMM yyyy HH:mm");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Impossible de charger le tableau de bord : " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }

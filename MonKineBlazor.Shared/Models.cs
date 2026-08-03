@@ -14,6 +14,10 @@ public class PatientDto
     public string? Telephone2 { get; set; }
     public string? Adresse { get; set; }
     public string? Couverture { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
 }
 
 public class PatientProgramDto

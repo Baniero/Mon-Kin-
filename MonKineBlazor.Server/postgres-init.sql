@@ -13,8 +13,17 @@ CREATE TABLE IF NOT EXISTS patients (
     telephone2 TEXT,
     adresse TEXT,
     couverture TEXT,
+    racine TEXT,
+    cle TEXT,
+    qualite TEXT,
+    n_assuree TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS racine TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS cle TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS qualite TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS n_assuree TEXT;
 
 CREATE TABLE IF NOT EXISTS medical_records (
     id SERIAL PRIMARY KEY,
