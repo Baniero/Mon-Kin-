@@ -182,7 +182,7 @@ else
                                             <td>@program.NatureSeances</td>
                                             <td>@program.NbSeances</td>
                                             <td>@program.DureeSeanceMinutes</td>
-                                            <td>@program.DateDebut.ToString("dd/MM/yyyy")</td>
+                                            <td>@(program.DateDebut.HasValue ? program.DateDebut.Value.ToString("dd/MM/yyyy") : string.Empty)</td>
                                             <td>@program.Statut</td>
                                             <td class="text-end">
                                                 <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditProgram(program)">Modifier</button>

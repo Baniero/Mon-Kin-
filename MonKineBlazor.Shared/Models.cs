@@ -172,3 +172,22 @@ public class PaymentProjectionEntryDto
     public bool HasProjection { get; set; }
     public string? SourceStatus { get; set; }
 }
+
+public class CabinetInfoDto
+{
+    public int Id { get; set; }
+    public string? NomCabinet { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
+}
+
+public class CabinetInfoRequestDto
+{
+    public string? NomCabinet { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
+}

@@ -22,6 +22,7 @@ public static class DatabaseInitializer
         command.ExecuteNonQuery();
 
         EnsureAdminUser(connection);
+        EnsureCabinetInfoTable(connection);
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection)
@@ -47,5 +48,21 @@ public static class DatabaseInitializer
         insertCmd.Parameters.AddWithValue("@active", true);
         insertCmd.Parameters.AddWithValue("@password_hash", passwordHash);
         insertCmd.ExecuteNonQuery();
+    }
+
+    private static void EnsureCabinetInfoTable(NpgsqlConnection connection)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS cabinet_info (
+                id SERIAL PRIMARY KEY,
+                nom_cabinet TEXT,
+                racine TEXT,
+                cle TEXT,
+                qualite TEXT,
+                numero_assuree TEXT
+            )
+        ";
+        cmd.ExecuteNonQuery();
     }
 }

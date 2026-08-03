@@ -17,6 +17,43 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">Données Cabinet</div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(cabinetMessage))
+        {
+            <div class="alert alert-success">@cabinetMessage</div>
+        }
+        <EditForm Model="cabinetInfoForm" OnValidSubmit="SaveCabinetInfoAsync">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nom du cabinet</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomCabinet" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Racine</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Racine" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Clé</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Cle" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Qualité</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Qualite" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">N° assurée</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NumeroAssuree" />
+                </div>
+                <div class="col-md-12 d-flex justify-content-end">
+                    <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger">@errorMessage</div>
@@ -102,10 +139,14 @@ else
     private bool showForm;
     private string searchKeyword = string.Empty;
     private string? errorMessage;
+    private CabinetInfoDto cabinetInfo = new();
+    private CabinetInfoRequestDto cabinetInfoForm = new();
+    private string? cabinetMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadUsers();
+        await LoadCabinetInfo();
     }
 
     private async Task LoadUsers()
@@ -115,6 +156,50 @@ else
         {
             allUsers = await Http.GetFromJsonAsync<List<UserDto>>("api/users") ?? new List<UserDto>();
             users = allUsers;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task LoadCabinetInfo()
+    {
+        cabinetMessage = null;
+        try
+        {
+            cabinetInfo = await Http.GetFromJsonAsync<CabinetInfoDto>("api/cabinetinfo") ?? new CabinetInfoDto();
+            cabinetInfoForm = new CabinetInfoRequestDto
+            {
+                NomCabinet = cabinetInfo.NomCabinet,
+                Racine = cabinetInfo.Racine,
+                Cle = cabinetInfo.Cle,
+                Qualite = cabinetInfo.Qualite,
+                NumeroAssuree = cabinetInfo.NumeroAssuree
+            };
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task SaveCabinetInfoAsync()
+    {
+        errorMessage = null;
+        cabinetMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync("api/cabinetinfo", cabinetInfoForm);
+            if (response.IsSuccessStatusCode)
+            {
+                cabinetMessage = "Données du cabinet enregistrées.";
+                await LoadCabinetInfo();
+            }
+            else
+            {
+                errorMessage = "Impossible d'enregistrer les données du cabinet.";
+            }
         }
         catch (Exception ex)
         {
