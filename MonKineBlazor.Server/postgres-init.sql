@@ -120,6 +120,32 @@ CREATE TABLE IF NOT EXISTS advance_usage (
     used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS advance_lots (
+    id SERIAL PRIMARY KEY,
+    patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    transaction_id INTEGER NOT NULL REFERENCES advance_transactions(id) ON DELETE CASCADE,
+    original_amount NUMERIC NOT NULL,
+    remaining_amount NUMERIC NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS advance_lot_usage (
+    id SERIAL PRIMARY KEY,
+    lot_id INTEGER NOT NULL REFERENCES advance_lots(id) ON DELETE CASCADE,
+    appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    amount_used NUMERIC NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cash_closings (
+    date_jour DATE PRIMARY KEY,
+    expected_amount NUMERIC DEFAULT 0,
+    actual_amount NUMERIC DEFAULT 0,
+    validated BOOLEAN DEFAULT FALSE,
+    validated_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,
     patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,

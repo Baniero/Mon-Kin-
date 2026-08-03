@@ -72,3 +72,64 @@ public class UserDto
     public string Role { get; set; } = "kine";
     public bool Active { get; set; } = true;
 }
+
+public class CashClosingDto
+{
+    public DateTime DateJour { get; set; }
+    public decimal ExpectedAmount { get; set; }
+    public decimal ActualAmount { get; set; }
+    public decimal Diff { get; set; }
+    public bool Validated { get; set; }
+    public string? ValidatedBy { get; set; }
+}
+
+public class CashClosingRequestDto
+{
+    public DateTime DateJour { get; set; }
+    public decimal ActualAmount { get; set; }
+    public string? ValidatedBy { get; set; }
+}
+
+public class CnamRecoveryDto
+{
+    public string? PatientName { get; set; }
+    public string? Couverture { get; set; }
+    public int NbSeances { get; set; }
+    public decimal MontantCnam { get; set; }
+}
+
+public class AdvanceTransactionDto
+{
+    public int Id { get; set; }
+    public int PatientId { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime TransactionDate { get; set; }
+    public string? Note { get; set; }
+    public string? CreatedBy { get; set; }
+}
+
+public class AdvanceTransactionRequestDto
+{
+    public int PatientId { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime TransactionDate { get; set; }
+    public string? Note { get; set; }
+    public string? CreatedBy { get; set; }
+}
+
+public class PatientFinanceDto
+{
+    public int PatientId { get; set; }
+    public decimal AdvanceBalance { get; set; }
+    public decimal TotalAdvancePaid { get; set; }
+}
+
+public class PaymentProjectionEntryDto
+{
+    public int AppointmentId { get; set; }
+    public decimal PaidTotal { get; set; }
+    public string? PaymentStatus { get; set; }
+    public decimal ProjectedAdvance { get; set; }
+    public bool HasProjection { get; set; }
+    public string? SourceStatus { get; set; }
+}

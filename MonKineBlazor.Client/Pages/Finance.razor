@@ -1,0 +1,320 @@
+@page "/finance"
+@using MonKineBlazor.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<h1>Finance et CNAM</h1>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="row mb-4">
+    <div class="col-md-12 d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" @onclick="LoadFinanceData">Rafraîchir</button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">Caisse journalière</div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Date</label>
+                        <InputDate class="form-control" @bind-Value="cashClosingRequest.DateJour" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Montant réel</label>
+                        <InputNumber class="form-control" @bind-Value="cashClosingRequest.ActualAmount" />
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                        <button class="btn btn-success" @onclick="ValidateCashClosing">Valider</button>
+                        <button class="btn btn-outline-secondary" @onclick="LoadCashClosings">Charger</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Attendu</th>
+                                <th>Réel</th>
+                                <th>Ecart</th>
+                                <th>Validé</th>
+                                <th>Utilisateur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in cashClosings)
+                            {
+                                <tr>
+                                    <td>@row.DateJour.ToString("yyyy-MM-dd")</td>
+                                    <td>@row.ExpectedAmount:F2</td>
+                                    <td>@row.ActualAmount:F2</td>
+                                    <td>@row.Diff:F2</td>
+                                    <td>@(row.Validated ? "Oui" : "Non")</td>
+                                    <td>@row.ValidatedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">Avances patient</div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Patient</label>
+                        <InputSelect class="form-select" @bind-Value="selectedPatientId" @onchange="OnPatientChanged">
+                            <option value="0">-- Sélectionnez --</option>
+                            @foreach (var patient in patients)
+                            {
+                                <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Montant avance</label>
+                        <InputNumber class="form-control" @bind-Value="advanceRequest.Amount" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Note</label>
+                        <InputText class="form-control" @bind-Value="advanceRequest.Note" />
+                    </div>
+                    <div class="col-md-12 d-flex gap-2">
+                        <button class="btn btn-success" @onclick="CreateAdvanceTransaction">Enregistrer l'avance</button>
+                        <button class="btn btn-outline-secondary" @onclick="LoadAdvanceData">Recharger</button>
+                    </div>
+                </div>
+                @if (patientFinance is not null)
+                {
+                    <div class="mb-3">
+                        <strong>Solde avance:</strong> @patientFinance.AdvanceBalance:F2<br />
+                        <strong>Total avances reçues:</strong> @patientFinance.TotalAdvancePaid:F2
+                    </div>
+                }
+                @if (advanceTransactions.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Note</th>
+                                    <th>Par</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transaction in advanceTransactions)
+                                {
+                                    <tr>
+                                        <td>@transaction.TransactionDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>@transaction.Amount:F2</td>
+                                        <td>@transaction.Note</td>
+                                        <td>@transaction.CreatedBy</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else if (selectedPatientId > 0)
+                {
+                    <div>Aucune avance trouvée pour ce patient.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">Recouvrement CNAM</div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Du</label>
+                        <InputDate class="form-control" @bind-Value="cnamStart" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Au</label>
+                        <InputDate class="form-control" @bind-Value="cnamEnd" />
+                    </div>
+                    <div class="col-md-12 d-flex gap-2 mt-2">
+                        <button class="btn btn-success" @onclick="LoadCnamRecovery">Calculer</button>
+                        <button class="btn btn-outline-secondary" @onclick="LoadCnamRecovery">Recharger</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Couverture</th>
+                                <th>Nb séances</th>
+                                <th>Montant CNAM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in cnamRecovery)
+                            {
+                                <tr>
+                                    <td>@row.PatientName</td>
+                                    <td>@row.Couverture</td>
+                                    <td>@row.NbSeances</td>
+                                    <td>@row.MontantCnam:F2</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <strong>Total CNAM à réclamer:</strong> @cnamRecovery.Sum(r => r.MontantCnam):F2
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? errorMessage;
+    private List<CashClosingDto> cashClosings = new();
+    private List<CnamRecoveryDto> cnamRecovery = new();
+    private List<PatientDto> patients = new();
+    private List<AdvanceTransactionDto> advanceTransactions = new();
+    private PatientFinanceDto? patientFinance;
+    private int selectedPatientId;
+    private DateTime cashStart = DateTime.Today.AddDays(-7);
+    private DateTime cashEnd = DateTime.Today;
+    private DateTime cnamStart = DateTime.Today.AddDays(-30);
+    private DateTime cnamEnd = DateTime.Today;
+    private CashClosingRequestDto cashClosingRequest = new() { DateJour = DateTime.Today, ActualAmount = 0, ValidatedBy = "Web" };
+    private AdvanceTransactionRequestDto advanceRequest = new() { TransactionDate = DateTime.UtcNow, Amount = 0, CreatedBy = "Web" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFinanceData();
+    }
+
+    private async Task LoadFinanceData()
+    {
+        errorMessage = null;
+        try
+        {
+            await LoadPatients();
+            await LoadCashClosings();
+            await LoadCnamRecovery();
+            if (selectedPatientId > 0)
+            {
+                await LoadAdvanceData();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task LoadPatients()
+    {
+        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
+    }
+
+    private async Task LoadCashClosings()
+    {
+        cashClosings = await Http.GetFromJsonAsync<List<CashClosingDto>>($"api/finance/cash-closings?start={cashStart:yyyy-MM-dd}&end={cashEnd:yyyy-MM-dd}") ?? new List<CashClosingDto>();
+    }
+
+    private async Task LoadCnamRecovery()
+    {
+        cnamRecovery = await Http.GetFromJsonAsync<List<CnamRecoveryDto>>($"api/finance/cnam-recovery?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamRecoveryDto>();
+    }
+
+    private async Task LoadAdvanceData()
+    {
+        if (selectedPatientId <= 0)
+        {
+            advanceTransactions = new();
+            patientFinance = null;
+            return;
+        }
+
+        advanceTransactions = await Http.GetFromJsonAsync<List<AdvanceTransactionDto>>($"api/finance/advance-transactions/patient/{selectedPatientId}") ?? new List<AdvanceTransactionDto>();
+        patientFinance = await Http.GetFromJsonAsync<PatientFinanceDto>($"api/finance/patient-finance/{selectedPatientId}");
+    }
+
+    private async Task ValidateCashClosing()
+    {
+        errorMessage = null;
+        try
+        {
+            cashClosingRequest.ValidatedBy = "Web";
+            var response = await Http.PostAsJsonAsync("api/finance/cash-closings", cashClosingRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadCashClosings();
+            }
+            else
+            {
+                errorMessage = "Impossible de valider la caisse.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task CreateAdvanceTransaction()
+    {
+        errorMessage = null;
+        if (selectedPatientId <= 0)
+        {
+            errorMessage = "Sélectionnez un patient avant d'enregistrer une avance.";
+            return;
+        }
+
+        if (advanceRequest.Amount <= 0)
+        {
+            errorMessage = "Entrez un montant d'avance valide.";
+            return;
+        }
+
+        try
+        {
+            advanceRequest.PatientId = selectedPatientId;
+            advanceRequest.TransactionDate = DateTime.UtcNow;
+            advanceRequest.CreatedBy = "Web";
+            var response = await Http.PostAsJsonAsync("api/finance/advance-transactions", advanceRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadAdvanceData();
+                advanceRequest.Amount = 0;
+                advanceRequest.Note = string.Empty;
+            }
+            else
+            {
+                errorMessage = "Impossible d'enregistrer l'avance.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task OnPatientChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var patientId))
+        {
+            selectedPatientId = patientId;
+            await LoadAdvanceData();
+        }
+    }
+}
