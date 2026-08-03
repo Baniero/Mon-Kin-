@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\buildMultiTargeting\MonKineBlazor.Server.props" />
+</Project>

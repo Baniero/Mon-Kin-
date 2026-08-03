@@ -1,0 +1,353 @@
+@page "/patients"
+@using MonKineBlazor.Shared.Models
+@inject HttpClient Http
+
+<h1>Patients</h1>
+
+<div class="row mb-4">
+    <div class="col-md-12 d-flex gap-2">
+        <button class="btn btn-primary" @onclick="LoadPatients">Rafraîchir</button>
+        <button class="btn btn-secondary" @onclick="CreateNewPatient">Nouveau patient</button>
+    </div>
+</div>
+
+@if (patients is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card mb-4">
+                <div class="card-header">Liste des patients</div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var patient in patients)
+                            {
+                                <tr class="@(selectedPatient?.Id == patient.Id ? "table-active" : string.Empty)" @onclick="() => SelectPatient(patient)">
+                                    <td>@patient.CodePatient</td>
+                                    <td>@patient.Nom</td>
+                                    <td>@patient.Prenom</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>@(patientForm.Id == 0 ? "Créer un patient" : "Modifier un patient")</span>
+                    @if (patientForm.Id != 0)
+                    {
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="CreateNewPatient">Nouveau</button>
+                    }
+                </div>
+                <div class="card-body">
+                    <EditForm Model="patientForm" OnValidSubmit="SavePatientAsync">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Code patient</label>
+                                <InputText class="form-control" @bind-Value="patientForm.CodePatient" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Numéro dossier</label>
+                                <InputText class="form-control" @bind-Value="patientForm.DossierPatient" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nom</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Nom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prénom</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Prenom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date de naissance</label>
+                                <InputDate class="form-control" @bind-Value="patientForm.DateNaissance" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sexe</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Sexe" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone 1</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Telephone1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone 2</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Telephone2" />
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Adresse</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Adresse" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Couverture</label>
+                                <InputText class="form-control" @bind-Value="patientForm.Couverture" />
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button class="btn btn-success w-100" type="submit">Enregistrer</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            @if (selectedPatient != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">Programmes du patient</div>
+                    <div class="card-body p-0">
+                        @if (programs is null)
+                        {
+                            <div class="p-3">Chargement des programmes...</div>
+                        }
+                        else if (!programs.Any())
+                        {
+                            <div class="p-3">Aucun programme trouvé.</div>
+                        }
+                        else
+                        {
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Titre</th>
+                                        <th>Nature</th>
+                                        <th>Nb séances</th>
+                                        <th>Durée</th>
+                                        <th>Date début</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var program in programs)
+                                    {
+                                        <tr>
+                                            <td>@program.Titre</td>
+                                            <td>@program.NatureSeances</td>
+                                            <td>@program.NbSeances</td>
+                                            <td>@program.DureeSeanceMinutes</td>
+                                            <td>@program.DateDebut</td>
+                                            <td>@program.Statut</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Ajouter un programme</div>
+                    <div class="card-body">
+                        <EditForm Model="newProgram" OnValidSubmit="AddProgramAsync">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Titre</label>
+                                    <InputText class="form-control" @bind-Value="newProgram.Titre" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Nature</label>
+                                    <InputText class="form-control" @bind-Value="newProgram.NatureSeances" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Nb séances</label>
+                                    <InputNumber class="form-control" @bind-Value="newProgram.NbSeances" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Durée (min)</label>
+                                    <InputNumber class="form-control" @bind-Value="newProgram.DureeSeanceMinutes" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Date début</label>
+                                    <InputDate class="form-control" @bind-Value="newProgram.DateDebut" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Objectifs</label>
+                                    <InputText class="form-control" @bind-Value="newProgram.Objectifs" />
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Remarques</label>
+                                    <InputText class="form-control" @bind-Value="newProgram.Remarques" />
+                                </div>
+                                <div class="col-md-12 d-flex gap-2">
+                                    <button class="btn btn-success" type="submit">Ajouter le programme</button>
+                                    <button class="btn btn-outline-secondary" type="button" @onclick="ResetProgramForm">Réinitialiser</button>
+                                </div>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<PatientDto>? patients;
+    private List<PatientProgramDto>? programs;
+    private PatientDto? selectedPatient;
+    private PatientDto patientForm = new();
+    private PatientProgramDto newProgram = new()
+    {
+        DateDebut = DateTime.Now,
+        Statut = "planifie",
+        NbSeances = 1,
+        DureeSeanceMinutes = 30,
+    };
+    private string? statusMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPatients();
+    }
+
+    private async Task LoadPatients()
+    {
+        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients");
+        if (selectedPatient != null)
+        {
+            selectedPatient = patients?.FirstOrDefault(p => p.Id == selectedPatient.Id);
+            if (selectedPatient != null)
+            {
+                CopyPatientToForm(selectedPatient);
+                await LoadPrograms();
+            }
+            else
+            {
+                programs = null;
+            }
+        }
+    }
+
+    private async Task SelectPatient(PatientDto patient)
+    {
+        selectedPatient = patient;
+        CopyPatientToForm(patient);
+        await LoadPrograms();
+    }
+
+    private async Task SavePatientAsync()
+    {
+        if (patientForm is null)
+        {
+            return;
+        }
+
+        if (patientForm.Id == 0)
+        {
+            var response = await Http.PostAsJsonAsync("api/patients", patientForm);
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<PatientDto>();
+                if (created != null)
+                {
+                    selectedPatient = created;
+                    CopyPatientToForm(created);
+                }
+                await LoadPatients();
+                statusMessage = "Patient créé avec succès.";
+            }
+            else
+            {
+                statusMessage = "Erreur lors de la création du patient.";
+            }
+        }
+        else
+        {
+            var response = await Http.PutAsJsonAsync($"api/patients/{patientForm.Id}", patientForm);
+            if (response.IsSuccessStatusCode)
+            {
+                selectedPatient = patientForm;
+                await LoadPatients();
+                statusMessage = "Patient mis à jour avec succès.";
+            }
+            else
+            {
+                statusMessage = "Erreur lors de la mise à jour du patient.";
+            }
+        }
+    }
+
+    private void CreateNewPatient()
+    {
+        selectedPatient = null;
+        patientForm = new PatientDto();
+        programs = null;
+        statusMessage = null;
+    }
+
+    private async Task LoadPrograms()
+    {
+        if (selectedPatient == null)
+        {
+            programs = null;
+            return;
+        }
+
+        programs = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{selectedPatient.Id}");
+    }
+
+    private async Task AddProgramAsync()
+    {
+        if (selectedPatient == null)
+        {
+            statusMessage = "Sélectionnez d'abord un patient avant d'ajouter un programme.";
+            return;
+        }
+
+        newProgram.PatientId = selectedPatient.Id;
+        var response = await Http.PostAsJsonAsync("api/patientprograms", newProgram);
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadPrograms();
+            ResetProgramForm();
+            statusMessage = "Programme ajouté avec succès.";
+        }
+        else
+        {
+            statusMessage = "Erreur lors de l'ajout du programme.";
+        }
+    }
+
+    private void CopyPatientToForm(PatientDto patient)
+    {
+        patientForm = new PatientDto
+        {
+            Id = patient.Id,
+            CodePatient = patient.CodePatient,
+            DossierPatient = patient.DossierPatient,
+            Nom = patient.Nom,
+            Prenom = patient.Prenom,
+            Age = patient.Age,
+            DateNaissance = patient.DateNaissance,
+            Sexe = patient.Sexe,
+            Telephone1 = patient.Telephone1,
+            Telephone2 = patient.Telephone2,
+            Adresse = patient.Adresse,
+            Couverture = patient.Couverture,
+        };
+    }
+
+    private void ResetProgramForm()
+    {
+        newProgram = new PatientProgramDto
+        {
+            DateDebut = DateTime.Now.ToString("yyyy-MM-dd"),
+            Statut = "planifie",
+            NbSeances = 1,
+            DureeSeanceMinutes = 30,
+        };
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "payload": {
+    "version": 1,
+    "license_id": "ba5b0fd5-a90e-48a4-972c-4049296a1353",
+    "client_name": "Nader",
+    "activation_code": "kine03",
+    "machine_fingerprint": "d434ae52095dd74b18f5e3ee6c9e7c60d7db41b47a20d7a5cb161c8ba3a01d84",
+    "issued_at": "2026-07-22T15:50:26Z"
+  },
+  "signature": "IW7TIhnGb4iGtV79RGDpsfb+djTgTbupVsE4en8lqO3CxIaxUzhAD5OIBlkPgfBwYZblzuPpmEEGZnMKz5EDDA=="
+}
