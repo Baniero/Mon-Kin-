@@ -1,0 +1,253 @@
+@page "/appointments"
+@using MonKineBlazor.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<h1>Rendez-vous</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <button class="btn btn-primary me-2" @onclick="LoadAppointments">Rafraîchir</button>
+        <button class="btn btn-success" @onclick="ShowAddAppointment">Nouveau rendez-vous</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (appointments is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!appointments.Any())
+{
+    <div class="alert alert-info">Aucun rendez-vous trouvé.</div>
+}
+else
+{
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Date début</th>
+                <th>Patient</th>
+                <th>Kiné</th>
+                <th>Acte</th>
+                <th>Salle</th>
+                <th>Montant</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var appointment in appointments)
+            {
+                <tr>
+                    <td>@appointment.Start</td>
+                    <td>@appointment.PatientName</td>
+                    <td>@appointment.KineName</td>
+                    <td>@appointment.Acte</td>
+                    <td>@appointment.Room</td>
+                    <td>@appointment.Amount</td>
+                    <td>@appointment.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showAppointmentForm)
+{
+    <div class="card mt-4">
+        <div class="card-header">Nouveau rendez-vous</div>
+        <div class="card-body">
+            <EditForm Model="newAppointment" OnValidSubmit="CreateAppointmentAsync">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Patient</label>
+                        <InputSelect class="form-select" @bind-Value="newAppointment.PatientId">
+                            <option value="">-- Sélectionnez --</option>
+                            @foreach (var patient in patients)
+                            {
+                                <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kiné</label>
+                        <InputSelect class="form-select" @bind-Value="newAppointment.KineId">
+                            <option value="">-- Sélectionnez --</option>
+                            @foreach (var kine in kines)
+                            {
+                                <option value="@kine.Id">@kine.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Date début</label>
+                        <InputDate class="form-control" @bind-Value="newAppointment.Start" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Heure début</label>
+                        <InputText class="form-control" @bind-Value="startTime" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Durée (min)</label>
+                        <InputNumber class="form-control" @bind-Value="durationMinutes" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Acte</label>
+                        <InputText class="form-control" @bind-Value="newAppointment.Acte" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Salle</label>
+                        <InputText class="form-control" @bind-Value="newAppointment.Room" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Montant</label>
+                        <InputNumber class="form-control" @bind-Value="newAppointment.Amount" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Part CNAM</label>
+                        <InputNumber class="form-control" @bind-Value="newAppointment.CnamCovered" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Statut</label>
+                        <InputSelect class="form-select" @bind-Value="newAppointment.Status">
+                            <option value="planifie">planifie</option>
+                            <option value="termine">termine</option>
+                            <option value="annule">annule</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Paiement</label>
+                        <InputSelect class="form-select" @bind-Value="newAppointment.PaymentStatus">
+                            <option value="non_paye">non_paye</option>
+                            <option value="partiellement_paye">partiellement_paye</option>
+                            <option value="paye">paye</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Notes</label>
+                        <InputTextArea class="form-control" @bind-Value="newAppointment.Notes" Rows="3" />
+                    </div>
+                    <div class="col-md-12 d-flex gap-2">
+                        <button class="btn btn-success" type="submit">Enregistrer</button>
+                        <button class="btn btn-outline-secondary" type="button" @onclick="HideAddAppointment">Annuler</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AppointmentDto>? appointments;
+    private List<PatientDto> patients = new();
+    private List<(int Id, string Name)> kines = new();
+    private AppointmentDto newAppointment = new()
+    {
+        Status = "planifie",
+        PaymentStatus = "non_paye",
+        Amount = 0,
+        PaidAmount = 0,
+        CnamCovered = 0,
+        Start = DateTime.Today,
+        End = DateTime.Today.AddHours(1)
+    };
+    private bool showAppointmentForm;
+    private string startTime = "08:00";
+    private int durationMinutes = 30;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPatients();
+        await LoadKines();
+        await LoadAppointments();
+    }
+
+    private async Task LoadPatients()
+    {
+        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
+    }
+
+    private async Task LoadKines()
+    {
+        kines = new List<(int Id, string Name)>();
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<UserDto>>("api/users/kines");
+            if (response != null)
+            {
+                kines = response.Select(u => (u.Id, u.Name)).ToList();
+            }
+        }
+        catch { }
+    }
+
+    private async Task LoadAppointments()
+    {
+        errorMessage = null;
+        try
+        {
+            appointments = await Http.GetFromJsonAsync<List<AppointmentDto>>("api/appointments");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            appointments = new List<AppointmentDto>();
+        }
+    }
+
+    private void ShowAddAppointment()
+    {
+        showAppointmentForm = true;
+    }
+
+    private void HideAddAppointment()
+    {
+        showAppointmentForm = false;
+        newAppointment = new AppointmentDto
+        {
+            Status = "planifie",
+            PaymentStatus = "non_paye",
+            Amount = 0,
+            PaidAmount = 0,
+            CnamCovered = 0,
+            Start = DateTime.Today,
+            End = DateTime.Today.AddHours(1)
+        };
+        startTime = "08:00";
+        durationMinutes = 30;
+    }
+
+    private async Task CreateAppointmentAsync()
+    {
+        if (newAppointment.Start.HasValue)
+        {
+            if (TimeSpan.TryParse(startTime, out var parsedTime))
+            {
+                newAppointment.Start = newAppointment.Start.Value.Date + parsedTime;
+                newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes);
+            }
+        }
+
+        var response = await Http.PostAsJsonAsync("api/appointments", newAppointment);
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAppointments();
+            HideAddAppointment();
+        }
+        else
+        {
+            errorMessage = "Erreur lors de l'enregistrement du rendez-vous.";
+        }
+    }
+
+    private class UserDto
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+    }
+}

@@ -44,3 +44,22 @@ public class PatientProgramDto
     public string? Objectifs { get; set; }
     public string? Remarques { get; set; }
 }
+
+public class AppointmentDto
+{
+    public int Id { get; set; }
+    public int PatientId { get; set; }
+    public string? PatientName { get; set; }
+    public int? KineId { get; set; }
+    public string? KineName { get; set; }
+    public DateTime? Start { get; set; }
+    public DateTime? End { get; set; }
+    public string? Acte { get; set; }
+    public string? Room { get; set; }
+    public string? Status { get; set; }
+    public string? PaymentStatus { get; set; }
+    public decimal Amount { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal CnamCovered { get; set; }
+    public string? Notes { get; set; }
+}
