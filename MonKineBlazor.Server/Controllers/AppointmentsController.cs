@@ -161,6 +161,20 @@ public class AppointmentsController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM appointments WHERE id = @id";
+        cmd.Parameters.AddWithValue("@id", id);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
+    }
+
     private bool HasConflict(int kineId, DateTime start, DateTime end, int? ignoreAppointmentId = null)
     {
         using var conn = DatabaseConnectionProvider.CreateConnection();

@@ -2,13 +2,17 @@
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <h1>Rendez-vous</h1>
 
 <div class="row mb-3">
-    <div class="col-md-6 d-flex flex-wrap gap-2">
-        <button class="btn btn-primary me-2" @onclick="LoadAppointments">Rafraîchir</button>
+    <div class="col-md-12 d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" @onclick="LoadAppointments">Rafraîchir</button>
         <button class="btn btn-success" @onclick="ShowAddAppointment">Nouveau rendez-vous</button>
+        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.Week)">Semaine</button>
+        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.Month)">Mois</button>
+        <button class="btn btn-outline-secondary" @onclick="() => SetCalendarView(CalendarView.List)">Liste</button>
     </div>
 </div>
 <div class="row mb-3">
@@ -50,6 +54,83 @@ else if (!appointments.Any())
 {
     <div class="alert alert-info">Aucun rendez-vous trouvé.</div>
 }
+else if (calendarView != CalendarView.List)
+{
+    @if (calendarView == CalendarView.Week)
+    {
+        <div class="table-responsive">
+            <table class="table table-bordered calendar-table">
+                <thead>
+                    <tr>
+                        @foreach (var day in GetWeekDays())
+                        {
+                            <th>@day.ToString("ddd dd/MM")</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        @foreach (var day in GetWeekDays())
+                        {
+                            <td>
+                                @foreach (var appt in appointments.Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start))
+                                {
+                                    <div class="mb-2 p-2 border rounded">
+                                        <strong>@appt.Start:HH:mm</strong><br />
+                                        <span>@appt.PatientName</span><br />
+                                        <span>@appt.KineName</span><br />
+                                        <span>@appt.Acte</span>
+                                    </div>
+                                }
+                            </td>
+                        }
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-bordered calendar-table">
+                <thead>
+                    <tr>
+                        <th>Lun</th>
+                        <th>Mar</th>
+                        <th>Mer</th>
+                        <th>Jeu</th>
+                        <th>Ven</th>
+                        <th>Sam</th>
+                        <th>Dim</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var week in GetMonthWeeks())
+                    {
+                        <tr>
+                            @foreach (var day in week)
+                            {
+                                <td class="align-top" style="min-height: 120px; vertical-align: top;">
+                                    <div class="fw-bold">@day.Day</div>
+                                    @foreach (var appt in appointments.Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start).Take(3))
+                                    {
+                                        <div class="mb-1 p-1 border rounded small">
+                                            <strong>@appt.Start:HH:mm</strong> @appt.KineName
+                                        </div>
+                                    }
+                                    @if (appointments.Count(a => a.Start.HasValue && a.Start.Value.Date == day.Date) > 3)
+                                    {
+                                        <div class="small text-muted">+ autres</div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
 else
 {
     <table class="table table-striped table-hover">
@@ -75,6 +156,10 @@ else
                     <td>@appointment.Room</td>
                     <td>@appointment.Amount</td>
                     <td>@appointment.Status</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-2" @onclick="() => EditAppointment(appointment)">Modifier</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supprimer</button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -135,6 +220,15 @@ else
                     <div class="col-md-4">
                         <label class="form-label">Part CNAM</label>
                         <InputNumber class="form-control" @bind-Value="newAppointment.CnamCovered" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Kinés disponibles</label>
+                        <div class="form-control" style="height: auto; min-height: 110px;">
+                            @foreach (var available in AvailableKines())
+                            {
+                                <div>@available.FullName (@available.Username)</div>
+                            }
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Statut</label>
@@ -273,6 +367,11 @@ else
         }
     }
 
+    private CalendarView calendarView = CalendarView.List;
+    private DateTime currentDate = DateTime.Today;
+    private bool isEditing;
+    private AppointmentDto? editingAppointment;
+
     private IEnumerable<AppointmentDto> FilteredAppointments()
     {
         if (appointments == null)
@@ -303,5 +402,152 @@ else
         }
 
         return filtered;
+    }
+
+    private void SetCalendarView(CalendarView view)
+    {
+        calendarView = view;
+    }
+
+    private IEnumerable<DateTime> GetWeekDays()
+    {
+        var startOfWeek = currentDate.AddDays(-((int)currentDate.DayOfWeek + 6) % 7);
+        return Enumerable.Range(0, 7).Select(i => startOfWeek.AddDays(i));
+    }
+
+    private IEnumerable<List<DateTime>> GetMonthWeeks()
+    {
+        var firstOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var firstDay = firstOfMonth.AddDays(-((int)firstOfMonth.DayOfWeek + 6) % 7);
+        var weeks = new List<List<DateTime>>();
+
+        for (var weekStart = firstDay; weekStart < firstOfMonth.AddMonths(1) || weeks.Count < 5; weekStart = weekStart.AddDays(7))
+        {
+            weeks.Add(Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList());
+        }
+
+        return weeks;
+    }
+
+    private void EditAppointment(AppointmentDto appointment)
+    {
+        editingAppointment = appointment;
+        isEditing = true;
+        showAppointmentForm = true;
+        newAppointment = new AppointmentDto
+        {
+            Id = appointment.Id,
+            PatientId = appointment.PatientId,
+            KineId = appointment.KineId,
+            PatientName = appointment.PatientName,
+            KineName = appointment.KineName,
+            Start = appointment.Start,
+            End = appointment.End,
+            Acte = appointment.Acte,
+            Room = appointment.Room,
+            Status = appointment.Status,
+            PaymentStatus = appointment.PaymentStatus,
+            Amount = appointment.Amount,
+            PaidAmount = appointment.PaidAmount,
+            CnamCovered = appointment.CnamCovered,
+            Notes = appointment.Notes
+        };
+        if (newAppointment.Start.HasValue)
+        {
+            startTime = newAppointment.Start.Value.ToString("HH:mm");
+            durationMinutes = newAppointment.End.HasValue ? (int)(newAppointment.End.Value - newAppointment.Start.Value).TotalMinutes : 30;
+        }
+    }
+
+    private async Task DeleteAppointment(int id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer ce rendez-vous ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/appointments/{id}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAppointments();
+        }
+        else
+        {
+            errorMessage = "Impossible de supprimer le rendez-vous.";
+        }
+    }
+
+    private IEnumerable<UserDto> AvailableKines()
+    {
+        if (!newAppointment.Start.HasValue || durationMinutes <= 0)
+        {
+            return kines;
+        }
+
+        var start = newAppointment.Start.Value.Date + TimeSpan.Parse(startTime);
+        var end = start.AddMinutes(durationMinutes);
+        return kines.Where(k => !appointments.Any(a => a.KineId == k.Id && a.Id != newAppointment.Id &&
+            a.Start.HasValue && (start < (a.End ?? a.Start) && a.Start < end))).ToList();
+    }
+
+    private async Task SaveAppointmentAsync()
+    {
+        errorMessage = null;
+        if (newAppointment.Start.HasValue)
+        {
+            if (TimeSpan.TryParse(startTime, out var parsedTime))
+            {
+                newAppointment.Start = newAppointment.Start.Value.Date + parsedTime;
+                newAppointment.End = newAppointment.Start.Value.AddMinutes(durationMinutes);
+            }
+        }
+
+        HttpResponseMessage response;
+        if (isEditing && editingAppointment != null)
+        {
+            response = await Http.PutAsJsonAsync($"api/appointments/{newAppointment.Id}", newAppointment);
+        }
+        else
+        {
+            response = await Http.PostAsJsonAsync("api/appointments", newAppointment);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAppointments();
+            HideAddAppointment();
+            isEditing = false;
+            editingAppointment = null;
+        }
+        else
+        {
+            errorMessage = "Erreur lors de l'enregistrement du rendez-vous.";
+        }
+    }
+
+    private void HideAddAppointment()
+    {
+        showAppointmentForm = false;
+        isEditing = false;
+        editingAppointment = null;
+        newAppointment = new AppointmentDto
+        {
+            Status = "planifie",
+            PaymentStatus = "non_paye",
+            Amount = 0,
+            PaidAmount = 0,
+            CnamCovered = 0,
+            Start = DateTime.Today,
+            End = DateTime.Today.AddHours(1)
+        };
+        startTime = "08:00";
+        durationMinutes = 30;
+    }
+
+    private enum CalendarView
+    {
+        List,
+        Week,
+        Month
     }
 }
