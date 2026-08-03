@@ -163,7 +163,10 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button class="btn btn-success" @onclick="CreateProgramAppointments" disabled="@(programPreview.Count == 0)">Créer les rendez-vous</button>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-primary" @onclick="StartProgram" disabled="@(selectedProgram == null)">Démarrer ce programme</button>
+                            <button class="btn btn-success" @onclick="CreateProgramAppointments" disabled="@(programPreview.Count == 0)">Créer les rendez-vous</button>
+                        </div>
                     </div>
                 </div>
             }
@@ -524,6 +527,29 @@
         RefreshProgramPreview();
     }
 
+    private void StartProgram()
+    {
+        if (selectedProgram == null)
+        {
+            return;
+        }
+
+        if (selectedProgram.DateDebut.HasValue)
+        {
+            programStartDate = selectedProgram.DateDebut.Value.Date;
+        }
+        else
+        {
+            programStartDate = DateTime.Today;
+        }
+
+        programStartTime = "08:00";
+        programRoom = "Salle 1";
+        programSelectedKineId = 0;
+        RefreshProgramPreview();
+        CreateProgramAppointments();
+    }
+
     private void RefreshProgramPreview()
     {
         if (selectedProgram == null)
@@ -869,6 +895,8 @@
         };
         startTime = "08:00";
         durationMinutes = 30;
+        selectedProgram = null;
+        programPreview.Clear();
     }
 
     private void PreviousWeek()
