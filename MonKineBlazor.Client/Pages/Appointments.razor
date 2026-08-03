@@ -26,7 +26,7 @@
             <option value="0">Tous</option>
             @foreach (var kine in kines)
             {
-                <option value="@kine.Id">@kine.FullName (@kine.Username)</option>
+                <option value="@kine.Id">@((kine.FullName ?? kine.Username))</option>
             }
         </InputSelect>
     </div>
@@ -189,7 +189,7 @@ else
                             <option value="">-- Sélectionnez --</option>
                             @foreach (var kine in kines)
                             {
-                                <option value="@kine.Id">@kine.Name</option>
+                                <option value="@kine.Id">@((kine.FullName ?? kine.Username))</option>
                             }
                         </InputSelect>
                     </div>
@@ -226,7 +226,7 @@ else
                         <div class="form-control" style="height: auto; min-height: 110px;">
                             @foreach (var available in AvailableKines())
                             {
-                                <div>@available.FullName (@available.Username)</div>
+                                <div>@((available.FullName ?? available.Username))</div>
                             }
                         </div>
                     </div>
@@ -325,23 +325,6 @@ else
     private void ShowAddAppointment()
     {
         showAppointmentForm = true;
-    }
-
-    private void HideAddAppointment()
-    {
-        showAppointmentForm = false;
-        newAppointment = new AppointmentDto
-        {
-            Status = "planifie",
-            PaymentStatus = "non_paye",
-            Amount = 0,
-            PaidAmount = 0,
-            CnamCovered = 0,
-            Start = DateTime.Today,
-            End = DateTime.Today.AddHours(1)
-        };
-        startTime = "08:00";
-        durationMinutes = 30;
     }
 
     private async Task CreateAppointmentAsync()
@@ -486,8 +469,8 @@ else
 
         var start = newAppointment.Start.Value.Date + TimeSpan.Parse(startTime);
         var end = start.AddMinutes(durationMinutes);
-        return kines.Where(k => !appointments.Any(a => a.KineId == k.Id && a.Id != newAppointment.Id &&
-            a.Start.HasValue && (start < (a.End ?? a.Start) && a.Start < end))).ToList();
+        return kines.Where(k => !appointments?.Any(a => a.KineId == k.Id && a.Id != newAppointment.Id &&
+            a.Start.HasValue && (start < (a.End ?? a.Start) && a.Start < end)) == true).ToList();
     }
 
     private async Task SaveAppointmentAsync()
