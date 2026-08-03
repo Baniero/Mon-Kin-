@@ -49,6 +49,20 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    @successMessage
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissSuccessMessage"></button>
+            </div>
+        </div>
+    </div>
+}
+
 @if (activeSubmodule == AppointmentSubmodule.ProgramPlanning)
 {
     <div class="row">
@@ -58,13 +72,16 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Patient</label>
-                        <InputSelect class="form-select" @bind-Value="selectedProgramPatientId" @onchange="OnProgramPatientChanged">
-                            <option value="0">-- Sélectionnez --</option>
-                            @foreach (var patient in patients)
-                            {
-                                <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
-                            }
-                        </InputSelect>
+                        <div class="input-group">
+                            <InputSelect class="form-select" @bind-Value="selectedProgramPatientId" @onchange="OnProgramPatientChanged">
+                                <option value="0">-- Sélectionnez --</option>
+                                @foreach (var patient in patients)
+                                {
+                                    <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
+                                }
+                            </InputSelect>
+                            <button class="btn btn-outline-primary" type="button" @onclick="LoadProgramsForSelectedPatient">Charger</button>
+                        </div>
                     </div>
                     @if (selectedProgramPatient != null)
                     {
@@ -137,6 +154,17 @@
                                     }
                                 </InputSelect>
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jours de séances</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var day in Enum.GetValues<DayOfWeek>())
+                                {
+                                    var selected = selectedProgramWeekDays.Contains(day);
+                                    <button type="button" class="btn btn-sm @(selected ? "btn-primary" : "btn-outline-secondary")" @onclick="() => ToggleProgramWeekDay(day)">@GetDayLabel(day)</button>
+                                }
+                            </div>
+                            <div class="small text-muted mt-2">Sélectionnez jusqu'à @((selectedProgram?.NbSeancesParSemaine ?? 1)) jours par semaine.</div>
                         </div>
                         <div class="mb-3">
                             <strong>Programme :</strong> @selectedProgram.Titre<br />
@@ -447,6 +475,7 @@
     private string programStartTime = "08:00";
     private string programRoom = "Salle 1";
     private int programSelectedKineId;
+    private List<DayOfWeek> selectedProgramWeekDays = new();
     private List<AppointmentDto> programPreview = new();
     private bool isLoadingPrograms;
     private string? programLoadError;
@@ -455,6 +484,8 @@
     private bool isEditing;
     private AppointmentDto? editingAppointment;
     private DateTime currentDate = DateTime.Today;
+    private string? successMessage;
+    private CancellationTokenSource? successMessageCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -518,27 +549,16 @@
         }
     }
 
-    private async Task OnProgramPatientChanged(ChangeEventArgs e)
+    private void OnProgramPatientChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out var patientId))
         {
             selectedProgramPatientId = patientId;
             selectedProgramPatient = patients.FirstOrDefault(p => p.Id == patientId);
             selectedProgram = null;
+            patientPrograms.Clear();
             programPreview.Clear();
-            if (patientId > 0)
-            {
-                await LoadProgramsForPatient(patientId);
-                if (patientPrograms.Any())
-                {
-                    selectedProgram = patientPrograms[0];
-                    RefreshProgramPreview();
-                }
-            }
-            else
-            {
-                patientPrograms.Clear();
-            }
+            programLoadError = null;
         }
         else
         {
@@ -547,6 +567,7 @@
             patientPrograms.Clear();
             selectedProgram = null;
             programPreview.Clear();
+            programLoadError = null;
         }
     }
 
@@ -578,6 +599,21 @@
         }
     }
 
+    private async Task LoadProgramsForSelectedPatient()
+    {
+        if (selectedProgramPatientId <= 0)
+        {
+            return;
+        }
+
+        selectedProgramPatient = patients.FirstOrDefault(p => p.Id == selectedProgramPatientId);
+        await LoadProgramsForPatient(selectedProgramPatientId);
+        if (patientPrograms.Any())
+        {
+            SelectProgram(patientPrograms[0]);
+        }
+    }
+
     private void SelectProgram(PatientProgramDto program)
     {
         selectedProgram = program;
@@ -585,10 +621,11 @@
         programStartTime = "08:00";
         programRoom = "Salle 1";
         programSelectedKineId = 0;
+        selectedProgramWeekDays = GetDefaultWeekDays(program.NbSeancesParSemaine, programStartDate.DayOfWeek);
         RefreshProgramPreview();
     }
 
-    private void StartProgram()
+    private async Task StartProgram()
     {
         if (selectedProgram == null)
         {
@@ -608,7 +645,7 @@
         programRoom = "Salle 1";
         programSelectedKineId = 0;
         RefreshProgramPreview();
-        CreateProgramAppointments();
+        await CreateProgramAppointments();
     }
 
     private void RefreshProgramPreview()
@@ -621,6 +658,48 @@
         programPreview = GenerateProgramAppointments(selectedProgram);
     }
 
+    private void ToggleProgramWeekDay(DayOfWeek day)
+    {
+        if (selectedProgramWeekDays.Contains(day))
+        {
+            selectedProgramWeekDays.Remove(day);
+        }
+        else
+        {
+            selectedProgramWeekDays.Add(day);
+        }
+
+        if (selectedProgram != null && selectedProgramWeekDays.Count > selectedProgram.NbSeancesParSemaine)
+        {
+            selectedProgramWeekDays = selectedProgramWeekDays.OrderBy(d => d).Take(selectedProgram.NbSeancesParSemaine).ToList();
+        }
+
+        RefreshProgramPreview();
+    }
+
+    private static string GetDayLabel(DayOfWeek day) => day switch
+    {
+        DayOfWeek.Monday => "Lundi",
+        DayOfWeek.Tuesday => "Mardi",
+        DayOfWeek.Wednesday => "Mercredi",
+        DayOfWeek.Thursday => "Jeudi",
+        DayOfWeek.Friday => "Vendredi",
+        DayOfWeek.Saturday => "Samedi",
+        DayOfWeek.Sunday => "Dimanche",
+        _ => day.ToString(),
+    };
+
+    private static List<DayOfWeek> GetDefaultWeekDays(int count, DayOfWeek startDay)
+    {
+        var days = new List<DayOfWeek>();
+        for (var i = 0; i < 7 && days.Count < count; i++)
+        {
+            var next = (DayOfWeek)(((int)startDay + i) % 7);
+            days.Add(next);
+        }
+        return days;
+    }
+
     private List<AppointmentDto> GenerateProgramAppointments(PatientProgramDto program)
     {
         var totalSessions = Math.Max(1, program.NbSeances);
@@ -631,45 +710,67 @@
             startTimeSpan = TimeSpan.FromHours(8);
         }
 
+        var effectiveWeekDays = selectedProgramWeekDays.Any() ? selectedProgramWeekDays.OrderBy(d => d).Take(perWeek).ToList() : GetDefaultWeekDays(perWeek, startDate.DayOfWeek);
+        if (!effectiveWeekDays.Any())
+        {
+            effectiveWeekDays = GetDefaultWeekDays(perWeek, startDate.DayOfWeek);
+        }
+
         var result = new List<AppointmentDto>();
         var currentDate = startDate;
-        var sessionsScheduledThisWeek = 0;
 
-        for (var i = 0; i < totalSessions; i++)
+        while (result.Count < totalSessions)
         {
-            if (sessionsScheduledThisWeek >= perWeek)
+            if (effectiveWeekDays.Contains(currentDate.DayOfWeek))
             {
-                currentDate = currentDate.AddDays(1);
-                while (currentDate.DayOfWeek != DayOfWeek.Monday)
+                var startDateTime = currentDate + startTimeSpan;
+                var endDateTime = startDateTime.AddMinutes(program.DureeSeanceMinutes > 0 ? program.DureeSeanceMinutes : 30);
+                result.Add(new AppointmentDto
                 {
-                    currentDate = currentDate.AddDays(1);
-                }
-                sessionsScheduledThisWeek = 0;
+                    PatientId = program.PatientId,
+                    PatientName = selectedProgramPatient?.Nom + " " + selectedProgramPatient?.Prenom,
+                    KineId = programSelectedKineId > 0 ? programSelectedKineId : null,
+                    Start = startDateTime,
+                    End = endDateTime,
+                    Acte = program.NatureSeances,
+                    Room = programRoom,
+                    Status = "planifie",
+                    PaymentStatus = "non_paye",
+                    Amount = program.PrixUnitaire,
+                    CnamCovered = 0,
+                    Notes = $"Programme {program.Titre}"
+                });
             }
 
-            var startDateTime = currentDate + startTimeSpan;
-            var endDateTime = startDateTime.AddMinutes(program.DureeSeanceMinutes > 0 ? program.DureeSeanceMinutes : 30);
-            result.Add(new AppointmentDto
-            {
-                PatientId = program.PatientId,
-                PatientName = selectedProgramPatient?.Nom + " " + selectedProgramPatient?.Prenom,
-                KineId = programSelectedKineId > 0 ? programSelectedKineId : null,
-                Start = startDateTime,
-                End = endDateTime,
-                Acte = program.NatureSeances,
-                Room = programRoom,
-                Status = "planifie",
-                PaymentStatus = "non_paye",
-                Amount = program.PrixUnitaire,
-                CnamCovered = 0,
-                Notes = $"Programme {program.Titre}"
-            });
-
             currentDate = currentDate.AddDays(1);
-            sessionsScheduledThisWeek++;
         }
 
         return result;
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessageCts?.Cancel();
+        successMessage = message;
+        StateHasChanged();
+
+        successMessageCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(5000, successMessageCts.Token);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignorer l'annulation lorsque l'utilisateur ferme manuellement.
+        }
+    }
+
+    private void DismissSuccessMessage()
+    {
+        successMessageCts?.Cancel();
+        successMessage = null;
     }
 
     private async Task CreateProgramAppointments()
@@ -691,7 +792,7 @@
         }
         await LoadAppointments();
         programPreview.Clear();
-        errorMessage = "Rendez-vous du programme créés avec succès.";
+        await ShowSuccessMessage("Rendez-vous du programme créés avec succès.");
     }
 
     private async Task OnNewAppointmentPatientChanged(ChangeEventArgs e)
