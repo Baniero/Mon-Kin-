@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS session_types (
     libelle TEXT UNIQUE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    full_name TEXT,
+    role TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS patient_programs (
     id SERIAL PRIMARY KEY,
     patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -69,6 +78,8 @@ CREATE TABLE IF NOT EXISTS patient_programs (
 );
 
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS nb_seances_par_semaine INTEGER DEFAULT 1;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS date_debut DATE;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS date_fin DATE;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS code_bureau TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS annee TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS numero_decision TEXT;
@@ -78,6 +89,9 @@ ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_ht NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS tva NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS montant_tva NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_ttc NUMERIC DEFAULT 0;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS statut TEXT DEFAULT 'planifie';
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS objectifs TEXT;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS remarques TEXT;
 
 CREATE TABLE IF NOT EXISTS patient_finance (
     patient_id INTEGER PRIMARY KEY REFERENCES patients(id) ON DELETE CASCADE,
