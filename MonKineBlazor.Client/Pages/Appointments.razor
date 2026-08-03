@@ -509,6 +509,18 @@
                     RefreshProgramPreview();
                 }
             }
+            else
+            {
+                patientPrograms.Clear();
+            }
+        }
+        else
+        {
+            selectedProgramPatientId = 0;
+            selectedProgramPatient = null;
+            patientPrograms.Clear();
+            selectedProgram = null;
+            programPreview.Clear();
         }
     }
 
