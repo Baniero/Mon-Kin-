@@ -147,6 +147,10 @@ else
                 <div class="card mb-4">
                     <div class="card-header">Programmes du patient</div>
                     <div class="card-body p-0">
+                        @if (!string.IsNullOrEmpty(statusMessage))
+                        {
+                            <div class="alert alert-info m-3">@statusMessage</div>
+                        }
                         @if (programs is null)
                         {
                             <div class="p-3">Chargement des programmes...</div>
@@ -249,7 +253,7 @@ else
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Prix HT</label>
-                                    <InputNumber class="form-control" Value="newProgram.PrixHT" disabled />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixHT" disabled />
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">TVA (%)</label>
@@ -257,11 +261,11 @@ else
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Montant TVA</label>
-                                    <InputNumber class="form-control" Value="newProgram.MontantTVA" disabled />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.MontantTVA" disabled />
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Prix TTC</label>
-                                    <InputNumber class="form-control" Value="newProgram.PrixTTC" disabled />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixTTC" disabled />
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Objectifs</label>
