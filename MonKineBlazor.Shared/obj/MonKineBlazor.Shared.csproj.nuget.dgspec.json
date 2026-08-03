@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {}
+    "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {
+    "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj",
+        "projectUniqueName": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj",
         "projectName": "MonKineBlazor.Shared",
-        "projectPath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj",
+        "projectPath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj",
         "packagesPath": "C:\\Users\\Nader Harrabi\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\obj\\",
+        "outputPath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Nader Harrabi\\AppData\\Roaming\\NuGet\\NuGet.Config"

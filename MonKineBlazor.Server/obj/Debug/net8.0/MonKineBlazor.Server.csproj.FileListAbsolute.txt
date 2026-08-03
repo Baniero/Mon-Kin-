@@ -34,3 +34,4 @@ C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Server\obj\Debug\n
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Server\obj\Debug\net8.0\MonKineBlazor.Server.genruntimeconfig.cache
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Server\obj\Debug\net8.0\ref\MonKineBlazor.Server.dll
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Server\bin\Debug\net8.0\Npgsql.dll
+c:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Server\obj\Debug\net8.0\MonKineBlazor.Server.sourcelink.json

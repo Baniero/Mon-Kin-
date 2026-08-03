@@ -683,11 +683,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\MonKineBlazor.Server.csproj",
+      "projectUniqueName": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\MonKineBlazor.Server.csproj",
       "projectName": "MonKineBlazor.Server",
-      "projectPath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\MonKineBlazor.Server.csproj",
+      "projectPath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\MonKineBlazor.Server.csproj",
       "packagesPath": "C:\\Users\\Nader Harrabi\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\obj\\",
+      "outputPath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Server\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Nader Harrabi\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -702,8 +702,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {
-              "projectPath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj"
+            "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj": {
+              "projectPath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Shared\\MonKineBlazor.Shared.csproj"
             }
           }
         }

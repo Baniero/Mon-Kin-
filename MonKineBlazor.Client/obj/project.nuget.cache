@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "/zhI1FrLL7s=",
+  "dgSpecHash": "X+Vx6TnWe10=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Client\\MonKineBlazor.Client.csproj",
+  "projectFilePath": "c:\\Users\\Nader Harrabi\\Desktop\\APP db\\mon kiné\\MonKineBlazor.Client\\MonKineBlazor.Client.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Nader Harrabi\\.nuget\\packages\\microsoft.aspnetcore.authorization\\8.0.29\\microsoft.aspnetcore.authorization.8.0.29.nupkg.sha512",
     "C:\\Users\\Nader Harrabi\\.nuget\\packages\\microsoft.aspnetcore.components\\8.0.29\\microsoft.aspnetcore.components.8.0.29.nupkg.sha512",

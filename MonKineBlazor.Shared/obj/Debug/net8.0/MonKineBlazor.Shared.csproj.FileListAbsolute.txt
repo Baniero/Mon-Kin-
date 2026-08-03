@@ -9,3 +9,4 @@ C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Shared\obj\Debug\n
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Shared\obj\Debug\net8.0\refint\MonKineBlazor.Shared.dll
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Shared\obj\Debug\net8.0\MonKineBlazor.Shared.pdb
 C:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Shared\obj\Debug\net8.0\ref\MonKineBlazor.Shared.dll
+c:\Users\Nader Harrabi\Desktop\APP db\mon kiné\MonKineBlazor.Shared\obj\Debug\net8.0\MonKineBlazor.Shared.sourcelink.json
