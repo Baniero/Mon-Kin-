@@ -7,8 +7,9 @@ services:
     dockerfilePath: Dockerfile
     envVars:
       - key: DATABASE_URL
-        value: "postgres://<username>:<password>@<host>:<port>/<database>"
-        fromDatabase: false
+        fromDatabase:
+          name: dpg-d9odl6vlk1mc738coipg-a
+          property: DATABASE_URL
     healthCheckPath: "/"
     plan: starter
     region: oregon

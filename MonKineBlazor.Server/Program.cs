@@ -8,6 +8,15 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+try
+{
+    DatabaseInitializer.EnsureDatabaseCreated(app.Environment.ContentRootPath);
+}
+catch
+{
+    // Ignore initialization errors here; they will surface in requests.
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
