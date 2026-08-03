@@ -73,6 +73,36 @@ public class UserDto
     public bool Active { get; set; } = true;
 }
 
+public class UserCreateRequestDto
+{
+    public string Username { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string Role { get; set; } = "kine";
+    public bool Active { get; set; } = true;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class UserUpdateRequestDto
+{
+    public int Id { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public string Role { get; set; } = "kine";
+    public bool Active { get; set; } = true;
+    public string? Password { get; set; }
+}
+
+public class LoginRequestDto
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginResponseDto
+{
+    public UserDto User { get; set; } = new UserDto();
+}
+
 public class CashClosingDto
 {
     public DateTime DateJour { get; set; }

@@ -1,0 +1,130 @@
+@page "/users"
+@inject MonKineBlazor.Client.Services.AuthService AuthService
+@inject HttpClient Http
+
+<h1>Utilisateurs</h1>
+
+@if (!AuthService.IsAuthenticated || AuthService.CurrentUser?.Role != "admin")
+{
+    <div class="alert alert-danger">Accès refusé. Seul l'administrateur peut gérer les utilisateurs.</div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Créer un utilisateur</div>
+                <div class="card-body">
+                    <EditForm Model="newUser" OnValidSubmit="CreateUser">
+                        <div class="mb-3">
+                            <label class="form-label">Nom d'utilisateur</label>
+                            <InputText class="form-control" @bind-Value="newUser.Username" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nom complet</label>
+                            <InputText class="form-control" @bind-Value="newUser.FullName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rôle</label>
+                            <InputSelect class="form-select" @bind-Value="newUser.Role">
+                                <option value="kine">Kiné</option>
+                                <option value="admin">Admin</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <InputText type="password" class="form-control" @bind-Value="newUser.Password" />
+                        </div>
+                        <div class="form-check mb-3">
+                            <InputCheckbox class="form-check-input" @bind-Value="newUser.Active" />
+                            <label class="form-check-label">Actif</label>
+                        </div>
+                        <button class="btn btn-success" type="submit">Créer</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Liste des utilisateurs</div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Utilisateur</th>
+                            <th>Nom complet</th>
+                            <th>Rôle</th>
+                            <th>Actif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>@user.Username</td>
+                                <td>@user.FullName</td>
+                                <td>@user.Role</td>
+                                <td>@(user.Active ? "Oui" : "Non")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string? errorMessage;
+    private List<UserDto> users = new();
+    private UserCreateRequestDto newUser = new() { Role = "kine", Active = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.IsAuthenticated && AuthService.CurrentUser?.Role == "admin")
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<UserDto>>("api/users") ?? new List<UserDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task CreateUser()
+    {
+        errorMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/users", newUser);
+            if (response.IsSuccessStatusCode)
+            {
+                newUser = new UserCreateRequestDto { Role = "kine", Active = true };
+                await LoadUsers();
+            }
+            else
+            {
+                errorMessage = "Impossible de créer l'utilisateur.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

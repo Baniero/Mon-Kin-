@@ -1,0 +1,53 @@
+@page "/login"
+@inject MonKineBlazor.Client.Services.AuthService AuthService
+@inject NavigationManager NavigationManager
+
+<h1>Connexion</h1>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+            <div class="mb-3">
+                <label class="form-label">Nom d'utilisateur</label>
+                <InputText class="form-control" @bind-Value="loginModel.Username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Mot de passe</label>
+                <InputText type="password" class="form-control" @bind-Value="loginModel.Password" />
+            </div>
+            <button class="btn btn-primary" type="submit">Se connecter</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginRequestDto loginModel = new();
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        if (AuthService.IsAuthenticated)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = null;
+        var success = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
+        if (success)
+        {
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            errorMessage = "Nom d'utilisateur ou mot de passe invalide.";
+        }
+    }
+}

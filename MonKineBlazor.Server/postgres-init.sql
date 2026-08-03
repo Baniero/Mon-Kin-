@@ -49,8 +49,10 @@ CREATE TABLE IF NOT EXISTS users (
     full_name TEXT,
     role TEXT,
     active BOOLEAN DEFAULT TRUE,
+    password_hash TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
 CREATE TABLE IF NOT EXISTS patient_programs (
     id SERIAL PRIMARY KEY,

@@ -42,22 +42,64 @@
                 <span class="nav-text">CNAM</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3">
+                <div class="nav-item px-3">
             <NavLink class="nav-link" href="manage-cabinet">
                 <span class="nav-icon bi bi-building" aria-hidden="true"></span>
                 <span class="nav-text">Gérer mon cabinet</span>
             </NavLink>
         </div>
+        @if (AuthService.IsAuthenticated && AuthService.CurrentUser?.Role == "admin")
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="users">
+                    <span class="nav-icon bi bi-people" aria-hidden="true"></span>
+                    <span class="nav-text">Utilisateurs</span>
+                </NavLink>
+            </div>
+        }
+        <div class="nav-item px-3">
+            @if (AuthService.IsAuthenticated)
+            {
+                <button class="nav-link btn btn-link text-start w-100" @onclick="Logout">
+                    <span class="nav-icon bi bi-box-arrow-right" aria-hidden="true"></span>
+                    <span class="nav-text">Déconnexion (@AuthService.CurrentUser?.Username)</span>
+                </button>
+            }
+            else
+            {
+                <NavLink class="nav-link" href="login">
+                    <span class="nav-icon bi bi-box-arrow-in-right" aria-hidden="true"></span>
+                    <span class="nav-text">Connexion</span>
+                </NavLink>
+            }
+        </div>
     </nav>
 </div>
 
 @code {
+    [Inject]
+    private MonKineBlazor.Client.Services.AuthService AuthService { get; set; } = null!;
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
+
     private bool collapseNavMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
+    protected override void OnInitialized()
+    {
+        AuthService.OnChange += StateHasChanged;
+    }
+
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        NavigationManager.NavigateTo("/login");
     }
 }
