@@ -199,17 +199,69 @@ else
                                     <label class="form-label">Nature</label>
                                     <InputText class="form-control" @bind-Value="newProgram.NatureSeances" />
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Nb séances</label>
-                                    <InputNumber class="form-control" @bind-Value="newProgram.NbSeances" />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.NbSeances" @onchange="_ => RecalculateProgram()" />
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Séances / semaine</label>
+                                    <InputSelect class="form-select" @bind-Value="newProgram.NbSeancesParSemaine" @onchange="_ => RecalculateProgram()">
+                                        @for (int i = 1; i <= 6; i++)
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label">Durée (min)</label>
                                     <InputNumber class="form-control" @bind-Value="newProgram.DureeSeanceMinutes" />
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-2">
                                     <label class="form-label">Date début</label>
-                                    <InputDate class="form-control" @bind-Value="newProgram.DateDebut" />
+                                    <InputDate class="form-control" @bind-Value="newProgram.DateDebut" @onchange="_ => RecalculateProgram()" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date fin</label>
+                                    <InputDate class="form-control" @bind-Value="newProgram.DateFin" disabled />
+                                </div>
+                                @if (isCnam)
+                                {
+                                    <div class="col-md-3">
+                                        <label class="form-label">Code bureau</label>
+                                        <InputText class="form-control" @bind-Value="newProgram.CodeBureau" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Année</label>
+                                        <InputText class="form-control" @bind-Value="newProgram.Annee" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">N° décision</label>
+                                        <InputText class="form-control" @bind-Value="newProgram.NumeroDecision" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">N° ordre</label>
+                                        <InputText class="form-control" @bind-Value="newProgram.NumeroOrdre" />
+                                    </div>
+                                }
+                                <div class="col-md-3">
+                                    <label class="form-label">Prix Unitaire</label>
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixUnitaire" @onchange="_ => RecalculateProgram()" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Prix HT</label>
+                                    <InputNumber class="form-control" Value="newProgram.PrixHT" disabled />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">TVA (%)</label>
+                                    <InputNumber class="form-control" @bind-Value="newProgram.TVA" @onchange="_ => RecalculateProgram()" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Montant TVA</label>
+                                    <InputNumber class="form-control" Value="newProgram.MontantTVA" disabled />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Prix TTC</label>
+                                    <InputNumber class="form-control" Value="newProgram.PrixTTC" disabled />
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Objectifs</label>
@@ -263,7 +315,13 @@ else
         DateDebut = DateTime.Now,
         Statut = "planifie",
         NbSeances = 1,
+        NbSeancesParSemaine = 1,
         DureeSeanceMinutes = 30,
+        TVA = 20,
+        PrixUnitaire = 0,
+        PrixHT = 0,
+        MontantTVA = 0,
+        PrixTTC = 0,
     };
     private string? statusMessage;
     private string? errorMessage;
@@ -390,6 +448,7 @@ else
             return;
         }
 
+        RecalculateProgram();
         newProgram.PatientId = selectedPatient.Id;
         var response = await Http.PostAsJsonAsync("api/patientprograms", newProgram);
         if (response.IsSuccessStatusCode)
@@ -402,6 +461,23 @@ else
         {
             statusMessage = "Erreur lors de l'ajout du programme.";
         }
+    }
+
+    private void RecalculateProgram()
+    {
+        if (newProgram.DateDebut.HasValue && newProgram.NbSeances > 0 && newProgram.NbSeancesParSemaine > 0)
+        {
+            var weeks = (int)Math.Ceiling(newProgram.NbSeances / (double)newProgram.NbSeancesParSemaine);
+            newProgram.DateFin = newProgram.DateDebut.Value.AddDays((weeks * 7) - 1);
+        }
+        else
+        {
+            newProgram.DateFin = null;
+        }
+
+        newProgram.PrixHT = newProgram.PrixUnitaire * newProgram.NbSeances;
+        newProgram.MontantTVA = Math.Round(newProgram.PrixHT * (newProgram.TVA / 100m), 2);
+        newProgram.PrixTTC = Math.Round(newProgram.PrixHT + newProgram.MontantTVA, 2);
     }
 
     private void CopyPatientToForm(PatientDto patient)
@@ -435,7 +511,13 @@ else
             DateDebut = DateTime.Now,
             Statut = "planifie",
             NbSeances = 1,
+            NbSeancesParSemaine = 1,
             DureeSeanceMinutes = 30,
+            TVA = 20,
+            PrixUnitaire = 0,
+            PrixHT = 0,
+            MontantTVA = 0,
+            PrixTTC = 0,
         };
     }
 }

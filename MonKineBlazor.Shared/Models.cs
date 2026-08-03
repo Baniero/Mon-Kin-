@@ -29,6 +29,17 @@ public class PatientProgramDto
     public int NbSeances { get; set; }
     public int DureeSeanceMinutes { get; set; }
     public DateTime? DateDebut { get; set; }
+    public DateTime? DateFin { get; set; }
+    public int NbSeancesParSemaine { get; set; }
+    public string? CodeBureau { get; set; }
+    public string? Annee { get; set; }
+    public string? NumeroDecision { get; set; }
+    public string? NumeroOrdre { get; set; }
+    public decimal PrixUnitaire { get; set; }
+    public decimal PrixHT { get; set; }
+    public decimal TVA { get; set; }
+    public decimal MontantTVA { get; set; }
+    public decimal PrixTTC { get; set; }
     public string? Statut { get; set; }
     public string? Objectifs { get; set; }
     public string? Remarques { get; set; }
