@@ -35,6 +35,7 @@ packages/
 *.snk
 *.key
 *.pfx
+*.pem
 *.publishsettings
 publish/
 wwwroot/_framework/
