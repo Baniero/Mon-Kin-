@@ -147,6 +147,15 @@ public class AdvanceTransactionRequestDto
     public string? CreatedBy { get; set; }
 }
 
+public class AdvanceLotDto
+{
+    public int Id { get; set; }
+    public int TransactionId { get; set; }
+    public decimal OriginalAmount { get; set; }
+    public decimal RemainingAmount { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 public class PatientFinanceDto
 {
     public int PatientId { get; set; }

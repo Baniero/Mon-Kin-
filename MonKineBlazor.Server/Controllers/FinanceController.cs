@@ -225,6 +225,71 @@ public class FinanceController : ControllerBase
         return Ok(transactions);
     }
 
+    [HttpDelete("advance-transactions/{transactionId}")]
+    public IActionResult DeleteAdvanceTransaction(int transactionId)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM advance_transactions WHERE id = @transactionId";
+        cmd.Parameters.AddWithValue("@transactionId", transactionId);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
+    }
+
+    [HttpGet("advance-lots/patient/{patientId}")]
+    public ActionResult<IEnumerable<AdvanceLotDto>> GetAdvanceLots(int patientId)
+    {
+        var lots = new List<AdvanceLotDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT id, transaction_id, COALESCE(original_amount, 0), COALESCE(remaining_amount, 0), COALESCE(created_at, NOW())
+            FROM advance_lots
+            WHERE patient_id = @patientId
+            ORDER BY created_at DESC
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            lots.Add(new AdvanceLotDto
+            {
+                Id = reader.GetInt32(0),
+                TransactionId = reader.GetInt32(1),
+                OriginalAmount = reader.GetDecimal(2),
+                RemainingAmount = reader.GetDecimal(3),
+                CreatedAt = reader.GetDateTime(4)
+            });
+        }
+
+        return Ok(lots);
+    }
+
+    [HttpDelete("cash-closings/{dateJour}")]
+    public IActionResult DeleteCashClosing(string dateJour)
+    {
+        if (!DateTime.TryParse(dateJour, out var parsedDate))
+        {
+            return BadRequest("Date invalide.");
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM cash_closings WHERE date_jour = @dateJour";
+        cmd.Parameters.AddWithValue("@dateJour", parsedDate.Date);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
+    }
+
     [HttpGet("patient-finance/{patientId}")]
     public ActionResult<PatientFinanceDto> GetPatientFinance(int patientId)
     {
@@ -336,6 +401,31 @@ public class FinanceController : ControllerBase
             Note = request.Note,
             CreatedBy = request.CreatedBy ?? "Web"
         });
+    }
+
+    [HttpPut("advance-transactions/{transactionId}")]
+    public IActionResult UpdateAdvanceTransaction(int transactionId, AdvanceTransactionRequestDto request)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE advance_transactions
+            SET amount = @amount,
+                note = @note,
+                transaction_date = @transactionDate,
+                created_by = @createdBy
+            WHERE id = @transactionId
+        ";
+        cmd.Parameters.AddWithValue("@amount", request.Amount);
+        cmd.Parameters.AddWithValue("@note", (object?)request.Note ?? string.Empty);
+        cmd.Parameters.AddWithValue("@transactionDate", request.TransactionDate == default ? DateTime.UtcNow : request.TransactionDate);
+        cmd.Parameters.AddWithValue("@createdBy", (object?)request.CreatedBy ?? "Web");
+        cmd.Parameters.AddWithValue("@transactionId", transactionId);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
     }
 
     [HttpGet("payment-projections/patient/{patientId}")]
