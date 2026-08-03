@@ -7,10 +7,16 @@ public static class DatabaseConnectionProvider
 {
     public static NpgsqlConnection CreateConnection(string? connectionString = null)
     {
+        var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.IsNullOrWhiteSpace(environmentName))
+        {
+            environmentName = "Development";
+        }
+
         var config = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: false)
+            .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: false)
             .AddEnvironmentVariables()
             .Build();
 
@@ -35,10 +41,39 @@ public static class DatabaseConnectionProvider
                 Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
                 Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
                 Database = uri.AbsolutePath.TrimStart('/'),
-                SslMode = SslMode.Require,
                 TrustServerCertificate = true,
                 Pooling = true
             };
+
+            var query = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries);
+            var sslModeValue = query.Select(p => p.Split('=', 2))
+                                     .FirstOrDefault(parts => parts.Length == 2 && string.Equals(parts[0], "sslmode", StringComparison.OrdinalIgnoreCase))?
+                                     [1];
+
+            if (!string.IsNullOrWhiteSpace(sslModeValue))
+            {
+                builder.SslMode = sslModeValue.ToLowerInvariant() switch
+                {
+                    "disable" => SslMode.Disable,
+                    "allow" => SslMode.Allow,
+                    "prefer" => SslMode.Prefer,
+                    "require" => SslMode.Require,
+                    "verify-ca" => SslMode.VerifyCA,
+                    "verify-full" => SslMode.VerifyFull,
+                    _ => SslMode.Require
+                };
+            }
+            else if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(uri.Host, "::1", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.SslMode = SslMode.Disable;
+            }
+            else
+            {
+                builder.SslMode = SslMode.Require;
+            }
+
             return new NpgsqlConnection(builder.ConnectionString);
         }
 

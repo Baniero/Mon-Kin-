@@ -84,7 +84,11 @@ else
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Sexe</label>
-                                <InputText class="form-control" @bind-Value="patientForm.Sexe" />
+                                <InputSelect class="form-select" @bind-Value="patientForm.Sexe">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option value="Homme">Homme</option>
+                                    <option value="Femme">Femme</option>
+                                </InputSelect>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Téléphone 1</label>
@@ -103,8 +107,6 @@ else
                                     <InputCheckbox class="form-check-input" @bind-Value="isCnam" />
                                     <label class="form-check-label">Patient CNAM</label>
                                 </div>
-                                <label class="form-label mt-3">Couverture</label>
-                                <InputText class="form-control" @bind-Value="patientForm.Couverture" />
                             </div>
                             <div class="col-md-6 d-flex align-items-end">
                                 <button class="btn btn-success w-100" type="submit">Enregistrer</button>
@@ -242,6 +244,11 @@ else
         set
         {
             _isCnam = value;
+            if (patientForm != null)
+            {
+                patientForm.Couverture = _isCnam ? "CNAM" : "Civil payant";
+            }
+
             if (!_isCnam)
             {
                 patientForm.Racine = null;
@@ -307,6 +314,11 @@ else
             return;
         }
 
+        if (patientForm is not null)
+        {
+            patientForm.Couverture = isCnam ? "CNAM" : "Civil payant";
+        }
+
         if (patientForm.Id == 0)
         {
             var response = await Http.PostAsJsonAsync("api/patients", patientForm);
@@ -351,9 +363,12 @@ else
         statusMessage = null;
     }
 
-    private void OnCnamChanged(ChangeEventArgs args)
+    private void UpdateCoverageFromCheckbox()
     {
-        isCnam = args?.Value as bool? ?? false;
+        if (patientForm != null)
+        {
+            patientForm.Couverture = isCnam ? "CNAM" : "Civil payant";
+        }
     }
 
     private async Task LoadPrograms()
@@ -405,7 +420,12 @@ else
             Telephone2 = patient.Telephone2,
             Adresse = patient.Adresse,
             Couverture = patient.Couverture,
+            Racine = patient.Racine,
+            Cle = patient.Cle,
+            Qualite = patient.Qualite,
+            NumeroAssuree = patient.NumeroAssuree,
         };
+        isCnam = string.Equals(patient.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ResetProgramForm()
