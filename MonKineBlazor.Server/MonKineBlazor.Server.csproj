@@ -17,4 +17,10 @@
     <ProjectReference Include="..\MonKineBlazor.Shared\MonKineBlazor.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="postgres-init.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

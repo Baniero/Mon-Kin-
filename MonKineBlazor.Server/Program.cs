@@ -24,9 +24,9 @@ try
 {
     DatabaseInitializer.EnsureDatabaseCreated(app.Environment.ContentRootPath);
 }
-catch
+catch (Exception ex)
 {
-    // Ignore initialization errors here; they will surface in requests.
+    app.Logger.LogError(ex, "Database initialization failed.");
 }
 
 // Configure the HTTP request pipeline.
