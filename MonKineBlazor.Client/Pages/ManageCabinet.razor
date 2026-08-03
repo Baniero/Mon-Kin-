@@ -1,0 +1,224 @@
+@page "/manage-cabinet"
+@using MonKineBlazor.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<h1>Gérer mon cabinet</h1>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Rechercher un kiné</label>
+        <InputText class="form-control" @bind-Value="searchKeyword" placeholder="Nom, prénom ou username" />
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+        <button class="btn btn-primary me-2" @onclick="LoadUsers">Rechercher</button>
+        <button class="btn btn-success" @onclick="ShowCreateUser">Nouveau kiné</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (users is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Username</th>
+                    <th>Rôle</th>
+                    <th>Actif</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in FilteredUsers())
+                {
+                    <tr>
+                        <td>@user.FullName</td>
+                        <td>@user.Username</td>
+                        <td>@user.Role</td>
+                        <td>@(user.Active ? "Oui" : "Non")</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary me-2" @onclick="() => EditUser(user)">Modifier</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteUser(user.Id)">Supprimer</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showForm)
+{
+    <div class="card mt-4">
+        <div class="card-header">@((selectedUser?.Id ?? 0) == 0 ? "Créer un praticien" : "Modifier le praticien")</div>
+        <div class="card-body">
+            <EditForm Model="userForm" OnValidSubmit="SaveUserAsync">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nom complet</label>
+                        <InputText class="form-control" @bind-Value="userForm.FullName" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Username</label>
+                        <InputText class="form-control" @bind-Value="userForm.Username" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rôle</label>
+                        <InputSelect class="form-select" @bind-Value="userForm.Role">
+                            <option value="kine">Kiné</option>
+                            <option value="admin">Admin</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Actif</label>
+                        <InputCheckbox class="form-check-input" @bind-Value="userForm.Active" />
+                    </div>
+                    <div class="col-md-12">
+                        <button class="btn btn-success" type="submit">Enregistrer</button>
+                        <button class="btn btn-outline-secondary ms-2" type="button" @onclick="HideForm">Annuler</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserDto> users = new();
+    private List<UserDto> allUsers = new();
+    private UserDto userForm = new() { Role = "kine", Active = true };
+    private UserDto? selectedUser;
+    private bool showForm;
+    private string searchKeyword = string.Empty;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        errorMessage = null;
+        try
+        {
+            allUsers = await Http.GetFromJsonAsync<List<UserDto>>("api/users") ?? new List<UserDto>();
+            users = allUsers;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private List<UserDto> FilteredUsers()
+    {
+        if (string.IsNullOrWhiteSpace(searchKeyword))
+        {
+            return users;
+        }
+
+        var keyword = searchKeyword.Trim().ToLowerInvariant();
+        return users.Where(u =>
+            (u.FullName ?? string.Empty).ToLowerInvariant().Contains(keyword) ||
+            u.Username.ToLowerInvariant().Contains(keyword) ||
+            u.Role.ToLowerInvariant().Contains(keyword)
+        ).ToList();
+    }
+
+    private void ShowCreateUser()
+    {
+        selectedUser = null;
+        userForm = new UserDto { Role = "kine", Active = true };
+        showForm = true;
+    }
+
+    private void EditUser(UserDto user)
+    {
+        selectedUser = user;
+        userForm = new UserDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = user.FullName,
+            Role = user.Role,
+            Active = user.Active
+        };
+        showForm = true;
+    }
+
+    private void HideForm()
+    {
+        showForm = false;
+        selectedUser = null;
+        userForm = new UserDto { Role = "kine", Active = true };
+    }
+
+    private async Task SaveUserAsync()
+    {
+        errorMessage = null;
+        try
+        {
+            if (selectedUser == null || selectedUser.Id == 0)
+            {
+                var response = await Http.PostAsJsonAsync("api/users", userForm);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadUsers();
+                    HideForm();
+                }
+                else
+                {
+                    errorMessage = "Impossible de créer le praticien.";
+                }
+            }
+            else
+            {
+                var response = await Http.PutAsJsonAsync($"api/users/{selectedUser.Id}", userForm);
+                if (response.IsSuccessStatusCode)
+                {
+                    await LoadUsers();
+                    HideForm();
+                }
+                else
+                {
+                    errorMessage = "Impossible de mettre à jour le praticien.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        errorMessage = null;
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer ce praticien ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/users/{userId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadUsers();
+        }
+        else
+        {
+            errorMessage = "Impossible de supprimer le praticien.";
+        }
+    }
+}

@@ -6,9 +6,34 @@
 <h1>Rendez-vous</h1>
 
 <div class="row mb-3">
-    <div class="col-md-6">
+    <div class="col-md-6 d-flex flex-wrap gap-2">
         <button class="btn btn-primary me-2" @onclick="LoadAppointments">Rafraîchir</button>
         <button class="btn btn-success" @onclick="ShowAddAppointment">Nouveau rendez-vous</button>
+    </div>
+</div>
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label class="form-label">Rechercher</label>
+        <InputText class="form-control" @bind-Value="appointmentSearch" placeholder="Patient, Acte, Salle" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Filtrer par kiné</label>
+        <InputSelect class="form-select" @bind-Value="selectedKineFilter">
+            <option value="0">Tous</option>
+            @foreach (var kine in kines)
+            {
+                <option value="@kine.Id">@kine.FullName (@kine.Username)</option>
+            }
+        </InputSelect>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Filtrer par statut</label>
+        <InputSelect class="form-select" @bind-Value="appointmentStatusFilter">
+            <option value="">Tous</option>
+            <option value="planifie">planifie</option>
+            <option value="termine">termine</option>
+            <option value="annule">annule</option>
+        </InputSelect>
     </div>
 </div>
 
@@ -144,7 +169,7 @@ else
 @code {
     private List<AppointmentDto>? appointments;
     private List<PatientDto> patients = new();
-    private List<(int Id, string Name)> kines = new();
+    private List<UserDto> kines = new();
     private AppointmentDto newAppointment = new()
     {
         Status = "planifie",
@@ -159,6 +184,9 @@ else
     private string startTime = "08:00";
     private int durationMinutes = 30;
     private string? errorMessage;
+    private string appointmentSearch = string.Empty;
+    private string appointmentStatusFilter = string.Empty;
+    private int selectedKineFilter = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -174,13 +202,13 @@ else
 
     private async Task LoadKines()
     {
-        kines = new List<(int Id, string Name)>();
+        kines = new List<UserDto>();
         try
         {
             var response = await Http.GetFromJsonAsync<List<UserDto>>("api/users/kines");
             if (response != null)
             {
-                kines = response.Select(u => (u.Id, u.Name)).ToList();
+                kines = response;
             }
         }
         catch { }
@@ -245,9 +273,35 @@ else
         }
     }
 
-    private class UserDto
+    private IEnumerable<AppointmentDto> FilteredAppointments()
     {
-        public int Id { get; set; }
-        public string? Name { get; set; }
+        if (appointments == null)
+        {
+            return Array.Empty<AppointmentDto>();
+        }
+
+        var filtered = appointments.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(appointmentSearch))
+        {
+            var keyword = appointmentSearch.Trim().ToLowerInvariant();
+            filtered = filtered.Where(a =>
+                (a.PatientName ?? string.Empty).ToLowerInvariant().Contains(keyword) ||
+                (a.Acte ?? string.Empty).ToLowerInvariant().Contains(keyword) ||
+                (a.Room ?? string.Empty).ToLowerInvariant().Contains(keyword)
+            );
+        }
+
+        if (selectedKineFilter > 0)
+        {
+            filtered = filtered.Where(a => a.KineId == selectedKineFilter);
+        }
+
+        if (!string.IsNullOrWhiteSpace(appointmentStatusFilter))
+        {
+            filtered = filtered.Where(a => string.Equals(a.Status, appointmentStatusFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return filtered;
     }
 }
