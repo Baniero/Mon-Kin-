@@ -2,6 +2,8 @@
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
+@inject MonKineBlazor.Client.Services.AuthService AuthService
 
 <h1>Finance</h1>
 
@@ -10,31 +12,116 @@
     <div class="alert alert-danger">@errorMessage</div>
 }
 
-<div class="row mb-4">
-    <div class="col-md-12 d-flex flex-wrap gap-2">
-        <button class="btn btn-primary" @onclick="LoadFinanceData">Rafraîchir</button>
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">@successMessage</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissSuccessMessage"></button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card text-center p-3">
+            <div class="text-muted">Cash attendu</div>
+            <div class="h4">@($"{TotalCashExpected:F2} DT")</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center p-3">
+            <div class="text-muted">Cash réel</div>
+            <div class="h4">@($"{TotalCashActual:F2} DT")</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center p-3">
+            <div class="text-muted">Écart total</div>
+            <div class="h4">@($"{TotalCashDiff:F2} DT")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted">Total avances reçues</div>
+            <div class="h4">@($"{TotalAdvances:F2} DT")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <div class="text-muted">Total CNAM recouvré</div>
+            <div class="h4">@($"{TotalCnamRecovered:F2} DT")</div>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card mb-4">
-            <div class="card-header">Caisse journalière</div>
-            <div class="card-body">
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Date</label>
-                        <InputDate class="form-control" @bind-Value="cashClosingRequest.DateJour" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Montant réel</label>
-                        <InputNumber class="form-control" @bind-Value="cashClosingRequest.ActualAmount" />
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end gap-2">
-                        <button class="btn btn-success" @onclick="ValidateCashClosing">Valider</button>
-                        <button class="btn btn-outline-secondary" @onclick="LoadCashClosings">Charger</button>
-                    </div>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Du</label>
+                <InputDate class="form-control" @bind-Value="cashStart" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Au</label>
+                <InputDate class="form-control" @bind-Value="cashEnd" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Patient</label>
+                <InputText class="form-control" @bind-Value="patientSearch" placeholder="Rechercher patient" />
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-primary w-100" @onclick="FilterFinance">Filtrer</button>
+                <button class="btn btn-outline-secondary w-100" @onclick="ResetFilters">Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cash)">Caisse</button>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Advances)">Avances</button>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Projections)">Projections</button>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cnam)">CNAM</button>
+    </div>
+</div>
+
+@if (activeSection == FinanceSection.Cash)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Caisse journalière</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(cashClosings, "caisse_journaliere.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Date</label>
+                    <InputDate class="form-control" @bind-Value="cashClosingRequest.DateJour" />
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">Montant réel</label>
+                    <InputNumber class="form-control" @bind-Value="cashClosingRequest.ActualAmount" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button class="btn btn-success w-100" @onclick="ValidateCashClosing">Enregistrer</button>
+                </div>
+            </div>
+            @if (!cashClosings.Any())
+            {
+                <div class="alert alert-info">Aucune donnée trouvée pour cette plage de dates.</div>
+            }
+            else
+            {
                 <div class="table-responsive">
                     <table class="table table-sm table-striped">
                         <thead>
@@ -42,61 +129,126 @@
                                 <th>Date</th>
                                 <th>Attendu</th>
                                 <th>Réel</th>
-                                <th>Ecart</th>
+                                <th>Écart</th>
                                 <th>Validé</th>
                                 <th>Utilisateur</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var row in cashClosings)
                             {
-                                <tr>
+                                <tr class="@(GetEcartClass(row.Diff))">
                                     <td>@row.DateJour.ToString("yyyy-MM-dd")</td>
                                     <td>@($"{row.ExpectedAmount:F2} DT")</td>
                                     <td>@($"{row.ActualAmount:F2} DT")</td>
                                     <td>@($"{row.Diff:F2} DT")</td>
                                     <td>@(row.Validated ? "Oui" : "Non")</td>
                                     <td>@row.ValidatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditCashClosing(row)">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCashClosing(row.DateJour)">Supprimer</button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Total</th>
+                                <th>@($"{TotalCashExpected:F2} DT")</th>
+                                <th>@($"{TotalCashActual:F2} DT")</th>
+                                <th>@($"{TotalCashDiff:F2} DT")</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
-            </div>
+            }
         </div>
+    </div>
+}
 
-        <div class="card mb-4">
-            <div class="card-header">Avances patient</div>
-            <div class="card-body">
+@if (activeSection == FinanceSection.Advances)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Avances patient</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(advanceTransactions, "avances_patient.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-5">
+                    <label class="form-label">Patient</label>
+                    <InputSelect class="form-select" @bind-Value="selectedPatientId" @onchange="OnPatientChanged">
+                        <option value="0">-- Sélectionnez --</option>
+                        @foreach (var patient in FilteredPatients)
+                        {
+                            <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Rechercher</label>
+                    <InputText class="form-control" @bind-Value="patientSearch" placeholder="Rechercher patient" />
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" @onclick="FilterPatients">Actualiser</button>
+                </div>
+            </div>
+            @if (selectedPatientId == 0)
+            {
+                <div class="alert alert-info">Sélectionnez un patient pour voir ses avances et lots.</div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <strong>Solde avance :</strong> @($"{patientFinance?.AdvanceBalance:F2 ?? 0m} DT")<br />
+                    <strong>Avances totales :</strong> @($"{patientFinance?.TotalAdvancePaid:F2 ?? 0m} DT")<br />
+                    <strong>Avances utilisées :</strong> @($"{GetUsedAdvanceAmount():F2} DT")
+                </div>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Patient</label>
-                        <InputSelect class="form-select" @bind-Value="selectedPatientId" @onchange="OnPatientChanged">
-                            <option value="0">-- Sélectionnez --</option>
-                            @foreach (var patient in patients)
-                            {
-                                <option value="@patient.Id">@patient.Nom @patient.Prenom</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-3">
                         <label class="form-label">Montant avance</label>
                         <InputNumber class="form-control" @bind-Value="advanceRequest.Amount" />
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Note</label>
                         <InputText class="form-control" @bind-Value="advanceRequest.Note" />
                     </div>
-                    <div class="col-md-12 d-flex gap-2">
-                        <button class="btn btn-success" @onclick="CreateAdvanceTransaction">Enregistrer l'avance</button>
-                        <button class="btn btn-outline-secondary" @onclick="LoadAdvanceData">Recharger</button>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-success w-100" @onclick="CreateOrUpdateAdvance">@(isEditingAdvance ? "Mettre à jour" : "Enregistrer")</button>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary w-100" @onclick="ResetAdvanceForm">Réinitialiser</button>
                     </div>
                 </div>
-                @if (patientFinance is not null)
+                @if (advanceLots.Any())
                 {
                     <div class="mb-3">
-                        <strong>Solde avance:</strong> @($"{patientFinance.AdvanceBalance:F2} DT")<br />
-                        <strong>Total avances reçues:</strong> @($"{patientFinance.TotalAdvancePaid:F2} DT")
+                        <h5>Lots d'avance</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Transaction</th>
+                                        <th>Original</th>
+                                        <th>Restant</th>
+                                        <th>Créé le</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var lot in advanceLots)
+                                    {
+                                        <tr>
+                                            <td>@lot.TransactionId</td>
+                                            <td>@($"{lot.OriginalAmount:F2} DT")</td>
+                                            <td>@($"{lot.RemainingAmount:F2} DT")</td>
+                                            <td>@lot.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 }
                 @if (advanceTransactions.Any())
@@ -109,6 +261,7 @@
                                     <th>Montant</th>
                                     <th>Note</th>
                                     <th>Par</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -119,36 +272,146 @@
                                         <td>@($"{transaction.Amount:F2} DT")</td>
                                         <td>@transaction.Note</td>
                                         <td>@transaction.CreatedBy</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => BeginEditAdvance(transaction)">Modifier</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAdvanceTransaction(transaction.Id)">Annuler</button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
                 }
-                else if (selectedPatientId > 0)
-                {
-                    <div>Aucune avance trouvée pour ce patient.</div>
-                }
-            </div>
+            }
         </div>
     </div>
-</div>
+}
+
+@if (activeSection == FinanceSection.Projections)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Projection de paiement</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(paymentProjections, "projection_paiement.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            @if (selectedPatientId == 0)
+            {
+                <div class="alert alert-info">Sélectionnez un patient dans le filtre ci-dessus pour voir la projection de paiement.</div>
+            }
+            else if (!paymentProjections.Any())
+            {
+                <div class="alert alert-info">Aucune projection disponible pour ce patient.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Rendez-vous</th>
+                                <th>Montant dû</th>
+                                <th>Paiement projeté</th>
+                                <th>Avance projetée</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in paymentProjections)
+                            {
+                                <tr>
+                                    <td>@item.AppointmentId</td>
+                                    <td>@($"{item.PaidTotal:F2} DT")</td>
+                                    <td>@item.PaymentStatus</td>
+                                    <td>@($"{item.ProjectedAdvance:F2} DT")</td>
+                                    <td>@item.SourceStatus</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (activeSection == FinanceSection.Cnam)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Reporting CNAM</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(cnamRecovery, "cnam_recovery.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            @if (!cnamRecovery.Any())
+            {
+                <div class="alert alert-info">Aucun recouvrement CNAM trouvé pour cette plage.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Couverture</th>
+                                <th>Nb séances</th>
+                                <th>Montant CNAM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in cnamRecovery)
+                            {
+                                <tr>
+                                    <td>@item.PatientName</td>
+                                    <td>@item.Couverture</td>
+                                    <td>@item.NbSeances</td>
+                                    <td>@($"{item.MontantCnam:F2} DT")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 @code {
     private string? errorMessage;
+    private string? successMessage;
+    private CancellationTokenSource? successMessageCts;
+
+    private FinanceSection activeSection = FinanceSection.Cash;
     private List<CashClosingDto> cashClosings = new();
     private List<PatientDto> patients = new();
     private List<AdvanceTransactionDto> advanceTransactions = new();
+    private List<AdvanceLotDto> advanceLots = new();
+    private List<PaymentProjectionEntryDto> paymentProjections = new();
+    private List<CnamRecoveryDto> cnamRecovery = new();
     private PatientFinanceDto? patientFinance;
     private int selectedPatientId;
+    private string patientSearch = string.Empty;
     private DateTime cashStart = DateTime.Today.AddDays(-7);
     private DateTime cashEnd = DateTime.Today;
     private CashClosingRequestDto cashClosingRequest = new() { DateJour = DateTime.Today, ActualAmount = 0, ValidatedBy = "Web" };
     private AdvanceTransactionRequestDto advanceRequest = new() { TransactionDate = DateTime.UtcNow, Amount = 0, CreatedBy = "Web" };
+    private bool isEditingAdvance;
+    private int editingAdvanceTransactionId;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPatients();
         await LoadFinanceData();
+    }
+
+    private IEnumerable<PatientDto> FilteredPatients => string.IsNullOrWhiteSpace(patientSearch)
+        ? patients
+        : patients.Where(p => $"{p.Nom} {p.Prenom}".Contains(patientSearch, StringComparison.OrdinalIgnoreCase));
+
+    private async Task LoadPatients()
+    {
+        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
     }
 
     private async Task LoadFinanceData()
@@ -156,11 +419,13 @@
         errorMessage = null;
         try
         {
-            await LoadPatients();
             await LoadCashClosings();
+            await LoadCnamRecovery();
             if (selectedPatientId > 0)
             {
                 await LoadAdvanceData();
+                await LoadAdvanceLots();
+                await LoadPaymentProjections();
             }
         }
         catch (Exception ex)
@@ -169,14 +434,14 @@
         }
     }
 
-    private async Task LoadPatients()
-    {
-        patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
-    }
-
     private async Task LoadCashClosings()
     {
         cashClosings = await Http.GetFromJsonAsync<List<CashClosingDto>>($"api/finance/cash-closings?start={cashStart:yyyy-MM-dd}&end={cashEnd:yyyy-MM-dd}") ?? new List<CashClosingDto>();
+    }
+
+    private async Task LoadCnamRecovery()
+    {
+        cnamRecovery = await Http.GetFromJsonAsync<List<CnamRecoveryDto>>($"api/finance/cnam-recovery?start={cashStart:yyyy-MM-dd}&end={cashEnd:yyyy-MM-dd}") ?? new List<CnamRecoveryDto>();
     }
 
     private async Task LoadAdvanceData()
@@ -192,16 +457,58 @@
         patientFinance = await Http.GetFromJsonAsync<PatientFinanceDto>($"api/finance/patient-finance/{selectedPatientId}");
     }
 
+    private async Task LoadAdvanceLots()
+    {
+        if (selectedPatientId <= 0)
+        {
+            advanceLots = new();
+            return;
+        }
+
+        advanceLots = await Http.GetFromJsonAsync<List<AdvanceLotDto>>($"api/finance/advance-lots/patient/{selectedPatientId}") ?? new List<AdvanceLotDto>();
+    }
+
+    private async Task LoadPaymentProjections()
+    {
+        if (selectedPatientId <= 0)
+        {
+            paymentProjections = new();
+            return;
+        }
+
+        paymentProjections = await Http.GetFromJsonAsync<List<PaymentProjectionEntryDto>>($"api/finance/payment-projections/patient/{selectedPatientId}") ?? new List<PaymentProjectionEntryDto>();
+    }
+
+    private async Task FilterFinance()
+    {
+        await LoadFinanceData();
+    }
+
+    private async Task ResetFilters()
+    {
+        selectedPatientId = 0;
+        patientSearch = string.Empty;
+        cashStart = DateTime.Today.AddDays(-7);
+        cashEnd = DateTime.Today;
+        await LoadFinanceData();
+    }
+
+    private void SetSection(FinanceSection section)
+    {
+        activeSection = section;
+    }
+
     private async Task ValidateCashClosing()
     {
         errorMessage = null;
         try
         {
-            cashClosingRequest.ValidatedBy = "Web";
+            cashClosingRequest.ValidatedBy = AuthService.CurrentUser?.Username ?? "Web";
             var response = await Http.PostAsJsonAsync("api/finance/cash-closings", cashClosingRequest);
             if (response.IsSuccessStatusCode)
             {
                 await LoadCashClosings();
+                await ShowSuccessMessage("Caisse enregistrée avec succès.");
             }
             else
             {
@@ -214,7 +521,34 @@
         }
     }
 
-    private async Task CreateAdvanceTransaction()
+    private void EditCashClosing(CashClosingDto row)
+    {
+        cashClosingRequest.DateJour = row.DateJour;
+        cashClosingRequest.ActualAmount = row.ActualAmount;
+        cashClosingRequest.ValidatedBy = row.ValidatedBy;
+        SetSection(FinanceSection.Cash);
+    }
+
+    private async Task DeleteCashClosing(DateTime dateJour)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer cette clôture de caisse ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/finance/cash-closings/{dateJour:yyyy-MM-dd}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadCashClosings();
+            await ShowSuccessMessage("Clôture de caisse supprimée.");
+        }
+        else
+        {
+            errorMessage = "Impossible de supprimer la clôture de caisse.";
+        }
+    }
+
+    private async Task CreateOrUpdateAdvance()
     {
         errorMessage = null;
         if (selectedPatientId <= 0)
@@ -233,22 +567,68 @@
         {
             advanceRequest.PatientId = selectedPatientId;
             advanceRequest.TransactionDate = DateTime.UtcNow;
-            advanceRequest.CreatedBy = "Web";
-            var response = await Http.PostAsJsonAsync("api/finance/advance-transactions", advanceRequest);
-            if (response.IsSuccessStatusCode)
+            advanceRequest.CreatedBy = AuthService.CurrentUser?.Username ?? "Web";
+
+            if (isEditingAdvance)
             {
-                await LoadAdvanceData();
-                advanceRequest.Amount = 0;
-                advanceRequest.Note = string.Empty;
+                var response = await Http.PutAsJsonAsync($"api/finance/advance-transactions/{editingAdvanceTransactionId}", advanceRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Impossible de modifier l'avance.";
+                    return;
+                }
+                await ShowSuccessMessage("Avance modifiée.");
             }
             else
             {
-                errorMessage = "Impossible d'enregistrer l'avance.";
+                var response = await Http.PostAsJsonAsync("api/finance/advance-transactions", advanceRequest);
+                if (!response.IsSuccessStatusCode)
+                {
+                    errorMessage = "Impossible d'enregistrer l'avance.";
+                    return;
+                }
+                await ShowSuccessMessage("Avance enregistrée.");
             }
+
+            await LoadAdvanceData();
+            await LoadAdvanceLots();
+            await LoadPaymentProjections();
+            ResetAdvanceForm();
         }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+        }
+    }
+
+    private void BeginEditAdvance(AdvanceTransactionDto transaction)
+    {
+        selectedPatientId = transaction.PatientId;
+        advanceRequest.Amount = transaction.Amount;
+        advanceRequest.Note = transaction.Note;
+        advanceRequest.TransactionDate = transaction.TransactionDate;
+        advanceRequest.CreatedBy = transaction.CreatedBy;
+        isEditingAdvance = true;
+        editingAdvanceTransactionId = transaction.Id;
+    }
+
+    private async Task DeleteAdvanceTransaction(int transactionId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Annuler cette avance ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/finance/advance-transactions/{transactionId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAdvanceData();
+            await LoadAdvanceLots();
+            await ShowSuccessMessage("Avance annulée.");
+        }
+        else
+        {
+            errorMessage = "Impossible d'annuler l'avance.";
         }
     }
 
@@ -258,6 +638,96 @@
         {
             selectedPatientId = patientId;
             await LoadAdvanceData();
+            await LoadAdvanceLots();
+            await LoadPaymentProjections();
         }
+    }
+
+    private void FilterPatients()
+    {
+    }
+
+    private void ResetAdvanceForm()
+    {
+        isEditingAdvance = false;
+        editingAdvanceTransactionId = 0;
+        advanceRequest = new AdvanceTransactionRequestDto { TransactionDate = DateTime.UtcNow, Amount = 0, CreatedBy = AuthService.CurrentUser?.Username ?? "Web" };
+    }
+
+    private decimal GetUsedAdvanceAmount() => Math.Max(0, (advanceTransactions?.Sum(a => a.Amount) ?? 0m) - (patientFinance?.AdvanceBalance ?? 0m));
+
+    private async Task ExportCsv<T>(IEnumerable<T> items, string filename)
+    {
+        var csv = GenerateCsv(items);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", filename, base64);
+    }
+
+    private static string GenerateCsv<T>(IEnumerable<T> items)
+    {
+        var props = typeof(T).GetProperties();
+        var csvBuilder = new System.Text.StringBuilder();
+        csvBuilder.AppendLine(string.Join(',', props.Select(p => p.Name)));
+        foreach (var item in items)
+        {
+            var values = props.Select(p => EscapeCsvValue(p.GetValue(item)?.ToString() ?? string.Empty));
+            csvBuilder.AppendLine(string.Join(',', values));
+        }
+        return csvBuilder.ToString();
+    }
+
+    private static string EscapeCsvValue(string value)
+    {
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n'))
+        {
+            return '"' + value.Replace("\"", "\"\"") + '"';
+        }
+        return value;
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessageCts?.Cancel();
+        successMessage = message;
+        StateHasChanged();
+
+        successMessageCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(5000, successMessageCts.Token);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    private void DismissSuccessMessage()
+    {
+        successMessageCts?.Cancel();
+        successMessage = null;
+    }
+
+    private string GetEcartClass(decimal diff)
+    {
+        if (diff == 0m) return "table-success";
+        if (Math.Abs(diff) <= 10m) return "table-warning";
+        return "table-danger";
+    }
+
+    private decimal TotalCashExpected => cashClosings.Sum(c => c.ExpectedAmount);
+    private decimal TotalCashActual => cashClosings.Sum(c => c.ActualAmount);
+    private decimal TotalCashDiff => cashClosings.Sum(c => c.Diff);
+    private decimal TotalAdvances => advanceTransactions.Sum(a => a.Amount);
+    private decimal TotalCnamRecovered => cnamRecovery.Sum(c => c.MontantCnam);
+
+    private enum FinanceSection
+    {
+        Cash,
+        Advances,
+        Projections,
+        Cnam
     }
 }
