@@ -467,6 +467,39 @@ public class FinanceController : ControllerBase
         });
     }
 
+    [HttpGet("advance-transactions/patient/{patientId}")]
+    public ActionResult<IEnumerable<AdvanceTransactionDto>> GetAdvanceTransactions(int patientId)
+    {
+        var transactions = new List<AdvanceTransactionDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT id, patient_id, amount, transaction_date, COALESCE(note, ''), COALESCE(created_by, '')
+            FROM advance_transactions
+            WHERE patient_id = @patientId
+            ORDER BY transaction_date DESC
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            transactions.Add(new AdvanceTransactionDto
+            {
+                Id = reader.GetInt32(0),
+                PatientId = reader.GetInt32(1),
+                Amount = reader.GetDecimal(2),
+                TransactionDate = reader.GetDateTime(3),
+                Note = reader.GetString(4),
+                CreatedBy = reader.GetString(5)
+            });
+        }
+
+        return Ok(transactions);
+    }
+
     [HttpPut("advance-transactions/{transactionId}")]
     public IActionResult UpdateAdvanceTransaction(int transactionId, AdvanceTransactionRequestDto request)
     {
