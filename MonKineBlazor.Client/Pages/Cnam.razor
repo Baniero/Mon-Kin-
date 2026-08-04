@@ -136,49 +136,49 @@
                 <div class="border rounded p-3">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <h5>En-tête cabinet</h5>
-                            <p class="mb-1"><strong>Nom:</strong> @cabinetInfo.NomCabinet</p>
-                            <p class="mb-1"><strong>Racine:</strong> @cabinetInfo.Racine</p>
-                            <p class="mb-1"><strong>Clé:</strong> @cabinetInfo.Cle</p>
-                            <p class="mb-1"><strong>Qualité:</strong> @cabinetInfo.Qualite</p>
-                            <p class="mb-0"><strong>N° assurée cabinet:</strong> @cabinetInfo.NumeroAssuree</p>
+                            <h5>Cabinet</h5>
+                            <p class="mb-1"><strong>Nom :</strong> @cabinetInfo.NomCabinet</p>
+                            <p class="mb-1"><strong>CNAM :</strong> @cabinetInfo.CodeEtablissement</p>
+                            <p class="mb-1"><strong>Responsable :</strong> @(string.IsNullOrWhiteSpace(cabinetInfo.NomEtablissement) ? (string.IsNullOrWhiteSpace(cabinetInfo.Qualite) ? "" : cabinetInfo.Qualite) : cabinetInfo.NomEtablissement)</p>
+                            <p class="mb-1"><strong>Matricule fiscal :</strong> @cabinetInfo.MatriculeFiscal</p>
+                            <p class="mb-1"><strong>CCB :</strong> @cabinetInfo.NumeroAssuree</p>
+                            <p class="mb-0"><strong>Code CNSS :</strong> @cabinetInfo.Cle</p>
                         </div>
                         <div class="col-md-6">
                             <h5>Facture</h5>
-                            <p class="mb-1"><strong>N° facture:</strong> @invoiceNumber</p>
-                            <p class="mb-0"><strong>Date facture:</strong> @invoiceDate</p>
+                            <p class="mb-1"><strong>N° facture :</strong> @invoiceNumber</p>
+                            <p class="mb-0"><strong>Date facture :</strong> @invoiceDate</p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <h6>Assurée</h6>
-                            <p class="mb-1"><strong>Patient:</strong> @selectedProgram.PatientName</p>
-                            <p class="mb-1"><strong>N° assurée:</strong> @selectedProgram.NumeroAssuree</p>
-                            <p class="mb-0"><strong>Code patient:</strong> @selectedProgram.CodePatient</p>
+                            <p class="mb-1"><strong>Patient :</strong> @selectedProgram.PatientName</p>
+                            <p class="mb-1"><strong>N° assurée :</strong> @selectedProgram.NumeroAssuree</p>
+                            <p class="mb-1"><strong>Code patient :</strong> @selectedProgram.CodePatient</p>
+                            <p class="mb-0"><strong>Couverture :</strong> @selectedProgram.Couverture</p>
                         </div>
                         <div class="col-md-6">
                             <h6>Séance</h6>
-                            <p class="mb-1"><strong>Titre:</strong> @selectedProgram.Titre</p>
-                            <p class="mb-1"><strong>Nature:</strong> @selectedProgram.NatureSeances</p>
-                            <p class="mb-1"><strong>Date début:</strong> @selectedProgram.DateDebut?.ToString("dd/MM/yyyy")</p>
-                            <p class="mb-0"><strong>Date fin:</strong> @selectedProgram.DateFin?.ToString("dd/MM/yyyy")</p>
+                            <p class="mb-1"><strong>Titre :</strong> @selectedProgram.Titre</p>
+                            <p class="mb-1"><strong>Nature :</strong> @selectedProgram.NatureSeances</p>
+                            <p class="mb-1"><strong>Date début :</strong> @selectedProgram.DateDebut?.ToString("dd/MM/yyyy")</p>
+                            <p class="mb-1"><strong>Date fin :</strong> @selectedProgram.DateFin?.ToString("dd/MM/yyyy")</p>
+                            <p class="mb-1"><strong>Nb séances :</strong> @selectedProgram.NbSeances</p>
+                            <p class="mb-1"><strong>Durée séance :</strong> @selectedProgram.DureeSeanceMinutes min</p>
+                            <p class="mb-1"><strong>Prix unitaire :</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")</p>
+                            <p class="mb-0"><strong>Total TTC :</strong> @($"{selectedProgram.PrixTTC:F2} DT")</p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-md-4"><strong>Nb séances:</strong> @selectedProgram.NbSeances</div>
-                        <div class="col-md-4"><strong>Durée séance:</strong> @selectedProgram.DureeSeanceMinutes min</div>
-                        <div class="col-md-4"><strong>Prix unitaire:</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Total TTC:</strong> @($"{selectedProgram.PrixTTC:F2} DT")</div>
-                        <div class="col-md-4"><strong>Code bureau:</strong> @selectedProgram.CodeBureau</div>
-                        <div class="col-md-4"><strong>Année:</strong> @selectedProgram.Annee</div>
+                        <div class="col-md-4"><strong>Code bureau :</strong> @selectedProgram.CodeBureau</div>
+                        <div class="col-md-4"><strong>Année :</strong> @selectedProgram.Annee</div>
+                        <div class="col-md-4"><strong>N° décision :</strong> @selectedProgram.NumeroDecision</div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6"><strong>N° décision:</strong> @selectedProgram.NumeroDecision</div>
-                        <div class="col-md-6"><strong>N° ordre:</strong> @selectedProgram.NumeroOrdre</div>
+                        <div class="col-md-6"><strong>N° ordre :</strong> @selectedProgram.NumeroOrdre</div>
                     </div>
                 </div>
             }
