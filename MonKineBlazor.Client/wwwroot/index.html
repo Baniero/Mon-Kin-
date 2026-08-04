@@ -65,6 +65,12 @@
             doc.setFontSize(11);
             doc.text(`Cabinet: ${data.cabinet.NomCabinet || ''}`, margin, y);
             y += 18;
+            doc.text(`Nom établissement/professionnel: ${data.cabinet.NomEtablissement || ''}`, margin, y);
+            y += 18;
+            doc.text(`Code établissement/professionnel: ${data.cabinet.CodeEtablissement || ''}`, margin, y);
+            y += 18;
+            doc.text(`Matricule fiscal: ${data.cabinet.MatriculeFiscal || ''}`, margin, y);
+            y += 18;
             doc.text(`Racine: ${data.cabinet.Racine || ''}`, margin, y);
             y += 18;
             doc.text(`Clé: ${data.cabinet.Cle || ''}`, margin, y);

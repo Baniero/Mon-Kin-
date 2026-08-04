@@ -28,13 +28,14 @@
     padding: 0.35rem;
 }
 
-.bi {
-    display: inline-block;
+:global(.bi) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 1.25rem;
     height: 1.25rem;
     margin-right: 0.75rem;
-    background-size: contain;
-    background-repeat: no-repeat;
+    font-size: 1.1rem;
     vertical-align: middle;
 }
 
