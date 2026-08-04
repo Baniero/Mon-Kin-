@@ -2,6 +2,7 @@
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <h1>CNAM</h1>
 
@@ -9,81 +10,298 @@
 {
     <div class="alert alert-danger">@errorMessage</div>
 }
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
 
-<div class="row mb-4">
-    <div class="col-md-12 d-flex flex-wrap gap-2">
-        <button class="btn btn-primary" @onclick="LoadCnamRecovery">Rafraîchir</button>
+<div class="mb-4">
+    <div class="btn-group" role="group">
+        <button class="btn @(activeSection == CnamSection.Recovery ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Recovery)">Recouvrement</button>
+        <button class="btn @(activeSection == CnamSection.Invoice ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Invoice)">Facture séance</button>
+        <button class="btn @(activeSection == CnamSection.Bordereau ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Bordereau)">Bordereau CNAM</button>
     </div>
 </div>
 
 <div class="card mb-4">
-    <div class="card-header">Recouvrement CNAM</div>
     <div class="card-body">
-        <div class="row g-3 mb-3">
-            <div class="col-md-6">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
                 <label class="form-label">Du</label>
                 <InputDate class="form-control" @bind-Value="cnamStart" />
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <label class="form-label">Au</label>
                 <InputDate class="form-control" @bind-Value="cnamEnd" />
             </div>
-            <div class="col-12 d-flex gap-2 mt-2">
-                <button class="btn btn-success" @onclick="LoadCnamRecovery">Calculer</button>
-                <button class="btn btn-outline-secondary" @onclick="LoadCnamRecovery">Recharger</button>
+            <div class="col-md-3">
+                <button class="btn btn-success w-100" @onclick="RefreshCurrentSection">Charger</button>
+            </div>
+            <div class="col-md-3 text-end">
+                <span class="text-muted">Période active</span>
             </div>
         </div>
-
-        @if (!cnamRecovery.Any())
-        {
-            <div class="alert alert-info">Aucun recouvrement CNAM trouvé pour cette période.</div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-sm table-striped">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Couverture</th>
-                            <th>Nb séances</th>
-                            <th>Montant CNAM</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in cnamRecovery)
-                        {
-                            <tr>
-                                <td>@row.PatientName</td>
-                                <td>@row.Couverture</td>
-                                <td>@row.NbSeances</td>
-                                <td>@($"{row.MontantCnam:F2} DT")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3">
-                <strong>Total CNAM à réclamer:</strong> @($"{cnamRecovery.Sum(r => r.MontantCnam):F2} DT")
-            </div>
-        }
     </div>
 </div>
 
+@if (activeSection == CnamSection.Recovery)
+{
+    <div class="card mb-4">
+        <div class="card-header">Recouvrement CNAM</div>
+        <div class="card-body">
+            @if (!cnamRecovery.Any())
+            {
+                <div class="alert alert-info">Aucun recouvrement CNAM trouvé pour cette période.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Couverture</th>
+                                <th>Nb séances</th>
+                                <th>Montant CNAM</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in cnamRecovery)
+                            {
+                                <tr>
+                                    <td>@row.PatientName</td>
+                                    <td>@row.Couverture</td>
+                                    <td>@row.NbSeances</td>
+                                    <td>@($"{row.MontantCnam:F2} DT")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <strong>Total CNAM à réclamer :</strong> @($"{cnamRecovery.Sum(r => r.MontantCnam):F2} DT")
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (activeSection == CnamSection.Invoice)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Facture séance CNAM</span>
+            <button class="btn btn-outline-secondary" @onclick="ExportInvoicePdf" disabled="@(selectedProgram == null)">Exporter PDF</button>
+        </div>
+        <div class="card-body">
+            @if (!cnamPrograms.Any())
+            {
+                <div class="alert alert-info">Cliquez sur "Charger" pour lister les programmes CNAM démarrés.</div>
+            }
+            else
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Programme</th>
+                                <th>Patient</th>
+                                <th>N° assurée</th>
+                                <th>Date début</th>
+                                <th>Total TTC</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in cnamPrograms)
+                            {
+                                <tr class="@(selectedProgram?.ProgramId == item.ProgramId ? "table-active" : string.Empty)">
+                                    <td>@item.Titre</td>
+                                    <td>@item.PatientName</td>
+                                    <td>@item.NumeroAssuree</td>
+                                    <td>@item.DateDebut?.ToString("dd/MM/yyyy")</td>
+                                    <td>@($"{item.PrixTTC:F2} DT")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-primary" @onclick="() => SelectProgram(item)">Sélectionner</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (selectedProgram != null)
+            {
+                <div class="border rounded p-3">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>En-tête cabinet</h5>
+                            <p class="mb-1"><strong>Nom:</strong> @cabinetInfo.NomCabinet</p>
+                            <p class="mb-1"><strong>Racine:</strong> @cabinetInfo.Racine</p>
+                            <p class="mb-1"><strong>Clé:</strong> @cabinetInfo.Cle</p>
+                            <p class="mb-1"><strong>Qualité:</strong> @cabinetInfo.Qualite</p>
+                            <p class="mb-0"><strong>N° assurée cabinet:</strong> @cabinetInfo.NumeroAssuree</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Facture</h5>
+                            <p class="mb-1"><strong>N° facture:</strong> @invoiceNumber</p>
+                            <p class="mb-0"><strong>Date facture:</strong> @invoiceDate</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Assurée</h6>
+                            <p class="mb-1"><strong>Patient:</strong> @selectedProgram.PatientName</p>
+                            <p class="mb-1"><strong>N° assurée:</strong> @selectedProgram.NumeroAssuree</p>
+                            <p class="mb-0"><strong>Code patient:</strong> @selectedProgram.CodePatient</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Séance</h6>
+                            <p class="mb-1"><strong>Titre:</strong> @selectedProgram.Titre</p>
+                            <p class="mb-1"><strong>Nature:</strong> @selectedProgram.NatureSeances</p>
+                            <p class="mb-1"><strong>Date début:</strong> @selectedProgram.DateDebut?.ToString("dd/MM/yyyy")</p>
+                            <p class="mb-0"><strong>Date fin:</strong> @selectedProgram.DateFin?.ToString("dd/MM/yyyy")</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Nb séances:</strong> @selectedProgram.NbSeances</div>
+                        <div class="col-md-4"><strong>Durée séance:</strong> @selectedProgram.DureeSeanceMinutes min</div>
+                        <div class="col-md-4"><strong>Prix unitaire:</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Total TTC:</strong> @($"{selectedProgram.PrixTTC:F2} DT")</div>
+                        <div class="col-md-4"><strong>Code bureau:</strong> @selectedProgram.CodeBureau</div>
+                        <div class="col-md-4"><strong>Année:</strong> @selectedProgram.Annee</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6"><strong>N° décision:</strong> @selectedProgram.NumeroDecision</div>
+                        <div class="col-md-6"><strong>N° ordre:</strong> @selectedProgram.NumeroOrdre</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (activeSection == CnamSection.Bordereau)
+{
+    <div class="card mb-4">
+        <div class="card-header">Bordereau CNAM</div>
+        <div class="card-body">
+            @if (!cnamBordereau.Any())
+            {
+                <div class="alert alert-info">Aucun bordereau CNAM trouvé pour cette durée.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Programme</th>
+                                <th>N° facture</th>
+                                <th>Date facture</th>
+                                <th>N° assurée</th>
+                                <th>Patient</th>
+                                <th>Total TTC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in cnamBordereau)
+                            {
+                                <tr>
+                                    <td>@row.ProgramId</td>
+                                    <td>@row.FactureNumber</td>
+                                    <td>@row.DateFacture?.ToString("dd/MM/yyyy")</td>
+                                    <td>@row.NumeroAssuree</td>
+                                    <td>@row.PatientName</td>
+                                    <td>@($"{row.TotalTTC:F2} DT")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <strong>Total général TTC :</strong> @($"{cnamBordereau.Sum(r => r.TotalTTC):F2} DT")
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @code {
     private string? errorMessage;
+    private string? successMessage;
+    private CnamSection activeSection = CnamSection.Recovery;
     private List<CnamRecoveryDto> cnamRecovery = new();
+    private List<CnamProgramInvoiceDto> cnamPrograms = new();
+    private List<CnamBordereauEntryDto> cnamBordereau = new();
+    private CnamProgramInvoiceDto? selectedProgram;
+    private CabinetInfoDto cabinetInfo = new();
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
     private DateTime cnamEnd = DateTime.Today;
+    private string invoiceNumber = string.Empty;
+    private string invoiceDate => DateTime.Today.ToString("dd/MM/yyyy");
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCabinetInfo();
         await LoadCnamRecovery();
+    }
+
+    private async Task SetSection(CnamSection section)
+    {
+        activeSection = section;
+        successMessage = null;
+        errorMessage = null;
+        selectedProgram = null;
+
+        if (section == CnamSection.Invoice)
+        {
+            await LoadCnamPrograms();
+        }
+        else if (section == CnamSection.Bordereau)
+        {
+            await LoadCnamBordereau();
+        }
+    }
+
+    private async Task RefreshCurrentSection()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (activeSection == CnamSection.Recovery)
+        {
+            await LoadCnamRecovery();
+        }
+        else if (activeSection == CnamSection.Invoice)
+        {
+            await LoadCnamPrograms();
+        }
+        else if (activeSection == CnamSection.Bordereau)
+        {
+            await LoadCnamBordereau();
+        }
+    }
+
+    private async Task LoadCabinetInfo()
+    {
+        try
+        {
+            cabinetInfo = await Http.GetFromJsonAsync<CabinetInfoDto>("api/cabinetinfo") ?? new CabinetInfoDto();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
     }
 
     private async Task LoadCnamRecovery()
     {
-        errorMessage = null;
         try
         {
             cnamRecovery = await Http.GetFromJsonAsync<List<CnamRecoveryDto>>($"api/finance/cnam-recovery?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamRecoveryDto>();
@@ -92,5 +310,85 @@
         {
             errorMessage = ex.Message;
         }
+    }
+
+    private async Task LoadCnamPrograms()
+    {
+        try
+        {
+            cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamProgramInvoiceDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task LoadCnamBordereau()
+    {
+        try
+        {
+            cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void SelectProgram(CnamProgramInvoiceDto program)
+    {
+        selectedProgram = program;
+        invoiceNumber = program.DateDebut.HasValue ? $"CNAM-{program.ProgramId}-{program.DateDebut:yyyyMMdd}" : $"CNAM-{program.ProgramId}";
+    }
+
+    private async Task ExportInvoicePdf()
+    {
+        if (selectedProgram == null)
+        {
+            errorMessage = "Sélectionnez un programme avant d'exporter la facture.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        var pdfData = new
+        {
+            cabinet = cabinetInfo,
+            program = new
+            {
+                selectedProgram.ProgramId,
+                selectedProgram.PatientId,
+                selectedProgram.PatientName,
+                selectedProgram.CodePatient,
+                selectedProgram.NumeroAssuree,
+                selectedProgram.Couverture,
+                selectedProgram.Titre,
+                selectedProgram.NatureSeances,
+                DateDebut = selectedProgram.DateDebut?.ToString("dd/MM/yyyy"),
+                DateFin = selectedProgram.DateFin?.ToString("dd/MM/yyyy"),
+                selectedProgram.NbSeances,
+                selectedProgram.DureeSeanceMinutes,
+                selectedProgram.PrixUnitaire,
+                selectedProgram.PrixTTC,
+                selectedProgram.CodeBureau,
+                selectedProgram.Annee,
+                selectedProgram.NumeroDecision,
+                selectedProgram.NumeroOrdre
+            },
+            invoiceNumber,
+            invoiceDate
+        };
+
+        await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{invoiceNumber}.pdf", pdfData);
+        successMessage = "Facture PDF générée.";
+    }
+
+    private enum CnamSection
+    {
+        Recovery,
+        Invoice,
+        Bordereau
     }
 }

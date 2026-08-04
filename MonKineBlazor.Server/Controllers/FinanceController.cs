@@ -192,44 +192,116 @@ public class FinanceController : ControllerBase
         return Ok(rows);
     }
 
-    [HttpGet("advance-transactions/patient/{patientId}")]
-    public ActionResult<IEnumerable<AdvanceTransactionDto>> GetAdvanceTransactions(int patientId)
-    {
-        var transactions = new List<AdvanceTransactionDto>();
-        using var conn = DatabaseConnectionProvider.CreateConnection();
-        conn.Open();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, patient_id, COALESCE(amount, 0), transaction_date, COALESCE(note, ''), COALESCE(created_by, '')
-            FROM advance_transactions
-            WHERE patient_id = @patientId
-            ORDER BY transaction_date DESC, id DESC
-        ";
-        cmd.Parameters.AddWithValue("@patientId", patientId);
-
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        [HttpGet("cnam-programs")]
+        public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(DateTime start, DateTime end)
         {
-            transactions.Add(new AdvanceTransactionDto
+            var programs = new List<CnamProgramInvoiceDto>();
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT
+                    pp.id,
+                    p.id,
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.couverture, ''),
+                    COALESCE(pp.titre, ''),
+                    COALESCE(pp.nature_seances, ''),
+                    COALESCE(pp.nb_seances, 0),
+                    COALESCE(pp.duree_seance_minutes, 0),
+                    pp.date_debut,
+                    pp.date_fin,
+                    COALESCE(pp.prix_unitaire, 0),
+                    COALESCE(pp.prix_ttc, 0),
+                    COALESCE(pp.code_bureau, ''),
+                    COALESCE(pp.annee, ''),
+                    COALESCE(pp.numero_decision, ''),
+                    COALESCE(pp.numero_ordre, '')
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND COALESCE(p.couverture, '') <> ''
+                ORDER BY pp.date_debut DESC
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                Id = reader.GetInt32(0),
-                PatientId = reader.GetInt32(1),
-                Amount = reader.GetDecimal(2),
-                TransactionDate = reader.GetDateTime(3),
-                Note = reader.GetString(4),
-                CreatedBy = reader.GetString(5)
-            });
+                programs.Add(new CnamProgramInvoiceDto
+                {
+                    ProgramId = reader.GetInt32(0),
+                    PatientId = reader.GetInt32(1),
+                    PatientName = reader.GetString(2),
+                    CodePatient = reader.GetString(3),
+                    NumeroAssuree = reader.GetString(4),
+                    Couverture = reader.GetString(5),
+                    Titre = reader.GetString(6),
+                    NatureSeances = reader.GetString(7),
+                    NbSeances = reader.GetInt32(8),
+                    DureeSeanceMinutes = reader.GetInt32(9),
+                    DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                    DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                    PrixUnitaire = reader.GetDecimal(12),
+                    PrixTTC = reader.GetDecimal(13),
+                    CodeBureau = reader.GetString(14),
+                    Annee = reader.GetString(15),
+                    NumeroDecision = reader.GetString(16),
+                    NumeroOrdre = reader.GetString(17)
+                });
+            }
+
+            return Ok(programs);
         }
 
-        return Ok(transactions);
-    }
+        [HttpGet("cnam-bordereau")]
+        public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereau(DateTime start, DateTime end)
+        {
+            var rows = new List<CnamBordereauEntryDto>();
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
 
-    [HttpDelete("advance-transactions/{transactionId}")]
-    public IActionResult DeleteAdvanceTransaction(int transactionId)
-    {
-        using var conn = DatabaseConnectionProvider.CreateConnection();
-        conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0)
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND COALESCE(p.couverture, '') <> ''
+                ORDER BY pp.date_debut
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var programId = reader.GetInt32(0);
+                var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+                rows.Add(new CnamBordereauEntryDto
+                {
+                    ProgramId = programId,
+                    FactureNumber = dateDebut.HasValue ? $"INV-{programId}-{dateDebut:yyyyMMdd}" : $"INV-{programId}",
+                    DateFacture = dateDebut,
+                    CodePatient = reader.GetString(2),
+                    NumeroAssuree = reader.GetString(3),
+                    PatientName = reader.GetString(4),
+                    TotalTTC = reader.GetDecimal(5)
+                });
+            }
+
+            return Ok(rows);
+        }
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM advance_transactions WHERE id = @transactionId";

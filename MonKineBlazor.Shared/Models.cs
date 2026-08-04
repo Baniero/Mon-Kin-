@@ -173,6 +173,39 @@ public class PaymentProjectionEntryDto
     public string? SourceStatus { get; set; }
 }
 
+public class CnamProgramInvoiceDto
+{
+    public int ProgramId { get; set; }
+    public int PatientId { get; set; }
+    public string? PatientName { get; set; }
+    public string? CodePatient { get; set; }
+    public string? NumeroAssuree { get; set; }
+    public string? Couverture { get; set; }
+    public string? Titre { get; set; }
+    public string? NatureSeances { get; set; }
+    public int NbSeances { get; set; }
+    public int DureeSeanceMinutes { get; set; }
+    public DateTime? DateDebut { get; set; }
+    public DateTime? DateFin { get; set; }
+    public decimal PrixUnitaire { get; set; }
+    public decimal PrixTTC { get; set; }
+    public string? CodeBureau { get; set; }
+    public string? Annee { get; set; }
+    public string? NumeroDecision { get; set; }
+    public string? NumeroOrdre { get; set; }
+}
+
+public class CnamBordereauEntryDto
+{
+    public int ProgramId { get; set; }
+    public string? FactureNumber { get; set; }
+    public DateTime? DateFacture { get; set; }
+    public string? CodePatient { get; set; }
+    public string? NumeroAssuree { get; set; }
+    public string? PatientName { get; set; }
+    public decimal TotalTTC { get; set; }
+}
+
 public class CabinetInfoDto
 {
     public int Id { get; set; }

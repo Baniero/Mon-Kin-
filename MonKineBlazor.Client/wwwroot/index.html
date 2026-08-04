@@ -36,7 +36,78 @@
             link.click();
             document.body.removeChild(link);
         };
+
+        window.generateInvoicePdf = (filename, data) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            let y = margin;
+
+            doc.setFontSize(18);
+            doc.text('FACTURE CNAM', margin, y);
+            y += 30;
+
+            doc.setFontSize(11);
+            doc.text(`Cabinet: ${data.cabinet.NomCabinet || ''}`, margin, y);
+            y += 18;
+            doc.text(`Racine: ${data.cabinet.Racine || ''}`, margin, y);
+            y += 18;
+            doc.text(`Clé: ${data.cabinet.Cle || ''}`, margin, y);
+            y += 18;
+            doc.text(`Qualité: ${data.cabinet.Qualite || ''}`, margin, y);
+            y += 18;
+            doc.text(`N° assurée cabinet: ${data.cabinet.NumeroAssuree || ''}`, margin, y);
+            y += 28;
+
+            doc.text(`N° facture: ${data.invoiceNumber}`, margin, y);
+            doc.text(`Date facture: ${data.invoiceDate}`, 400, y);
+            y += 24;
+
+            doc.text(`Patient: ${data.program.PatientName || ''}`, margin, y);
+            y += 18;
+            doc.text(`N° assurée: ${data.program.NumeroAssuree || ''}`, margin, y);
+            y += 18;
+            doc.text(`Code patient: ${data.program.CodePatient || ''}`, margin, y);
+            y += 18;
+            doc.text(`Couverture: ${data.program.Couverture || ''}`, margin, y);
+            y += 24;
+
+            doc.setFontSize(12);
+            doc.text('Données de la séance', margin, y);
+            y += 18;
+            doc.setFontSize(11);
+            doc.text(`Titre: ${data.program.Titre || ''}`, margin, y);
+            y += 16;
+            doc.text(`Nature: ${data.program.NatureSeances || ''}`, margin, y);
+            y += 16;
+            doc.text(`Date début: ${data.program.DateDebut || ''}`, margin, y);
+            y += 16;
+            doc.text(`Date fin: ${data.program.DateFin || ''}`, margin, y);
+            y += 16;
+            doc.text(`Nb séances: ${data.program.NbSeances}`, margin, y);
+            y += 16;
+            doc.text(`Durée séance: ${data.program.DureeSeanceMinutes} min`, margin, y);
+            y += 16;
+            doc.text(`Prix unitaire: ${data.program.PrixUnitaire.toFixed(2)} DT`, margin, y);
+            y += 16;
+            doc.text(`Total TTC: ${data.program.PrixTTC.toFixed(2)} DT`, margin, y);
+            y += 16;
+            doc.text(`Code bureau: ${data.program.CodeBureau || ''}`, margin, y);
+            y += 16;
+            doc.text(`Année: ${data.program.Annee || ''}`, margin, y);
+            y += 16;
+            doc.text(`N° décision: ${data.program.NumeroDecision || ''}`, margin, y);
+            y += 16;
+            doc.text(`N° ordre: ${data.program.NumeroOrdre || ''}`, margin, y);
+            y += 30;
+
+            doc.setFontSize(10);
+            doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+
+            doc.save(filename);
+        };
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
