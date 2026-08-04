@@ -214,6 +214,9 @@ public class CabinetInfoDto
     public string? Cle { get; set; }
     public string? Qualite { get; set; }
     public string? NumeroAssuree { get; set; }
+    public string? CodeEtablissement { get; set; }
+    public string? MatriculeFiscal { get; set; }
+    public string? NomEtablissement { get; set; }
 }
 
 public class CabinetInfoRequestDto
@@ -223,4 +226,7 @@ public class CabinetInfoRequestDto
     public string? Cle { get; set; }
     public string? Qualite { get; set; }
     public string? NumeroAssuree { get; set; }
+    public string? CodeEtablissement { get; set; }
+    public string? MatriculeFiscal { get; set; }
+    public string? NomEtablissement { get; set; }
 }

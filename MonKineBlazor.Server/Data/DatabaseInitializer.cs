@@ -60,9 +60,37 @@ public static class DatabaseInitializer
                 racine TEXT,
                 cle TEXT,
                 qualite TEXT,
-                numero_assuree TEXT
+                numero_assuree TEXT,
+                code_etablissement TEXT,
+                matricule_fiscal TEXT,
+                nom_etablissement TEXT
             )
         ";
         cmd.ExecuteNonQuery();
+
+        EnsureColumnExists(connection, "cabinet_info", "code_etablissement", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "matricule_fiscal", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "nom_etablissement", "TEXT");
+    }
+
+    private static void EnsureColumnExists(NpgsqlConnection connection, string tableName, string columnName, string columnType)
+    {
+        using var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = @"
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name = @tableName
+              AND column_name = @columnName
+        ";
+        checkCmd.Parameters.AddWithValue("@tableName", tableName);
+        checkCmd.Parameters.AddWithValue("@columnName", columnName);
+
+        var exists = checkCmd.ExecuteScalar();
+        if (exists == null)
+        {
+            using var alterCmd = connection.CreateCommand();
+            alterCmd.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnType}";
+            alterCmd.ExecuteNonQuery();
+        }
     }
 }

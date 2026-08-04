@@ -49,8 +49,18 @@
             let y = margin;
 
             doc.setFontSize(18);
-            doc.text('FACTURE CNAM', margin, y);
-            y += 30;
+            doc.text('BORDEREAU CNAM', margin, y);
+            y += 28;
+
+            doc.setFontSize(11);
+            const headerText = 'Un tableau de bordereau CNAM est un récapitulatif de facturation ou de soins transmis à la Caisse Nationale d\'Assurance Maladie, incluant l\'en-tête de décompte, le nombre de factures et le montant total.';
+            doc.text(headerText, margin, y, { maxWidth: 510 });
+            y += 40;
+
+            doc.setFontSize(12);
+            doc.text(`Nombre de factures: 1`, margin, y);
+            doc.text(`Montant total: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, 340, y);
+            y += 26;
 
             doc.setFontSize(11);
             doc.text(`Cabinet: ${data.cabinet.NomCabinet || ''}`, margin, y);

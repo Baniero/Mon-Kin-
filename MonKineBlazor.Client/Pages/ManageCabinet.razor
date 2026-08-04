@@ -27,10 +27,22 @@
         <EditForm Model="cabinetInfoForm" OnValidSubmit="SaveCabinetInfoAsync">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Nom du cabinet</label>
+                    <label class="form-label">Nom du cabinet / établissement</label>
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.NomCabinet" />
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">Nom de l'établissement / professionnel</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomEtablissement" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Code établissement / professionnel</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.CodeEtablissement" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Matricule fiscal</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.MatriculeFiscal" />
+                </div>
+                <div class="col-md-4">
                     <label class="form-label">Racine</label>
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.Racine" />
                 </div>
@@ -175,7 +187,10 @@ else
                 Racine = cabinetInfo.Racine,
                 Cle = cabinetInfo.Cle,
                 Qualite = cabinetInfo.Qualite,
-                NumeroAssuree = cabinetInfo.NumeroAssuree
+                NumeroAssuree = cabinetInfo.NumeroAssuree,
+                CodeEtablissement = cabinetInfo.CodeEtablissement,
+                MatriculeFiscal = cabinetInfo.MatriculeFiscal,
+                NomEtablissement = cabinetInfo.NomEtablissement
             };
         }
         catch (Exception ex)

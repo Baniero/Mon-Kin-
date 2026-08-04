@@ -17,7 +17,7 @@ public class CabinetInfoController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, nom_cabinet, racine, cle, qualite, numero_assuree
+            SELECT id, nom_cabinet, racine, cle, qualite, numero_assuree, code_etablissement, matricule_fiscal, nom_etablissement
             FROM cabinet_info
             ORDER BY id DESC
             LIMIT 1
@@ -36,7 +36,10 @@ public class CabinetInfoController : ControllerBase
             Racine = reader.IsDBNull(2) ? null : reader.GetString(2),
             Cle = reader.IsDBNull(3) ? null : reader.GetString(3),
             Qualite = reader.IsDBNull(4) ? null : reader.GetString(4),
-            NumeroAssuree = reader.IsDBNull(5) ? null : reader.GetString(5)
+            NumeroAssuree = reader.IsDBNull(5) ? null : reader.GetString(5),
+            CodeEtablissement = reader.IsDBNull(6) ? null : reader.GetString(6),
+            MatriculeFiscal = reader.IsDBNull(7) ? null : reader.GetString(7),
+            NomEtablissement = reader.IsDBNull(8) ? null : reader.GetString(8)
         });
     }
 
@@ -49,8 +52,8 @@ public class CabinetInfoController : ControllerBase
         using var tran = conn.BeginTransaction();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO cabinet_info (nom_cabinet, racine, cle, qualite, numero_assuree)
-            VALUES (@nom_cabinet, @racine, @cle, @qualite, @numero_assuree)
+            INSERT INTO cabinet_info (nom_cabinet, racine, cle, qualite, numero_assuree, code_etablissement, matricule_fiscal, nom_etablissement)
+            VALUES (@nom_cabinet, @racine, @cle, @qualite, @numero_assuree, @code_etablissement, @matricule_fiscal, @nom_etablissement)
         ";
         cmd.Transaction = tran;
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
@@ -58,6 +61,9 @@ public class CabinetInfoController : ControllerBase
         cmd.Parameters.AddWithValue("@cle", (object?)request.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)request.Qualite ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_assuree", (object?)request.NumeroAssuree ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@code_etablissement", (object?)request.CodeEtablissement ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@matricule_fiscal", (object?)request.MatriculeFiscal ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nom_etablissement", (object?)request.NomEtablissement ?? DBNull.Value);
 
         cmd.ExecuteNonQuery();
         tran.Commit();
