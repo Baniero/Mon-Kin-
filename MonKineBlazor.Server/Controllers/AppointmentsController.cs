@@ -66,6 +66,65 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
+    [HttpGet("patient/{patientId}")]
+    public ActionResult<IEnumerable<AppointmentDto>> GetByPatient(int patientId)
+    {
+        var appointments = new List<AppointmentDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                a.id,
+                a.patient_id,
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                a.kine_id,
+                COALESCE(u.full_name, u.username, ''),
+                a.start_datetime,
+                a.end_datetime,
+                COALESCE(a.acte, ''),
+                COALESCE(a.room, ''),
+                COALESCE(a.status, ''),
+                COALESCE(a.payment_status, ''),
+                COALESCE(a.amount, 0),
+                COALESCE(a.paid_amount, 0),
+                COALESCE(a.cnam_covered, 0),
+                COALESCE(a.notes, '')
+            FROM appointments a
+            JOIN patients p ON p.id = a.patient_id
+            LEFT JOIN users u ON u.id = a.kine_id
+            WHERE a.patient_id = @patientId
+            ORDER BY a.start_datetime DESC
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            appointments.Add(new AppointmentDto
+            {
+                Id = reader.GetInt32(0),
+                PatientId = reader.GetInt32(1),
+                PatientName = reader.GetString(2),
+                KineId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                KineName = reader.GetString(4),
+                Start = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
+                End = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                Acte = reader.GetString(7),
+                Room = reader.GetString(8),
+                Status = reader.GetString(9),
+                PaymentStatus = reader.GetString(10),
+                Amount = reader.GetDecimal(11),
+                PaidAmount = reader.GetDecimal(12),
+                CnamCovered = reader.GetDecimal(13),
+                Notes = reader.GetString(14),
+            });
+        }
+
+        return Ok(appointments);
+    }
+
     [HttpPost]
     public ActionResult<AppointmentDto> Create(AppointmentDto appointment)
     {

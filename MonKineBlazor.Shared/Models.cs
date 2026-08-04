@@ -163,6 +163,17 @@ public class PatientFinanceDto
     public decimal TotalAdvancePaid { get; set; }
 }
 
+public class PatientFinancialSummaryDto
+{
+    public int PatientId { get; set; }
+    public decimal TotalAmountDue { get; set; }
+    public decimal TotalPaid { get; set; }
+    public decimal OutstandingAmount { get; set; }
+    public decimal AdvanceBalance { get; set; }
+    public decimal TotalAdvancePaid { get; set; }
+    public decimal OutstandingAfterAdvance { get; set; }
+}
+
 public class PaymentProjectionEntryDto
 {
     public int AppointmentId { get; set; }

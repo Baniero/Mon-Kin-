@@ -533,6 +533,79 @@ public class FinanceController : ControllerBase
         });
     }
 
+    [HttpGet("patient-summary/{patientId}")]
+    public ActionResult<PatientFinancialSummaryDto> GetPatientFinancialSummary(int patientId)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        decimal totalAmountDue = 0;
+        decimal totalPaid = 0;
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT COALESCE(SUM(amount), 0), COALESCE(SUM(paid_amount), 0)
+                FROM appointments
+                WHERE patient_id = @patientId
+            ";
+            cmd.Parameters.AddWithValue("@patientId", patientId);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                totalAmountDue = reader.GetDecimal(0);
+                totalPaid = reader.GetDecimal(1);
+            }
+        }
+
+        decimal advanceBalance = 0;
+        decimal totalAdvancePaid = 0;
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT COALESCE(advance_balance, 0), COALESCE(total_advance_paid, 0)
+                FROM patient_finance
+                WHERE patient_id = @patientId
+            ";
+            cmd.Parameters.AddWithValue("@patientId", patientId);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                advanceBalance = reader.GetDecimal(0);
+                totalAdvancePaid = reader.GetDecimal(1);
+            }
+        }
+
+        if (advanceBalance == 0)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT COALESCE(SUM(remaining_amount), 0)
+                FROM advance_lots
+                WHERE patient_id = @patientId
+            ";
+            cmd.Parameters.AddWithValue("@patientId", patientId);
+
+            var result = Convert.ToDecimal(cmd.ExecuteScalar());
+            advanceBalance = result;
+        }
+
+        var outstanding = totalAmountDue - totalPaid;
+        var outstandingAfterAdvance = Math.Max(0, outstanding - advanceBalance);
+
+        return Ok(new PatientFinancialSummaryDto
+        {
+            PatientId = patientId,
+            TotalAmountDue = totalAmountDue,
+            TotalPaid = totalPaid,
+            OutstandingAmount = outstanding,
+            AdvanceBalance = advanceBalance,
+            TotalAdvancePaid = totalAdvancePaid,
+            OutstandingAfterAdvance = outstandingAfterAdvance
+        });
+    }
+
     [HttpPost("advance-transactions")]
     public ActionResult<AdvanceTransactionDto> CreateAdvanceTransaction(AdvanceTransactionRequestDto request)
     {

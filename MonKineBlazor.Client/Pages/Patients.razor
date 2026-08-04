@@ -28,26 +28,39 @@ else
         <div class="col-md-5">
             <div class="card mb-4">
                 <div class="card-header">Liste des patients</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <InputText class="form-control" placeholder="Rechercher patient par code, nom, prénom ou dossier" @bind-Value="patientFilter" />
+                    </div>
+                </div>
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
+                                <th style="width: 80px">Fiche</th>
                                 <th>Code</th>
                                 <th>Nom</th>
                                 <th>Prénom</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var patient in patients)
+                            @foreach (var patient in filteredPatients)
                             {
-                                <tr class="@(selectedPatient?.Id == patient.Id ? "table-active" : string.Empty)" @onclick="() => SelectPatient(patient)">
-                                    <td>@patient.CodePatient</td>
-                                    <td>@patient.Nom</td>
-                                    <td>@patient.Prenom</td>
+                                <tr class="@(selectedPatient?.Id == patient.Id ? "table-active" : string.Empty)">
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="@(async () => await ShowPatientDetails(patient))">Fiche</button>
+                                    </td>
+                                    <td @onclick="() => SelectPatient(patient)">@patient.CodePatient</td>
+                                    <td @onclick="() => SelectPatient(patient)">@patient.Nom</td>
+                                    <td @onclick="() => SelectPatient(patient)">@patient.Prenom</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
+                    @if (!filteredPatients.Any())
+                    {
+                        <div class="p-3 text-muted">Aucun patient ne correspond à la recherche.</div>
+                    }
                 </div>
             </div>
         </div>
@@ -196,6 +209,95 @@ else
                     </div>
                 </div>
 
+                @if (showPatientDetails)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">Fiche patient</div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4"><strong>Code :</strong> @selectedPatient.CodePatient</div>
+                                <div class="col-md-4"><strong>Nom :</strong> @selectedPatient.Nom</div>
+                                <div class="col-md-4"><strong>Prénom :</strong> @selectedPatient.Prenom</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-3"><strong>Age :</strong> @selectedPatient.Age</div>
+                                <div class="col-md-3"><strong>Couverture :</strong> @selectedPatient.Couverture</div>
+                                <div class="col-md-3"><strong>N° assurée :</strong> @selectedPatient.NumeroAssuree</div>
+                                <div class="col-md-3"><strong>Téléphone :</strong> @selectedPatient.Telephone1</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-12"><strong>Adresse :</strong> @selectedPatient.Adresse</div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header">État financier</div>
+                                        <div class="card-body">
+                                            @if (financialSummary is null)
+                                            {
+                                                <div>Chargement...</div>
+                                            }
+                                            else
+                                            {
+                                                <div><strong>Total dû :</strong> @($"{financialSummary.TotalAmountDue:F2} DT")</div>
+                                                <div><strong>Total payé :</strong> @($"{financialSummary.TotalPaid:F2} DT")</div>
+                                                <div><strong>Restant :</strong> @($"{financialSummary.OutstandingAmount:F2} DT")</div>
+                                                <div><strong>Avance disponible :</strong> @($"{financialSummary.AdvanceBalance:F2} DT")</div>
+                                                <div><strong>Avance payée :</strong> @($"{financialSummary.TotalAdvancePaid:F2} DT")</div>
+                                                <div><strong>Reste après avance :</strong> @($"{financialSummary.OutstandingAfterAdvance:F2} DT")</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header">Rendez-vous programmés</div>
+                                        <div class="card-body p-0">
+                                            @if (patientAppointments is null)
+                                            {
+                                                <div class="p-3">Chargement...</div>
+                                            }
+                                            else if (!patientAppointments.Any())
+                                            {
+                                                <div class="p-3">Aucun rendez-vous trouvé.</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-striped mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Date</th>
+                                                                <th>Acte</th>
+                                                                <th>Statut</th>
+                                                                <th>Paiement</th>
+                                                                <th class="text-end">Montant</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var appointment in patientAppointments)
+                                                            {
+                                                                <tr>
+                                                                    <td>@(appointment.Start?.ToString("dd/MM/yyyy HH:mm") ?? "")</td>
+                                                                    <td>@appointment.Acte</td>
+                                                                    <td>@appointment.Status</td>
+                                                                    <td>@appointment.PaymentStatus</td>
+                                                                    <td class="text-end">@($"{appointment.Amount:F2} DT")</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 <div class="card">
                     <div class="card-header">@(isEditingProgram ? "Modifier le programme" : "Ajouter un programme")</div>
                     <div class="card-body">
@@ -299,9 +401,21 @@ else
 }
 
 @code {
+    private string patientFilter = string.Empty;
     private List<PatientDto>? patients;
+    private List<PatientDto> filteredPatients => string.IsNullOrWhiteSpace(patientFilter)
+        ? patients ?? new List<PatientDto>()
+        : (patients ?? new List<PatientDto>()).Where(p =>
+            (!string.IsNullOrWhiteSpace(p.CodePatient) && p.CodePatient.Contains(patientFilter, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrWhiteSpace(p.Nom) && p.Nom.Contains(patientFilter, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrWhiteSpace(p.Prenom) && p.Prenom.Contains(patientFilter, StringComparison.OrdinalIgnoreCase)) ||
+            (!string.IsNullOrWhiteSpace(p.DossierPatient) && p.DossierPatient.Contains(patientFilter, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
     private List<PatientProgramDto>? programs;
     private PatientDto? selectedPatient;
+    private PatientFinancialSummaryDto? financialSummary;
+    private List<AppointmentDto>? patientAppointments;
+    private bool showPatientDetails;
     private PatientDto patientForm = new();
     private bool _isCnam;
     private bool isCnam
@@ -379,6 +493,56 @@ else
         selectedPatient = patient;
         CopyPatientToForm(patient);
         await LoadPrograms();
+        showPatientDetails = false;
+    }
+
+    private async Task ShowPatientDetails(PatientDto patient)
+    {
+        selectedPatient = patient;
+        CopyPatientToForm(patient);
+        await LoadPrograms();
+        await LoadPatientAppointments();
+        await LoadPatientFinancialSummary();
+        showPatientDetails = true;
+    }
+
+    private async Task LoadPatientAppointments()
+    {
+        patientAppointments = null;
+        if (selectedPatient == null)
+        {
+            patientAppointments = new List<AppointmentDto>();
+            return;
+        }
+
+        try
+        {
+            patientAppointments = await Http.GetFromJsonAsync<List<AppointmentDto>>($"api/appointments/patient/{selectedPatient.Id}") ?? new List<AppointmentDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des rendez-vous : " + ex.Message;
+            patientAppointments = new List<AppointmentDto>();
+        }
+    }
+
+    private async Task LoadPatientFinancialSummary()
+    {
+        financialSummary = null;
+        if (selectedPatient == null)
+        {
+            financialSummary = null;
+            return;
+        }
+
+        try
+        {
+            financialSummary = await Http.GetFromJsonAsync<PatientFinancialSummaryDto>($"api/finance/patient-summary/{selectedPatient.Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement du résumé financier : " + ex.Message;
+        }
     }
 
     private async Task SavePatientAsync()
