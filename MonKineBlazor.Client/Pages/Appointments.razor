@@ -537,6 +537,22 @@
     private HashSet<int> selectedAppointmentIds = new();
     private AppointmentSortColumn appointmentSortColumn = AppointmentSortColumn.Start;
     private bool appointmentSortDescending;
+    private static readonly HashSet<string> CanceledStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "annule",
+        "annulé",
+        "annulee",
+        "annulée",
+        "annulé ",
+        "annule " 
+    };
+    private static readonly HashSet<string> CanceledStatuses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "annule",
+        "annulé",
+        "annulee",
+        "annulée"
+    };
 
     private int selectedProgramPatientId;
     private PatientDto? selectedProgramPatient;
@@ -1023,12 +1039,11 @@
             filtered = filtered.Where(a => a.KineId == selectedKineFilter);
         }
 
-        var canceledStatuses = new[] { "annule", "annulé", "annulee", "annulée" };
-        filtered = filtered.Where(a => !canceledStatuses.Contains((a.Status ?? string.Empty).ToLowerInvariant()));
+        filtered = filtered.Where(a => !CanceledStatuses.Contains((a.Status ?? string.Empty).Trim()));
 
         if (!string.IsNullOrWhiteSpace(appointmentStatusFilter))
         {
-            filtered = filtered.Where(a => string.Equals(a.Status, appointmentStatusFilter, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(a => string.Equals(a.Status?.Trim(), appointmentStatusFilter.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         return SortFilteredAppointments(filtered);
@@ -1081,7 +1096,7 @@
         return appointmentSortDescending ? "▼" : "▲";
     }
 
-    private IEnumerable<AppointmentDto> CanceledAppointments => appointments?.Where(a => string.Equals(a.Status, "annule", StringComparison.OrdinalIgnoreCase)) ?? Enumerable.Empty<AppointmentDto>();
+    private IEnumerable<AppointmentDto> CanceledAppointments => appointments?.Where(a => CanceledStatuses.Contains((a.Status ?? string.Empty).Trim())) ?? Enumerable.Empty<AppointmentDto>();
 
     private void ToggleAppointmentSelection(int appointmentId)
     {
@@ -1155,6 +1170,7 @@
         }
 
         await UpdateAppointmentStatus(appointment, "annule", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
+        selectedAppointmentIds.Remove(appointment.Id);
         await LoadAppointments();
         await ShowSuccessMessage("Rendez-vous annulé.");
     }
