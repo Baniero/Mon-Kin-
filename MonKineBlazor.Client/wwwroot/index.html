@@ -39,12 +39,12 @@
         };
 
         window.generateInvoicePdf = (filename, data) => {
-            if (!window.jspdf || !window.jspdf.jsPDF) {
+            const jsPDFClass = window.jspdf?.jsPDF ?? window.jsPDF ?? null;
+            if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
             let y = margin;
 
