@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Mon Kiné logo">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5d7cff" />
+      <stop offset="100%" stop-color="#2a3ee0" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="28" fill="url(#g)" />
+  <path d="M35 30h16v60h-16z" fill="#fff" />
+  <path d="M65 30h15l15 30v30h-15V66l-6-12-6 12v24H65V30z" fill="#fff" />
+</svg>

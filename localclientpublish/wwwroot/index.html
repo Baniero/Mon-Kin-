@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MonKineBlazor.Client</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" integrity="sha384-b6lVK+yI1JOzG4FB2yO1H2b+QOHPY9fsSdlm+cyUe0x8LY2vF7W2KEqE+XqUH0f1" crossorigin="anonymous" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link href="MonKineBlazor.Client.styles.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        if (!window.jspdf && !window.jsPDF) {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            fallback.crossOrigin = 'anonymous';
+            fallback.referrerPolicy = 'no-referrer';
+            document.head.appendChild(fallback);
+        }
+
+        window.downloadFile = (filename, base64Data) => {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = 'data:text/csv;base64,' + base64Data;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.generateInvoicePdf = (filename, data) => {
+            const jsPDFClass = window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            let y = margin;
+
+            doc.setFontSize(18);
+            doc.text('BORDEREAU CNAM', margin, y);
+            y += 28;
+
+            doc.setFontSize(11);
+            const headerText = 'Un tableau de bordereau CNAM est un récapitulatif de facturation ou de soins transmis à la Caisse Nationale d\'Assurance Maladie, incluant l\'en-tête de décompte, le nombre de factures et le montant total.';
+            doc.text(headerText, margin, y, { maxWidth: 510 });
+            y += 40;
+
+            doc.setFontSize(12);
+            doc.text(`Nombre de factures: 1`, margin, y);
+            doc.text(`Montant total: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, 340, y);
+            y += 26;
+
+            doc.setFontSize(11);
+            doc.text(`Cabinet: ${data.cabinet.NomCabinet || ''}`, margin, y);
+            y += 18;
+            doc.text(`Nom établissement/professionnel: ${data.cabinet.NomEtablissement || ''}`, margin, y);
+            y += 18;
+            doc.text(`Code établissement/professionnel: ${data.cabinet.CodeEtablissement || ''}`, margin, y);
+            y += 18;
+            doc.text(`Matricule fiscal: ${data.cabinet.MatriculeFiscal || ''}`, margin, y);
+            y += 18;
+            doc.text(`Racine: ${data.cabinet.Racine || ''}`, margin, y);
+            y += 18;
+            doc.text(`Clé: ${data.cabinet.Cle || ''}`, margin, y);
+            y += 18;
+            doc.text(`Qualité: ${data.cabinet.Qualite || ''}`, margin, y);
+            y += 18;
+            doc.text(`N° assurée cabinet: ${data.cabinet.NumeroAssuree || ''}`, margin, y);
+            y += 28;
+
+            doc.text(`N° facture: ${data.invoiceNumber}`, margin, y);
+            doc.text(`Date facture: ${data.invoiceDate}`, 400, y);
+            y += 24;
+
+            doc.text(`Patient: ${data.program.PatientName || ''}`, margin, y);
+            y += 18;
+            doc.text(`N° assurée: ${data.program.NumeroAssuree || ''}`, margin, y);
+            y += 18;
+            doc.text(`Code patient: ${data.program.CodePatient || ''}`, margin, y);
+            y += 18;
+            doc.text(`Couverture: ${data.program.Couverture || ''}`, margin, y);
+            y += 24;
+
+            doc.setFontSize(12);
+            doc.text('Données de la séance', margin, y);
+            y += 18;
+            doc.setFontSize(11);
+            doc.text(`Titre: ${data.program.Titre || ''}`, margin, y);
+            y += 16;
+            doc.text(`Nature: ${data.program.NatureSeances || ''}`, margin, y);
+            y += 16;
+            doc.text(`Date début: ${data.program.DateDebut || ''}`, margin, y);
+            y += 16;
+            doc.text(`Date fin: ${data.program.DateFin || ''}`, margin, y);
+            y += 16;
+            doc.text(`Nb séances: ${data.program.NbSeances}`, margin, y);
+            y += 16;
+            doc.text(`Durée séance: ${data.program.DureeSeanceMinutes} min`, margin, y);
+            y += 16;
+            doc.text(`Prix unitaire: ${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
+            y += 16;
+            doc.text(`Total TTC: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
+            y += 16;
+            doc.text(`Code bureau: ${data.program.CodeBureau || ''}`, margin, y);
+            y += 16;
+            doc.text(`Année: ${data.program.Annee || ''}`, margin, y);
+            y += 16;
+            doc.text(`N° décision: ${data.program.NumeroDecision || ''}`, margin, y);
+            y += 16;
+            doc.text(`N° ordre: ${data.program.NumeroOrdre || ''}`, margin, y);
+            y += 30;
+
+            doc.setFontSize(10);
+            doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+
+            doc.save(filename);
+        };
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>
