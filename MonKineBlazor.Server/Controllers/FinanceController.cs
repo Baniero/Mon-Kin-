@@ -303,14 +303,6 @@ public class FinanceController : ControllerBase
             return Ok(rows);
         }
 
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM advance_transactions WHERE id = @transactionId";
-        cmd.Parameters.AddWithValue("@transactionId", transactionId);
-
-        var rows = cmd.ExecuteNonQuery();
-        return rows == 0 ? NotFound() : NoContent();
-    }
-
     [HttpGet("advance-lots/patient/{patientId}")]
     public ActionResult<IEnumerable<AdvanceLotDto>> GetAdvanceLots(int patientId)
     {
