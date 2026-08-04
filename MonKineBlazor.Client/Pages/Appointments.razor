@@ -37,7 +37,7 @@
             <option value="planifie">planifie</option>
             <option value="present">present</option>
             <option value="termine">termine</option>
-            <option value="annule">annule</option>
+            <option value="absent">absent</option>
         </InputSelect>
     </div>
     <div class="col-md-2 d-flex align-items-end">
@@ -350,6 +350,7 @@
                                     <td>@appointment.PaymentStatus</td>
                                     <td>
                                         <button class="btn btn-sm btn-success me-1" @onclick="() => MarkAppointmentPresent(appointment)">Présent</button>
+                                        <button class="btn btn-sm btn-danger me-1" @onclick="() => MarkAppointmentAbsent(appointment)">Absent</button>
                                         <button class="btn btn-sm btn-primary me-1" @onclick="() => MarkAppointmentPaid(appointment)">Payé</button>
                                         <button class="btn btn-sm btn-warning" @onclick="() => MarkAppointmentUnpaid(appointment)">Non payé</button>
                                     </td>
@@ -447,7 +448,8 @@
                                     <td>@appointment.Status</td>
                                     <td>@appointment.PaymentStatus</td>
                                     <td>
-                                        <button class="btn btn-sm btn-secondary" @onclick="() => ReactivateAppointment(appointment)">Réactiver</button>
+                                        <button class="btn btn-sm btn-secondary me-2" @onclick="() => ReactivateAppointment(appointment)">Réactiver</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supp. définitive</button>
                                     </td>
                                 </tr>
                             }
@@ -1021,6 +1023,9 @@
             filtered = filtered.Where(a => a.KineId == selectedKineFilter);
         }
 
+        var canceledStatuses = new[] { "annule", "annulé", "annulee", "annulée" };
+        filtered = filtered.Where(a => !canceledStatuses.Contains((a.Status ?? string.Empty).ToLowerInvariant()));
+
         if (!string.IsNullOrWhiteSpace(appointmentStatusFilter))
         {
             filtered = filtered.Where(a => string.Equals(a.Status, appointmentStatusFilter, StringComparison.OrdinalIgnoreCase));
@@ -1169,6 +1174,11 @@
     private async Task MarkAppointmentPresent(AppointmentDto appointment)
     {
         await UpdateAppointmentStatus(appointment, "present", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
+    }
+
+    private async Task MarkAppointmentAbsent(AppointmentDto appointment)
+    {
+        await UpdateAppointmentStatus(appointment, "absent", "non_paye", 0);
     }
 
     private async Task MarkAppointmentPaid(AppointmentDto appointment)
