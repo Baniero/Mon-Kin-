@@ -381,8 +381,19 @@
             invoiceDate
         };
 
-        await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{invoiceNumber}.pdf", pdfData);
-        successMessage = "Facture PDF générée.";
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{invoiceNumber}.pdf", pdfData);
+            successMessage = "Facture PDF générée.";
+        }
+        catch (JSException jsEx)
+        {
+            errorMessage = $"Erreur PDF : {jsEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'export PDF : {ex.Message}";
+        }
     }
 
     private enum CnamSection

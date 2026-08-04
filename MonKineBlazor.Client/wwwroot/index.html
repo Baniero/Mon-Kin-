@@ -27,6 +27,7 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
         window.downloadFile = (filename, base64Data) => {
             const link = document.createElement('a');
@@ -38,6 +39,10 @@
         };
 
         window.generateInvoicePdf = (filename, data) => {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ unit: 'pt', format: 'a4' });
             const margin = 40;
@@ -88,9 +93,9 @@
             y += 16;
             doc.text(`Durée séance: ${data.program.DureeSeanceMinutes} min`, margin, y);
             y += 16;
-            doc.text(`Prix unitaire: ${data.program.PrixUnitaire.toFixed(2)} DT`, margin, y);
+            doc.text(`Prix unitaire: ${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
             y += 16;
-            doc.text(`Total TTC: ${data.program.PrixTTC.toFixed(2)} DT`, margin, y);
+            doc.text(`Total TTC: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
             y += 16;
             doc.text(`Code bureau: ${data.program.CodeBureau || ''}`, margin, y);
             y += 16;
@@ -107,7 +112,6 @@
             doc.save(filename);
         };
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
