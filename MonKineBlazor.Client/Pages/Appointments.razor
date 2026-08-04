@@ -12,6 +12,7 @@
     <button class="btn @(activeSubmodule == AppointmentSubmodule.Today ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Today)">Rendez-vous du jour</button>
     <button class="btn @(activeSubmodule == AppointmentSubmodule.Weekly ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Weekly)">Planning hebdo</button>
     <button class="btn @(activeSubmodule == AppointmentSubmodule.List ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.List)">Liste</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Canceled ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Canceled)">Planification des rendez-vous annulé</button>
 </div>
 
 <div class="row mb-3">
@@ -407,8 +408,65 @@
     </div>
 }
 
+@if (activeSubmodule == AppointmentSubmodule.Canceled)
+{
+    <div class="card mb-4">
+        <div class="card-header">Planification des rendez-vous annulé</div>
+        <div class="card-body">
+            @if (!CanceledAppointments.Any())
+            {
+                <div class="alert alert-info">Aucun rendez-vous annulé pour le moment.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date début</th>
+                                <th>Patient</th>
+                                <th>Kiné</th>
+                                <th>Acte</th>
+                                <th>Salle</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                                <th>Paiement</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in CanceledAppointments)
+                            {
+                                <tr>
+                                    <td>@appointment.Start</td>
+                                    <td>@appointment.PatientName</td>
+                                    <td>@appointment.KineName</td>
+                                    <td>@appointment.Acte</td>
+                                    <td>@appointment.Room</td>
+                                    <td>@($"{appointment.Amount:F2} DT")</td>
+                                    <td>@appointment.Status</td>
+                                    <td>@appointment.PaymentStatus</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => ReactivateAppointment(appointment)">Réactiver</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @if (activeSubmodule == AppointmentSubmodule.List)
 {
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+            <button class="btn btn-danger btn-sm" @onclick="BulkCancelSelectedAppointments" disabled="@(selectedAppointmentIds.Count == 0)">Supprimer la sélection</button>
+            <span class="ms-2 text-muted">@selectedAppointmentIds.Count sélectionné(s)</span>
+        </div>
+    </div>
     <div class="table-responsive">
         <table class="table table-striped table-hover">
             <thead>
@@ -422,6 +480,7 @@
                     <th>Statut</th>
                     <th>Paiement</th>
                     <th>Actions</th>
+                    <th class="text-center"><input type="checkbox" @onchange="ToggleSelectAllCurrentPage" checked="@AreAllVisibleAppointmentsSelected()" aria-label="Sélectionner tout" /></th>
                 </tr>
             </thead>
             <tbody>
@@ -438,7 +497,10 @@
                         <td>@appointment.PaymentStatus</td>
                         <td>
                             <button class="btn btn-sm btn-primary me-2" @onclick="() => EditAppointment(appointment)">Modifier</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supprimer</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => CancelAppointment(appointment)">Supprimer</button>
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" checked="@selectedAppointmentIds.Contains(appointment.Id)" @onchange="() => ToggleAppointmentSelection(appointment.Id)" aria-label="Sélectionner ce rendez-vous" />
                         </td>
                     </tr>
                 }
@@ -470,6 +532,7 @@
     private int selectedKineFilter = 0;
 
     private AppointmentSubmodule activeSubmodule = AppointmentSubmodule.List;
+    private HashSet<int> selectedAppointmentIds = new();
 
     private int selectedProgramPatientId;
     private PatientDto? selectedProgramPatient;
@@ -964,6 +1027,96 @@
         return filtered;
     }
 
+    private IEnumerable<AppointmentDto> CanceledAppointments => appointments?.Where(a => string.Equals(a.Status, "annule", StringComparison.OrdinalIgnoreCase)) ?? Enumerable.Empty<AppointmentDto>();
+
+    private void ToggleAppointmentSelection(int appointmentId)
+    {
+        if (selectedAppointmentIds.Contains(appointmentId))
+        {
+            selectedAppointmentIds.Remove(appointmentId);
+        }
+        else
+        {
+            selectedAppointmentIds.Add(appointmentId);
+        }
+    }
+
+    private async Task BulkCancelSelectedAppointments()
+    {
+        if (selectedAppointmentIds.Count == 0 || appointments == null)
+        {
+            return;
+        }
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer les rendez-vous sélectionnés ?"))
+        {
+            return;
+        }
+
+        errorMessage = null;
+        foreach (var appointmentId in selectedAppointmentIds.ToList())
+        {
+            var appointment = appointments.FirstOrDefault(a => a.Id == appointmentId);
+            if (appointment != null)
+            {
+                await UpdateAppointmentStatus(appointment, "annule", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
+            }
+        }
+
+        selectedAppointmentIds.Clear();
+        await LoadAppointments();
+        await ShowSuccessMessage("Rendez-vous sélectionnés annulés.");
+    }
+
+    private void ToggleSelectAllCurrentPage(ChangeEventArgs e)
+    {
+        var visibleIds = FilteredAppointments().Select(a => a.Id).ToList();
+        if (visibleIds.All(id => selectedAppointmentIds.Contains(id)))
+        {
+            foreach (var id in visibleIds)
+            {
+                selectedAppointmentIds.Remove(id);
+            }
+        }
+        else
+        {
+            foreach (var id in visibleIds)
+            {
+                selectedAppointmentIds.Add(id);
+            }
+        }
+    }
+
+    private bool AreAllVisibleAppointmentsSelected()
+    {
+        var visibleIds = FilteredAppointments().Select(a => a.Id).ToList();
+        return visibleIds.Any() && visibleIds.All(id => selectedAppointmentIds.Contains(id));
+    }
+
+    private async Task CancelAppointment(AppointmentDto appointment)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer ce rendez-vous ?"))
+        {
+            return;
+        }
+
+        await UpdateAppointmentStatus(appointment, "annule", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
+        await LoadAppointments();
+        await ShowSuccessMessage("Rendez-vous annulé.");
+    }
+
+    private async Task ReactivateAppointment(AppointmentDto appointment)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Réactiver ce rendez-vous annulé ?"))
+        {
+            return;
+        }
+
+        await UpdateAppointmentStatus(appointment, "planifie", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
+        await LoadAppointments();
+        await ShowSuccessMessage("Rendez-vous réactivé.");
+    }
+
     private async Task MarkAppointmentPresent(AppointmentDto appointment)
     {
         await UpdateAppointmentStatus(appointment, "present", appointment.PaymentStatus ?? "non_paye", appointment.PaidAmount);
@@ -1134,6 +1287,7 @@
         NewAppointment,
         Today,
         Weekly,
-        List
+        List,
+        Canceled
     }
 }
