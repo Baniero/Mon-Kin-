@@ -204,6 +204,14 @@ public class CnamBordereauEntryDto
     public string? NumeroAssuree { get; set; }
     public string? PatientName { get; set; }
     public decimal TotalTTC { get; set; }
+    public DateTime? ExecutedAt { get; set; }
+    public string? ExecutedBy { get; set; }
+}
+
+public class CnamBordereauExecuteRequestDto
+{
+    public int ProgramId { get; set; }
+    public string? ExecutedBy { get; set; }
 }
 
 public class CabinetInfoDto

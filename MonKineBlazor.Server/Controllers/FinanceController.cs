@@ -152,6 +152,23 @@ public class FinanceController : ControllerBase
         });
     }
 
+    [HttpDelete("cash-closings/{dateJour:datetime}")]
+    public IActionResult DeleteCashClosing(DateTime dateJour)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            DELETE FROM cash_closings
+            WHERE date_jour = @dateJour
+        ";
+        cmd.Parameters.AddWithValue("@dateJour", dateJour.Date);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
+    }
+
     [HttpGet("cnam-recovery")]
     public ActionResult<IEnumerable<CnamRecoveryDto>> GetCnamRecovery(DateTime start, DateTime end)
     {
@@ -279,6 +296,9 @@ public class FinanceController : ControllerBase
                 WHERE DATE(pp.date_debut) BETWEEN @start AND @end
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
+                  AND NOT EXISTS (
+                      SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
+                  )
                 ORDER BY pp.date_debut
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
@@ -302,6 +322,133 @@ public class FinanceController : ControllerBase
             }
 
             return Ok(rows);
+        }
+
+        [HttpGet("cnam-bordereau-executed")]
+        public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereauExecuted(DateTime start, DateTime end)
+        {
+            var rows = new List<CnamBordereauEntryDto>();
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0),
+                    e.executed_at,
+                    COALESCE(e.executed_by, '')
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
+                ORDER BY e.executed_at DESC
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var programId = reader.GetInt32(0);
+                var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+                rows.Add(new CnamBordereauEntryDto
+                {
+                    ProgramId = programId,
+                    FactureNumber = dateDebut.HasValue ? $"INV-{programId}-{dateDebut:yyyyMMdd}" : $"INV-{programId}",
+                    DateFacture = dateDebut,
+                    CodePatient = reader.GetString(2),
+                    NumeroAssuree = reader.GetString(3),
+                    PatientName = reader.GetString(4),
+                    TotalTTC = reader.GetDecimal(5),
+                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    ExecutedBy = reader.GetString(7)
+                });
+            }
+
+            return Ok(rows);
+        }
+
+        [HttpPost("cnam-bordereau/execute")]
+        public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau(CnamBordereauExecuteRequestDto request)
+        {
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
+
+            using var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = @"
+                SELECT pp.id
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE pp.id = @programId
+                  AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
+                  AND NOT EXISTS (
+                      SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
+                  )
+            ";
+            checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+            var programIdObj = checkCmd.ExecuteScalar();
+            if (programIdObj == null)
+            {
+                return BadRequest("Programme introuvable ou déjà exécuté.");
+            }
+
+            using var insertCmd = conn.CreateCommand();
+            insertCmd.CommandText = @"
+                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by)
+                VALUES (@programId, NOW(), @executedBy)
+                ON CONFLICT (program_id) DO NOTHING
+            ";
+            insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+            insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+            insertCmd.ExecuteNonQuery();
+
+            using var fetchCmd = conn.CreateCommand();
+            fetchCmd.CommandText = @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0),
+                    e.executed_at,
+                    COALESCE(e.executed_by, '')
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+                WHERE pp.id = @programId
+            ";
+            fetchCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+
+            using var reader = fetchCmd.ExecuteReader();
+            if (!reader.Read())
+            {
+                return NotFound();
+            }
+
+            var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+            var executedEntry = new CnamBordereauEntryDto
+            {
+                ProgramId = reader.GetInt32(0),
+                FactureNumber = dateDebut.HasValue ? $"INV-{reader.GetInt32(0)}-{dateDebut:yyyyMMdd}" : $"INV-{reader.GetInt32(0)}",
+                DateFacture = dateDebut,
+                CodePatient = reader.GetString(2),
+                NumeroAssuree = reader.GetString(3),
+                PatientName = reader.GetString(4),
+                TotalTTC = reader.GetDecimal(5),
+                ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                ExecutedBy = reader.GetString(7)
+            };
+
+            return Ok(executedEntry);
         }
 
     [HttpGet("advance-lots/patient/{patientId}")]
@@ -334,25 +481,6 @@ public class FinanceController : ControllerBase
         }
 
         return Ok(lots);
-    }
-
-    [HttpDelete("cash-closings/{dateJour}")]
-    public IActionResult DeleteCashClosing(string dateJour)
-    {
-        if (!DateTime.TryParse(dateJour, out var parsedDate))
-        {
-            return BadRequest("Date invalide.");
-        }
-
-        using var conn = DatabaseConnectionProvider.CreateConnection();
-        conn.Open();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM cash_closings WHERE date_jour = @dateJour";
-        cmd.Parameters.AddWithValue("@dateJour", parsedDate.Date);
-
-        var rows = cmd.ExecuteNonQuery();
-        return rows == 0 ? NotFound() : NoContent();
     }
 
     [HttpGet("patient-finance/{patientId}")]

@@ -200,9 +200,57 @@
             <button class="btn btn-outline-secondary" @onclick="ExportBordereauPdf" disabled="@(!cnamBordereau.Any())">Exporter Bordereau</button>
         </div>
         <div class="card-body">
+            <h5>Factures à exécuter</h5>
             @if (!cnamBordereau.Any())
             {
-                <div class="alert alert-info">Aucun bordereau CNAM trouvé pour cette durée.</div>
+                <div class="alert alert-info">Aucune facture à exécuter pour cette durée.</div>
+            }
+            else
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Programme</th>
+                                <th>N° facture</th>
+                                <th>Date facture</th>
+                                <th>N° assurée</th>
+                                <th>Patient</th>
+                                <th>Total TTC</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in cnamBordereau)
+                            {
+                                <tr>
+                                    <td>@row.ProgramId</td>
+                                    <td>@row.FactureNumber</td>
+                                    <td>@row.DateFacture?.ToString("dd/MM/yyyy")</td>
+                                    <td>@row.NumeroAssuree</td>
+                                    <td>@row.PatientName</td>
+                                    <td>@($"{row.TotalTTC:F2} DT")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-success" @onclick="() => ExecuteBordereau(row)">Exécuter</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <strong>Total général TTC :</strong> @($"{cnamBordereau.Sum(r => r.TotalTTC):F2} DT")
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Bordereau exécuté</div>
+        <div class="card-body">
+            @if (!cnamBordereauExecuted.Any())
+            {
+                <div class="alert alert-info">Aucun bordereau exécuté pour cette période.</div>
             }
             else
             {
@@ -216,10 +264,12 @@
                                 <th>N° assurée</th>
                                 <th>Patient</th>
                                 <th>Total TTC</th>
+                                <th>Date exécution</th>
+                                <th>Exécuté par</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in cnamBordereau)
+                            @foreach (var row in cnamBordereauExecuted)
                             {
                                 <tr>
                                     <td>@row.ProgramId</td>
@@ -228,13 +278,12 @@
                                     <td>@row.NumeroAssuree</td>
                                     <td>@row.PatientName</td>
                                     <td>@($"{row.TotalTTC:F2} DT")</td>
+                                    <td>@row.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@row.ExecutedBy</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                </div>
-                <div class="mt-3">
-                    <strong>Total général TTC :</strong> @($"{cnamBordereau.Sum(r => r.TotalTTC):F2} DT")
                 </div>
             }
         </div>
@@ -248,6 +297,7 @@
     private List<CnamRecoveryDto> cnamRecovery = new();
     private List<CnamProgramInvoiceDto> cnamPrograms = new();
     private List<CnamBordereauEntryDto> cnamBordereau = new();
+    private List<CnamBordereauEntryDto> cnamBordereauExecuted = new();
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
@@ -338,6 +388,7 @@
         try
         {
             cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
+            cnamBordereauExecuted = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau-executed?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
         }
         catch (Exception ex)
         {
@@ -466,6 +517,34 @@
         catch (Exception ex)
         {
             errorMessage = $"Erreur lors de l'export PDF : {ex.Message}";
+        }
+    }
+
+    private async Task ExecuteBordereau(CnamBordereauEntryDto entry)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau/execute", new CnamBordereauExecuteRequestDto
+            {
+                ProgramId = entry.ProgramId,
+                ExecutedBy = "Web"
+            });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Impossible d'exécuter la facture : {response.ReasonPhrase}";
+                return;
+            }
+
+            successMessage = "Facture exécutée et enregistrée dans le bordereau exécuté.";
+            await LoadCnamBordereau();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'exécution : {ex.Message}";
         }
     }
 
