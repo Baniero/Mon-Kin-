@@ -189,7 +189,10 @@
 @if (activeSection == CnamSection.Bordereau)
 {
     <div class="card mb-4">
-        <div class="card-header">Bordereau CNAM</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Bordereau CNAM</span>
+            <button class="btn btn-outline-secondary" @onclick="ExportBordereauPdf" disabled="@(!cnamBordereau.Any())">Exporter Bordereau</button>
+        </div>
         <div class="card-body">
             @if (!cnamBordereau.Any())
             {
@@ -353,6 +356,9 @@
         errorMessage = null;
         successMessage = null;
 
+        var montantHT = selectedProgram.PrixTTC / 1.07m;
+        var montantTVA = selectedProgram.PrixTTC - montantHT;
+
         var pdfData = new
         {
             cabinet = cabinetInfo,
@@ -375,7 +381,9 @@
                 selectedProgram.CodeBureau,
                 selectedProgram.Annee,
                 selectedProgram.NumeroDecision,
-                selectedProgram.NumeroOrdre
+                selectedProgram.NumeroOrdre,
+                MontantHT = montantHT,
+                MontantTVA = montantTVA
             },
             invoiceNumber,
             invoiceDate
@@ -385,6 +393,65 @@
         {
             await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{invoiceNumber}.pdf", pdfData);
             successMessage = "Facture PDF générée.";
+        }
+        catch (JSException jsEx)
+        {
+            errorMessage = $"Erreur PDF : {jsEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'export PDF : {ex.Message}";
+        }
+    }
+
+    private async Task ExportBordereauPdf()
+    {
+        if (!cnamBordereau.Any())
+        {
+            errorMessage = "Aucun bordereau à exporter.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        var totalTTC = cnamBordereau.Sum(r => r.TotalTTC);
+        var totalHT = totalTTC / 1.07m;
+        var totalTVA = totalTTC - totalHT;
+        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{cnamBordereau.Count:000}";
+
+        var pdfData = new
+        {
+            cabinet = cabinetInfo,
+            title = $"Bordereau CNAM N° {bordereauReference}",
+            summary = new
+            {
+                Date = DateTime.Today.ToString("dd/MM/yyyy"),
+                Centre = cabinetInfo.NomEtablissement ?? string.Empty,
+                NbreSeances = cnamBordereau.Count,
+                MontantHT = totalHT,
+                Annee = cnamStart.Year.ToString(),
+                NbFactures = cnamBordereau.Count,
+                MontantTotalTTC = totalTTC,
+                MontantTVA = totalTVA
+            },
+            rows = cnamBordereau.Select(r => new
+            {
+                r.FactureNumber,
+                DateFacture = r.DateFacture?.ToString("dd/MM/yyyy"),
+                PriseEnCharge = r.CodePatient ?? string.Empty,
+                r.NumeroAssuree,
+                r.PatientName,
+                MontantHT = r.TotalTTC / 1.07m,
+                MontantTVA = r.TotalTTC - (r.TotalTTC / 1.07m),
+                MontantTTC = r.TotalTTC
+            }).ToList()
+        };
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
+            successMessage = "Bordereau PDF généré.";
         }
         catch (JSException jsEx)
         {

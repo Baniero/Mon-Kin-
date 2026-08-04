@@ -45,8 +45,19 @@
             document.body.removeChild(link);
         };
 
+        const getJsPDF = () => {
+            return window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
+        };
+
+        const drawLabelValue = (doc, label, value, x, y) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label, x, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(value, x + 120, y);
+        };
+
         window.generateInvoicePdf = (filename, data) => {
-            const jsPDFClass = window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
+            const jsPDFClass = getJsPDF();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }
@@ -55,82 +66,140 @@
             const margin = 40;
             let y = margin;
 
-            doc.setFontSize(18);
-            doc.text('BORDEREAU CNAM', margin, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.text('FACTURE CNAM', margin, y);
             y += 28;
-
-            doc.setFontSize(11);
-            const headerText = 'Un tableau de bordereau CNAM est un récapitulatif de facturation ou de soins transmis à la Caisse Nationale d\'Assurance Maladie, incluant l\'en-tête de décompte, le nombre de factures et le montant total.';
-            doc.text(headerText, margin, y, { maxWidth: 510 });
-            y += 40;
-
-            doc.setFontSize(12);
-            doc.text(`Nombre de factures: 1`, margin, y);
-            doc.text(`Montant total: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, 340, y);
-            y += 26;
-
-            doc.setFontSize(11);
-            doc.text(`Cabinet: ${data.cabinet.NomCabinet || ''}`, margin, y);
-            y += 18;
-            doc.text(`Nom établissement/professionnel: ${data.cabinet.NomEtablissement || ''}`, margin, y);
-            y += 18;
-            doc.text(`Code établissement/professionnel: ${data.cabinet.CodeEtablissement || ''}`, margin, y);
-            y += 18;
-            doc.text(`Matricule fiscal: ${data.cabinet.MatriculeFiscal || ''}`, margin, y);
-            y += 18;
-            doc.text(`Racine: ${data.cabinet.Racine || ''}`, margin, y);
-            y += 18;
-            doc.text(`Clé: ${data.cabinet.Cle || ''}`, margin, y);
-            y += 18;
-            doc.text(`Qualité: ${data.cabinet.Qualite || ''}`, margin, y);
-            y += 18;
-            doc.text(`N° assurée cabinet: ${data.cabinet.NumeroAssuree || ''}`, margin, y);
-            y += 28;
-
-            doc.text(`N° facture: ${data.invoiceNumber}`, margin, y);
-            doc.text(`Date facture: ${data.invoiceDate}`, 400, y);
-            y += 24;
-
-            doc.text(`Patient: ${data.program.PatientName || ''}`, margin, y);
-            y += 18;
-            doc.text(`N° assurée: ${data.program.NumeroAssuree || ''}`, margin, y);
-            y += 18;
-            doc.text(`Code patient: ${data.program.CodePatient || ''}`, margin, y);
-            y += 18;
-            doc.text(`Couverture: ${data.program.Couverture || ''}`, margin, y);
-            y += 24;
-
-            doc.setFontSize(12);
-            doc.text('Données de la séance', margin, y);
-            y += 18;
-            doc.setFontSize(11);
-            doc.text(`Titre: ${data.program.Titre || ''}`, margin, y);
-            y += 16;
-            doc.text(`Nature: ${data.program.NatureSeances || ''}`, margin, y);
-            y += 16;
-            doc.text(`Date début: ${data.program.DateDebut || ''}`, margin, y);
-            y += 16;
-            doc.text(`Date fin: ${data.program.DateFin || ''}`, margin, y);
-            y += 16;
-            doc.text(`Nb séances: ${data.program.NbSeances}`, margin, y);
-            y += 16;
-            doc.text(`Durée séance: ${data.program.DureeSeanceMinutes} min`, margin, y);
-            y += 16;
-            doc.text(`Prix unitaire: ${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
-            y += 16;
-            doc.text(`Total TTC: ${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
-            y += 16;
-            doc.text(`Code bureau: ${data.program.CodeBureau || ''}`, margin, y);
-            y += 16;
-            doc.text(`Année: ${data.program.Annee || ''}`, margin, y);
-            y += 16;
-            doc.text(`N° décision: ${data.program.NumeroDecision || ''}`, margin, y);
-            y += 16;
-            doc.text(`N° ordre: ${data.program.NumeroOrdre || ''}`, margin, y);
-            y += 30;
 
             doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Cabinet : ${data.cabinet.NomCabinet || ''}`, margin, y);
+            doc.text(`CNAM : ${data.cabinet.CodeEtablissement || ''}`, 520, y, { align: 'right' });
+            y += 14;
+            doc.text(`Responsable : ${data.cabinet.NomEtablissement || ''}`, margin, y);
+            doc.text(`Matricule fiscal : ${data.cabinet.MatriculeFiscal || ''}`, 520, y, { align: 'right' });
+            y += 14;
+            doc.text(`CCB : ${data.cabinet.NumeroAssuree || ''}`, margin, y);
+            doc.text(`Code CNSS : ${data.cabinet.Cle || ''}`, 520, y, { align: 'right' });
+            y += 20;
+
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Informations facture', margin, y);
+            y += 18;
+
+            doc.setFontSize(10);
+            drawLabelValue(doc, 'N° facture :', data.invoiceNumber || '', margin, y);
+            drawLabelValue(doc, 'Date facture :', data.invoiceDate || '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Patient :', data.program.PatientName || '', margin, y);
+            drawLabelValue(doc, 'N° assurée :', data.program.NumeroAssuree || '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Code patient :', data.program.CodePatient || '', margin, y);
+            drawLabelValue(doc, 'Couverture :', data.program.Couverture || '', 320, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Données de la séance', margin, y);
+            y += 18;
+            doc.setFont('helvetica', 'normal');
+            drawLabelValue(doc, 'Titre :', data.program.Titre || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Nature :', data.program.NatureSeances || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Date début :', data.program.DateDebut || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Date fin :', data.program.DateFin || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Nb séances :', `${data.program.NbSeances || 0}`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Durée séance :', `${data.program.DureeSeanceMinutes || 0} min`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Prix unitaire :', `${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Total TTC :', `${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+            doc.save(filename);
+        };
+
+        window.generateBordereauPdf = (filename, data) => {
+            const jsPDFClass = getJsPDF();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            let y = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(22);
+            doc.text(data.title || 'Bordereau CNAM', margin, y);
+            y += 28;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Date : ${data.summary.Date}`, margin, y);
+            doc.text(`Centre : ${data.summary.Centre}`, 260, y);
+            doc.text(`Nbre séances : ${data.summary.NbreSeances}`, 520, y, { align: 'right' });
+            y += 16;
+            doc.text(`Année : ${data.summary.Annee}`, margin, y);
+            doc.text(`Nb factures : ${data.summary.NbFactures}`, 260, y);
+            doc.text(`Montant total TTC : ${data.summary.MontantTotalTTC.toFixed(3)} DT`, 520, y, { align: 'right' });
+            y += 16;
+            doc.text(`Montant HT : ${data.summary.MontantHT.toFixed(3)} DT`, margin, y);
+            doc.text(`Montant TVA : ${data.summary.MontantTVA.toFixed(3)} DT`, 260, y);
+            y += 20;
+
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 16;
+
+            const headers = ['N° facture', 'Date facture', 'Prise en charge', 'N° assuré', 'Assuré', 'M. HT', 'M TVA', 'M TTC'];
+            const widths = [70, 70, 90, 70, 100, 55, 55, 55];
+            let x = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            headers.forEach((header, index) => {
+                doc.text(header, x, y);
+                x += widths[index];
+            });
+            y += 16;
+            doc.setLineWidth(0.25);
+            doc.line(margin, y, 555, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+
+            data.rows.forEach((row) => {
+                if (y > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+                x = margin;
+                const values = [row.FactureNumber, row.DateFacture, row.PriseEnCharge, row.NumeroAssuree, row.PatientName, row.MontantHT.toFixed(3), row.MontantTVA.toFixed(3), row.MontantTTC.toFixed(3)];
+                values.forEach((value, index) => {
+                    doc.text(String(value), x, y);
+                    x += widths[index];
+                });
+                y += 16;
+            });
+
+            y += 18;
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 16;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total général TTC :', margin, y);
+            doc.text(data.summary.MontantTotalTTC.toFixed(3) + ' DT', 555, y, { align: 'right' });
 
             doc.save(filename);
         };
