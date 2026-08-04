@@ -12,6 +12,7 @@ public class AuthService
 
     public UserDto? CurrentUser { get; private set; }
     public bool IsAuthenticated => CurrentUser != null;
+    public bool IsInitialized { get; private set; }
     public event Action? OnChange;
 
     public AuthService(HttpClient http, IJSRuntime jsRuntime)
@@ -28,12 +29,20 @@ public class AuthService
             if (!string.IsNullOrWhiteSpace(json))
             {
                 CurrentUser = System.Text.Json.JsonSerializer.Deserialize<UserDto>(json);
-                NotifyStateChanged();
+            }
+            else
+            {
+                CurrentUser = null;
             }
         }
         catch
         {
             CurrentUser = null;
+        }
+        finally
+        {
+            IsInitialized = true;
+            NotifyStateChanged();
         }
     }
 

@@ -10,6 +10,13 @@
     {
         <RouteView RouteData="RouteData" DefaultLayout="DefaultLayout" />
     }
+    else if (!AuthService.IsInitialized)
+    {
+        <div class="text-center mt-5">
+            <div class="spinner-border" role="status"></div>
+            <div>Vérification de la session...</div>
+        </div>
+    }
     else if (!AuthService.IsAuthenticated)
     {
         var relativeUri = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
