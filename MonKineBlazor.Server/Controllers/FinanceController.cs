@@ -278,6 +278,7 @@ public class FinanceController : ControllerBase
                 JOIN patients p ON p.id = pp.patient_id
                 WHERE DATE(pp.date_debut) BETWEEN @start AND @end
                   AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
                 ORDER BY pp.date_debut
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);

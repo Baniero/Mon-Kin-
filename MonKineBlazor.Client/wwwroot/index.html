@@ -109,7 +109,9 @@
             drawLabelValue(doc, 'Date facture :', data.invoiceDate || '', 320, y);
             y += 16;
             drawLabelValue(doc, 'Patient :', data.program.PatientName || '', margin, y);
-            drawLabelValue(doc, 'N° assurée :', data.program.NumeroAssuree || '', 320, y);
+            if (data.program.NumeroAssuree) {
+                drawLabelValue(doc, 'N° assurée :', data.program.NumeroAssuree || '', 320, y);
+            }
             y += 16;
             drawLabelValue(doc, 'Code patient :', data.program.CodePatient || '', margin, y);
             drawLabelValue(doc, 'Couverture :', data.program.Couverture || '', 320, y);
@@ -135,6 +137,16 @@
             y += 16;
             drawLabelValue(doc, 'Total TTC :', `${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
             y += 24;
+            if (data.program.NumeroAssuree) {
+                drawLabelValue(doc, 'Code bureau :', data.program.CodeBureau || '', margin, y);
+                y += 16;
+                drawLabelValue(doc, 'Année :', data.program.Annee || '', margin, y);
+                y += 16;
+                drawLabelValue(doc, 'N° décision :', data.program.NumeroDecision || '', margin, y);
+                y += 16;
+                drawLabelValue(doc, 'N° ordre :', data.program.NumeroOrdre || '', margin, y);
+                y += 24;
+            }
 
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);

@@ -155,7 +155,10 @@
                         <div class="col-md-6">
                             <h6>Assurée</h6>
                             <p class="mb-1"><strong>Patient :</strong> @selectedProgram.PatientName</p>
-                            <p class="mb-1"><strong>N° assurée :</strong> @selectedProgram.NumeroAssuree</p>
+                            @if (!string.IsNullOrWhiteSpace(selectedProgram.NumeroAssuree))
+                            {
+                                <p class="mb-1"><strong>N° assurée :</strong> @selectedProgram.NumeroAssuree</p>
+                            }
                             <p class="mb-1"><strong>Code patient :</strong> @selectedProgram.CodePatient</p>
                             <p class="mb-0"><strong>Couverture :</strong> @selectedProgram.Couverture</p>
                         </div>
@@ -172,14 +175,17 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Code bureau :</strong> @selectedProgram.CodeBureau</div>
-                        <div class="col-md-4"><strong>Année :</strong> @selectedProgram.Annee</div>
-                        <div class="col-md-4"><strong>N° décision :</strong> @selectedProgram.NumeroDecision</div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6"><strong>N° ordre :</strong> @selectedProgram.NumeroOrdre</div>
-                    </div>
+                    @if (!string.IsNullOrWhiteSpace(selectedProgram.NumeroAssuree))
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-4"><strong>Code bureau :</strong> @selectedProgram.CodeBureau</div>
+                            <div class="col-md-4"><strong>Année :</strong> @selectedProgram.Annee</div>
+                            <div class="col-md-4"><strong>N° décision :</strong> @selectedProgram.NumeroDecision</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6"><strong>N° ordre :</strong> @selectedProgram.NumeroOrdre</div>
+                        </div>
+                    }
                 </div>
             }
         </div>
