@@ -26,31 +26,36 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-2">
-        <div class="card text-center p-3">
+        <div class="card metric-card text-center p-3">
+            <div class="metric-icon"><i class="bi bi-cash-stack"></i></div>
             <div class="text-muted">Cash attendu</div>
             <div class="h4">@($"{TotalCashExpected:F2} DT")</div>
         </div>
     </div>
     <div class="col-md-2">
-        <div class="card text-center p-3">
+        <div class="card metric-card text-center p-3">
+            <div class="metric-icon"><i class="bi bi-wallet2"></i></div>
             <div class="text-muted">Cash réel</div>
             <div class="h4">@($"{TotalCashActual:F2} DT")</div>
         </div>
     </div>
     <div class="col-md-2">
-        <div class="card text-center p-3">
+        <div class="card metric-card text-center p-3">
+            <div class="metric-icon"><i class="bi bi-arrow-repeat"></i></div>
             <div class="text-muted">Écart total</div>
             <div class="h4">@($"{TotalCashDiff:F2} DT")</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-center p-3">
+        <div class="card metric-card text-center p-3">
+            <div class="metric-icon"><i class="bi bi-coin"></i></div>
             <div class="text-muted">Total avances reçues</div>
             <div class="h4">@($"{TotalAdvances:F2} DT")</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-center p-3">
+        <div class="card metric-card text-center p-3">
+            <div class="metric-icon"><i class="bi bi-shield-check"></i></div>
             <div class="text-muted">Total CNAM recouvré</div>
             <div class="h4">@($"{TotalCnamRecovered:F2} DT")</div>
         </div>
@@ -82,16 +87,16 @@
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cash)">Caisse</button>
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cash)"><i class="bi bi-currency-dollar me-2"></i>Caisse</button>
     </div>
     <div class="col-md-3">
-        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Advances)">Avances</button>
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Advances)"><i class="bi bi-wallet-fill me-2"></i>Avances</button>
     </div>
     <div class="col-md-3">
-        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Projections)">Projections</button>
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Projections)"><i class="bi bi-bar-chart-line me-2"></i>Projections</button>
     </div>
     <div class="col-md-3">
-        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cnam)">CNAM</button>
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cnam)"><i class="bi bi-shield-fill-check me-2"></i>CNAM</button>
     </div>
 </div>
 

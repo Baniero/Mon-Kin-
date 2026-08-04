@@ -7,11 +7,11 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="display-6">Tableau de bord professionnel</h1>
-        <p class="text-muted">Vue d'ensemble des patients et des indicateurs clés.</p>
+        <h1 class="display-6">📊 Tableau de bord professionnel</h1>
+        <p class="text-muted">Vue d'ensemble des patients, des flux CNAM et des tendances cliniques.</p>
     </div>
     <div>
-        <a class="btn btn-primary" href="patients">Gérer les patients</a>
+        <a class="btn btn-primary" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Gérer les patients</a>
     </div>
 </div>
 
@@ -29,36 +29,52 @@ else
 {
     <div class="row g-4 mb-4">
         <div class="col-md-3">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
-                    <h2 class="card-text">@totalPatients</h2>
-                </div>
+            <div class="card metric-card shadow-sm p-3">
+                <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
+                <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
+                <h2 class="card-text">@totalPatients</h2>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
-                    <h2 class="card-text">@cnamPatients</h2>
-                </div>
+            <div class="card metric-card shadow-sm p-3">
+                <div class="metric-icon"><i class="bi bi-heart-pulse"></i></div>
+                <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
+                <h2 class="card-text">@cnamPatients</h2>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
-                    <h2 class="card-text">@averagePatientAge</h2>
-                </div>
+            <div class="card metric-card shadow-sm p-3">
+                <div class="metric-icon"><i class="bi bi-calendar-check-fill"></i></div>
+                <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
+                <h2 class="card-text">@averagePatientAge</h2>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
-                    <p class="mb-0">@lastUpdated</p>
+            <div class="card metric-card shadow-sm p-3">
+                <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
+                <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
+                <p class="mb-0">@lastUpdated</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-graph-up-arrow me-2"></i>Analyse rapide</span>
+            <span class="badge-emoji">📈 CNAM / non CNAM</span>
+        </div>
+        <div class="card-body">
+            <div class="dashboard-graph">
+                <div class="graph-item">
+                    <span class="graph-label">CNAM (% du total)</span>
+                    <span class="graph-bar" style="--bar:@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+                </div>
+                <div class="graph-item">
+                    <span class="graph-label">Non CNAM</span>
+                    <span class="graph-bar" style="--bar:@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
                 </div>
             </div>
+            <p class="text-muted mt-3 mb-0">Tendances visuelles pour la part CNAM et les patients standards.</p>
         </div>
     </div>
 

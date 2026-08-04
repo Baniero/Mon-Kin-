@@ -14,6 +14,11 @@
     --danger: #e13e6f;
     --shadow: 0 26px 65px rgba(23, 44, 110, 0.10);
     --radius: 1.4rem;
+    --accent: #6b5bff;
+    --accent-soft: rgba(107, 91, 255, 0.12);
+    --success-soft: rgba(40, 182, 122, 0.14);
+    --info-soft: rgba(71, 92, 255, 0.12);
+    --warning-soft: rgba(247, 162, 59, 0.14);
 }
 
 html, body {
@@ -26,6 +31,71 @@ html, body {
 
 * {
     box-sizing: border-box;
+}
+
+.metric-card {
+    border: 1px solid rgba(107, 91, 255, 0.18);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(245, 248, 255, 0.85));
+    color: var(--text);
+}
+
+.metric-card .metric-icon {
+    width: 3rem;
+    height: 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    background: var(--accent-soft);
+    color: var(--primary);
+    font-size: 1.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.dashboard-graph {
+    display: grid;
+    gap: 1rem;
+}
+
+.dashboard-graph .graph-item {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.dashboard-graph .graph-label {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.dashboard-graph .graph-bar {
+    display: block;
+    height: 1rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), #3d63ff);
+    width: var(--bar, 50%);
+    position: relative;
+}
+
+.dashboard-graph .graph-bar::after {
+    content: attr(data-value);
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.badge-emoji {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--primary);
+    font-weight: 700;
 }
 
 button, input, textarea, select {
