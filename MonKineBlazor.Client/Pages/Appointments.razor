@@ -471,14 +471,14 @@
         <table class="table table-striped table-hover">
             <thead>
                 <tr>
-                    <th>Date début</th>
-                    <th>Patient</th>
-                    <th>Kiné</th>
-                    <th>Acte</th>
-                    <th>Salle</th>
-                    <th>Montant</th>
-                    <th>Statut</th>
-                    <th>Paiement</th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.Start)">Date début @GetSortIcon(AppointmentSortColumn.Start)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.PatientName)">Patient @GetSortIcon(AppointmentSortColumn.PatientName)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.KineName)">Kiné @GetSortIcon(AppointmentSortColumn.KineName)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.Acte)">Acte @GetSortIcon(AppointmentSortColumn.Acte)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.Room)">Salle @GetSortIcon(AppointmentSortColumn.Room)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.Amount)">Montant @GetSortIcon(AppointmentSortColumn.Amount)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.Status)">Statut @GetSortIcon(AppointmentSortColumn.Status)</button></th>
+                    <th><button class="btn btn-link btn-sm p-0" type="button" @onclick="() => SetAppointmentSort(AppointmentSortColumn.PaymentStatus)">Paiement @GetSortIcon(AppointmentSortColumn.PaymentStatus)</button></th>
                     <th>Actions</th>
                     <th class="text-center"><input type="checkbox" @onchange="ToggleSelectAllCurrentPage" checked="@AreAllVisibleAppointmentsSelected()" aria-label="Sélectionner tout" /></th>
                 </tr>
@@ -533,6 +533,8 @@
 
     private AppointmentSubmodule activeSubmodule = AppointmentSubmodule.List;
     private HashSet<int> selectedAppointmentIds = new();
+    private AppointmentSortColumn appointmentSortColumn = AppointmentSortColumn.Start;
+    private bool appointmentSortDescending;
 
     private int selectedProgramPatientId;
     private PatientDto? selectedProgramPatient;
@@ -1024,7 +1026,54 @@
             filtered = filtered.Where(a => string.Equals(a.Status, appointmentStatusFilter, StringComparison.OrdinalIgnoreCase));
         }
 
-        return filtered;
+        return SortFilteredAppointments(filtered);
+    }
+
+    private IEnumerable<AppointmentDto> SortFilteredAppointments(IEnumerable<AppointmentDto> appointments)
+    {
+        return (appointmentSortColumn, appointmentSortDescending) switch
+        {
+            (AppointmentSortColumn.Start, false) => appointments.OrderBy(a => a.Start),
+            (AppointmentSortColumn.Start, true) => appointments.OrderByDescending(a => a.Start),
+            (AppointmentSortColumn.PatientName, false) => appointments.OrderBy(a => a.PatientName),
+            (AppointmentSortColumn.PatientName, true) => appointments.OrderByDescending(a => a.PatientName),
+            (AppointmentSortColumn.KineName, false) => appointments.OrderBy(a => a.KineName),
+            (AppointmentSortColumn.KineName, true) => appointments.OrderByDescending(a => a.KineName),
+            (AppointmentSortColumn.Acte, false) => appointments.OrderBy(a => a.Acte),
+            (AppointmentSortColumn.Acte, true) => appointments.OrderByDescending(a => a.Acte),
+            (AppointmentSortColumn.Room, false) => appointments.OrderBy(a => a.Room),
+            (AppointmentSortColumn.Room, true) => appointments.OrderByDescending(a => a.Room),
+            (AppointmentSortColumn.Amount, false) => appointments.OrderBy(a => a.Amount),
+            (AppointmentSortColumn.Amount, true) => appointments.OrderByDescending(a => a.Amount),
+            (AppointmentSortColumn.Status, false) => appointments.OrderBy(a => a.Status),
+            (AppointmentSortColumn.Status, true) => appointments.OrderByDescending(a => a.Status),
+            (AppointmentSortColumn.PaymentStatus, false) => appointments.OrderBy(a => a.PaymentStatus),
+            (AppointmentSortColumn.PaymentStatus, true) => appointments.OrderByDescending(a => a.PaymentStatus),
+            _ => appointments.OrderBy(a => a.Start)
+        };
+    }
+
+    private void SetAppointmentSort(AppointmentSortColumn sortColumn)
+    {
+        if (appointmentSortColumn == sortColumn)
+        {
+            appointmentSortDescending = !appointmentSortDescending;
+        }
+        else
+        {
+            appointmentSortColumn = sortColumn;
+            appointmentSortDescending = false;
+        }
+    }
+
+    private string GetSortIcon(AppointmentSortColumn sortColumn)
+    {
+        if (appointmentSortColumn != sortColumn)
+        {
+            return string.Empty;
+        }
+
+        return appointmentSortDescending ? "▼" : "▲";
     }
 
     private IEnumerable<AppointmentDto> CanceledAppointments => appointments?.Where(a => string.Equals(a.Status, "annule", StringComparison.OrdinalIgnoreCase)) ?? Enumerable.Empty<AppointmentDto>();
@@ -1279,6 +1328,18 @@
             weeks.Add(Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList());
         }
         return weeks;
+    }
+
+    private enum AppointmentSortColumn
+    {
+        Start,
+        PatientName,
+        KineName,
+        Acte,
+        Room,
+        Amount,
+        Status,
+        PaymentStatus
     }
 
     private enum AppointmentSubmodule
