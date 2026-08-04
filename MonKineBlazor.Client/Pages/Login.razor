@@ -1,9 +1,14 @@
 @page "/login"
+@attribute [AllowAnonymous]
 @inject MonKineBlazor.Client.Services.AuthService AuthService
 @inject NavigationManager NavigationManager
 
 <h1>Connexion</h1>
 
+@if (!string.IsNullOrEmpty(loginMessage))
+{
+    <div class="alert alert-info">@loginMessage</div>
+}
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger">@errorMessage</div>
@@ -28,12 +33,20 @@
 @code {
     private LoginRequestDto loginModel = new();
     private string? errorMessage;
+    private string? loginMessage;
 
     protected override void OnInitialized()
     {
         if (AuthService.IsAuthenticated)
         {
             NavigationManager.NavigateTo("/");
+        }
+
+        var uri = new Uri(NavigationManager.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        if (query.TryGetValue("message", out var message))
+        {
+            loginMessage = message;
         }
     }
 
@@ -43,7 +56,16 @@
         var success = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
         if (success)
         {
-            NavigationManager.NavigateTo("/");
+            var uri = new Uri(NavigationManager.Uri);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            if (query.TryGetValue("redirectUri", out var redirectUri))
+            {
+                NavigationManager.NavigateTo(redirectUri);
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/");
+            }
         }
         else
         {

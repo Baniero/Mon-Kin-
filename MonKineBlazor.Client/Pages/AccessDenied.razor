@@ -1,0 +1,17 @@
+@page "/access-denied"
+@attribute [AllowAnonymous]
+@inject NavigationManager NavigationManager
+
+<PageTitle>Accès refusé</PageTitle>
+
+<div class="card">
+    <div class="card-body">
+        <h1>Accès refusé</h1>
+        <p>Vous n'avez pas les droits nécessaires pour accéder à cette page.</p>
+        <button class="btn btn-primary" @onclick="GoHome">Retour à l'accueil</button>
+    </div>
+</div>
+
+@code {
+    private void GoHome() => NavigationManager.NavigateTo("/");
+}
