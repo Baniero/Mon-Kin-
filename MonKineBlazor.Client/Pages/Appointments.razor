@@ -12,7 +12,7 @@
     <button class="btn @(activeSubmodule == AppointmentSubmodule.Today ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Today)">Rendez-vous du jour</button>
     <button class="btn @(activeSubmodule == AppointmentSubmodule.Weekly ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Weekly)">Planning hebdo</button>
     <button class="btn @(activeSubmodule == AppointmentSubmodule.List ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.List)">Liste</button>
-    <button class="btn @(activeSubmodule == AppointmentSubmodule.Canceled ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Canceled)">Planification des rendez-vous annulé</button>
+    <button class="btn @(activeSubmodule == AppointmentSubmodule.Canceled ? "btn-primary" : "btn-outline-secondary")" @onclick="async () => await SetSubmodule(AppointmentSubmodule.Canceled)">RDV annulé</button>
 </div>
 
 <div class="row mb-3">
@@ -412,7 +412,10 @@
 @if (activeSubmodule == AppointmentSubmodule.Canceled)
 {
     <div class="card mb-4">
-        <div class="card-header">Planification des rendez-vous annulé</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>RDV annulé</span>
+            <button class="btn btn-danger btn-sm" @onclick="BulkDeleteCanceledAppointments" disabled="@(canceledSelectedAppointmentIds.Count == 0)">Supp. définitive sélection</button>
+        </div>
         <div class="card-body">
             @if (!CanceledAppointments.Any())
             {
@@ -449,9 +452,12 @@
                                     <td>@appointment.PaymentStatus</td>
                                     <td>
                                         <button class="btn btn-sm btn-secondary me-2" @onclick="() => ReactivateAppointment(appointment)">Réactiver</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supp. définitive</button>
-                                    </td>
-                                </tr>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeleteAppointment(appointment.Id)">Supp. définitive</button>
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" checked="@canceledSelectedAppointmentIds.Contains(appointment.Id)" @onchange="() => ToggleCanceledAppointmentSelection(appointment.Id)" aria-label="Sélectionner ce rendez-vous" />
+                                </td>
+                            </tr>
                             }
                         </tbody>
                     </table>
@@ -535,6 +541,7 @@
 
     private AppointmentSubmodule activeSubmodule = AppointmentSubmodule.List;
     private HashSet<int> selectedAppointmentIds = new();
+    private HashSet<int> canceledSelectedAppointmentIds = new();
     private AppointmentSortColumn appointmentSortColumn = AppointmentSortColumn.Start;
     private bool appointmentSortDescending;
     private static readonly HashSet<string> CanceledStatuses = new(StringComparer.OrdinalIgnoreCase)
@@ -1153,6 +1160,65 @@
     {
         var visibleIds = FilteredAppointments().Select(a => a.Id).ToList();
         return visibleIds.Any() && visibleIds.All(id => selectedAppointmentIds.Contains(id));
+    }
+
+    private void ToggleCanceledAppointmentSelection(int appointmentId)
+    {
+        if (canceledSelectedAppointmentIds.Contains(appointmentId))
+        {
+            canceledSelectedAppointmentIds.Remove(appointmentId);
+        }
+        else
+        {
+            canceledSelectedAppointmentIds.Add(appointmentId);
+        }
+    }
+
+    private void ToggleSelectAllCanceledPage(ChangeEventArgs e)
+    {
+        var visibleIds = CanceledAppointments.Select(a => a.Id).ToList();
+        if (visibleIds.All(id => canceledSelectedAppointmentIds.Contains(id)))
+        {
+            foreach (var id in visibleIds)
+            {
+                canceledSelectedAppointmentIds.Remove(id);
+            }
+        }
+        else
+        {
+            foreach (var id in visibleIds)
+            {
+                canceledSelectedAppointmentIds.Add(id);
+            }
+        }
+    }
+
+    private bool AreAllVisibleCanceledAppointmentsSelected()
+    {
+        var visibleIds = CanceledAppointments.Select(a => a.Id).ToList();
+        return visibleIds.Any() && visibleIds.All(id => canceledSelectedAppointmentIds.Contains(id));
+    }
+
+    private async Task BulkDeleteCanceledAppointments()
+    {
+        if (canceledSelectedAppointmentIds.Count == 0)
+        {
+            return;
+        }
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer définitivement les rendez-vous sélectionnés ?"))
+        {
+            return;
+        }
+
+        foreach (var appointmentId in canceledSelectedAppointmentIds.ToList())
+        {
+            await DeleteAppointment(appointmentId);
+        }
+
+        canceledSelectedAppointmentIds.Clear();
+        await LoadAppointments();
+        await ShowSuccessMessage("Rendez-vous annulés supprimés définitivement.");
     }
 
     private async Task CancelAppointment(AppointmentDto appointment)
