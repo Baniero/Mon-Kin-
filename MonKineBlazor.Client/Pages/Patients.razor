@@ -211,87 +211,151 @@ else
 
                 @if (showPatientDetails)
                 {
-                    <div class="card mb-4">
-                        <div class="card-header">Fiche patient</div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-4"><strong>Code :</strong> @selectedPatient.CodePatient</div>
-                                <div class="col-md-4"><strong>Nom :</strong> @selectedPatient.Nom</div>
-                                <div class="col-md-4"><strong>Prénom :</strong> @selectedPatient.Prenom</div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-3"><strong>Age :</strong> @selectedPatient.Age</div>
-                                <div class="col-md-3"><strong>Couverture :</strong> @selectedPatient.Couverture</div>
-                                <div class="col-md-3"><strong>N° assurée :</strong> @selectedPatient.NumeroAssuree</div>
-                                <div class="col-md-3"><strong>Téléphone :</strong> @selectedPatient.Telephone1</div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-12"><strong>Adresse :</strong> @selectedPatient.Adresse</div>
-                            </div>
+                    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+                        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+                            <div class="modal-content" id="patientDetailsPrintArea">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Fiche patient</h5>
+                                    <button type="button" class="btn-close" aria-label="Close" @onclick="ClosePatientDetails"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4"><strong>Code :</strong> @selectedPatient.CodePatient</div>
+                                        <div class="col-md-4"><strong>Nom :</strong> @selectedPatient.Nom</div>
+                                        <div class="col-md-4"><strong>Prénom :</strong> @selectedPatient.Prenom</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-3"><strong>Age :</strong> @selectedPatient.Age</div>
+                                        <div class="col-md-3"><strong>Couverture :</strong> @selectedPatient.Couverture</div>
+                                        <div class="col-md-3"><strong>N° assurée :</strong> @selectedPatient.NumeroAssuree</div>
+                                        <div class="col-md-3"><strong>Téléphone :</strong> @selectedPatient.Telephone1</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-12"><strong>Adresse :</strong> @selectedPatient.Adresse</div>
+                                    </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header">État financier</div>
-                                        <div class="card-body">
-                                            @if (financialSummary is null)
-                                            {
-                                                <div>Chargement...</div>
-                                            }
-                                            else
-                                            {
-                                                <div><strong>Total dû :</strong> @($"{financialSummary.TotalAmountDue:F2} DT")</div>
-                                                <div><strong>Total payé :</strong> @($"{financialSummary.TotalPaid:F2} DT")</div>
-                                                <div><strong>Restant :</strong> @($"{financialSummary.OutstandingAmount:F2} DT")</div>
-                                                <div><strong>Avance disponible :</strong> @($"{financialSummary.AdvanceBalance:F2} DT")</div>
-                                                <div><strong>Avance payée :</strong> @($"{financialSummary.TotalAdvancePaid:F2} DT")</div>
-                                                <div><strong>Reste après avance :</strong> @($"{financialSummary.OutstandingAfterAdvance:F2} DT")</div>
-                                            }
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header">État financier</div>
+                                                <div class="card-body">
+                                                    @if (financialSummary is null)
+                                                    {
+                                                        <div>Chargement...</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div><strong>Total dû :</strong> @($"{financialSummary.TotalAmountDue:F2} DT")</div>
+                                                        <div><strong>Total payé :</strong> @($"{financialSummary.TotalPaid:F2} DT")</div>
+                                                        <div><strong>Restant :</strong> @($"{financialSummary.OutstandingAmount:F2} DT")</div>
+                                                        <div><strong>Avance disponible :</strong> @(patientFinanceDetails is null ? "..." : $"{patientFinanceDetails.AdvanceBalance:F2} DT")</div>
+                                                        <div><strong>Avance payée :</strong> @(patientFinanceDetails is null ? "..." : $"{patientFinanceDetails.TotalAdvancePaid:F2} DT")</div>
+                                                        <div><strong>Avance utilisée :</strong> @(patientFinanceDetails is null ? "..." : $"{GetPatientUsedAdvanceAmount():F2} DT")</div>
+                                                        <div><strong>Reste après avance :</strong> @($"{financialSummary.OutstandingAfterAdvance:F2} DT")</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card mb-3">
+                                                <div class="card-header">Rendez-vous programmés</div>
+                                                <div class="card-body p-0">
+                                                    @if (patientAppointments is null)
+                                                    {
+                                                        <div class="p-3">Chargement...</div>
+                                                    }
+                                                    else if (!patientAppointments.Any())
+                                                    {
+                                                        <div class="p-3">Aucun rendez-vous trouvé.</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-striped mb-0">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Date</th>
+                                                                        <th>Acte</th>
+                                                                        <th>Statut</th>
+                                                                        <th>Paiement</th>
+                                                                        <th class="text-end">Montant</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var appointment in patientAppointments)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>@(appointment.Start?.ToString("dd/MM/yyyy HH:mm") ?? "")</td>
+                                                                            <td>@appointment.Acte</td>
+                                                                            <td>@appointment.Status</td>
+                                                                            <td>@appointment.PaymentStatus</td>
+                                                                            <td class="text-end">@($"{appointment.Amount:F2} DT")</td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="card mb-3">
+                                                <div class="card-header">Avances patient</div>
+                                                <div class="card-body">
+                                                    @if (patientFinanceDetails is null)
+                                                    {
+                                                        <div>Chargement du solde avancé...</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="mb-3">
+                                                            <div><strong>Total avances reçues :</strong> @($"{patientAdvanceTransactions?.Sum(a => a.Amount) ?? 0m:F2} DT")</div>
+                                                            <div><strong>Avance disponible :</strong> @($"{patientFinanceDetails.AdvanceBalance:F2} DT")</div>
+                                                            <div><strong>Avance payée :</strong> @($"{patientFinanceDetails.TotalAdvancePaid:F2} DT")</div>
+                                                            <div><strong>Avance utilisée :</strong> @($"{GetPatientUsedAdvanceAmount():F2} DT")</div>
+                                                        </div>
+                                                    }
+                                                    @if (patientAdvanceTransactions is null)
+                                                    {
+                                                        <div class="p-3">Chargement...</div>
+                                                    }
+                                                    else if (!patientAdvanceTransactions.Any())
+                                                    {
+                                                        <div class="p-3">Aucune avance enregistrée.</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-striped mb-0">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Date</th>
+                                                                        <th>Montant</th>
+                                                                        <th>Note</th>
+                                                                        <th>Par</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach (var advance in patientAdvanceTransactions)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>@advance.TransactionDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                                                            <td class="text-end">@($"{advance.Amount:F2} DT")</td>
+                                                                            <td>@advance.Note</td>
+                                                                            <td>@advance.CreatedBy</td>
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="card mb-3">
-                                        <div class="card-header">Rendez-vous programmés</div>
-                                        <div class="card-body p-0">
-                                            @if (patientAppointments is null)
-                                            {
-                                                <div class="p-3">Chargement...</div>
-                                            }
-                                            else if (!patientAppointments.Any())
-                                            {
-                                                <div class="p-3">Aucun rendez-vous trouvé.</div>
-                                            }
-                                            else
-                                            {
-                                                <div class="table-responsive">
-                                                    <table class="table table-sm table-striped mb-0">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Date</th>
-                                                                <th>Acte</th>
-                                                                <th>Statut</th>
-                                                                <th>Paiement</th>
-                                                                <th class="text-end">Montant</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            @foreach (var appointment in patientAppointments)
-                                                            {
-                                                                <tr>
-                                                                    <td>@(appointment.Start?.ToString("dd/MM/yyyy HH:mm") ?? "")</td>
-                                                                    <td>@appointment.Acte</td>
-                                                                    <td>@appointment.Status</td>
-                                                                    <td>@appointment.PaymentStatus</td>
-                                                                    <td class="text-end">@($"{appointment.Amount:F2} DT")</td>
-                                                                </tr>
-                                                            }
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
+                                <div class="modal-footer">
+                                    <button class="btn btn-secondary" @onclick="ClosePatientDetails">Fermer</button>
+                                    <button class="btn btn-primary" @onclick="PrintPatientDetails">Imprimer</button>
                                 </div>
                             </div>
                         </div>
@@ -414,7 +478,9 @@ else
     private List<PatientProgramDto>? programs;
     private PatientDto? selectedPatient;
     private PatientFinancialSummaryDto? financialSummary;
+    private PatientFinanceDto? patientFinanceDetails;
     private List<AppointmentDto>? patientAppointments;
+    private List<AdvanceTransactionDto>? patientAdvanceTransactions;
     private bool showPatientDetails;
     private PatientDto patientForm = new();
     private bool _isCnam;
@@ -503,7 +569,18 @@ else
         await LoadPrograms();
         await LoadPatientAppointments();
         await LoadPatientFinancialSummary();
+        await LoadPatientAdvanceData();
         showPatientDetails = true;
+    }
+
+    private void ClosePatientDetails()
+    {
+        showPatientDetails = false;
+    }
+
+    private async Task PrintPatientDetails()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
     }
 
     private async Task LoadPatientAppointments()
@@ -543,6 +620,38 @@ else
         {
             errorMessage = "Erreur lors du chargement du résumé financier : " + ex.Message;
         }
+    }
+
+    private async Task LoadPatientAdvanceData()
+    {
+        patientAdvanceTransactions = null;
+        patientFinanceDetails = null;
+        if (selectedPatient == null)
+        {
+            patientAdvanceTransactions = new List<AdvanceTransactionDto>();
+            return;
+        }
+
+        try
+        {
+            patientAdvanceTransactions = await Http.GetFromJsonAsync<List<AdvanceTransactionDto>>($"api/finance/advance-transactions/patient/{selectedPatient.Id}") ?? new List<AdvanceTransactionDto>();
+            patientFinanceDetails = await Http.GetFromJsonAsync<PatientFinanceDto>($"api/finance/patient-finance/{selectedPatient.Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des avances : " + ex.Message;
+            patientAdvanceTransactions = new List<AdvanceTransactionDto>();
+        }
+    }
+
+    private decimal GetPatientUsedAdvanceAmount()
+    {
+        if (patientAdvanceTransactions == null || patientFinanceDetails == null)
+        {
+            return 0m;
+        }
+
+        return Math.Max(0, patientAdvanceTransactions.Sum(a => a.Amount) - patientFinanceDetails.AdvanceBalance);
     }
 
     private async Task SavePatientAsync()
