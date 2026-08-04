@@ -29,6 +29,14 @@
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
+        if (!window.jspdf && !window.jsPDF) {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            fallback.crossOrigin = 'anonymous';
+            fallback.referrerPolicy = 'no-referrer';
+            document.head.appendChild(fallback);
+        }
+
         window.downloadFile = (filename, base64Data) => {
             const link = document.createElement('a');
             link.download = filename;
@@ -39,7 +47,7 @@
         };
 
         window.generateInvoicePdf = (filename, data) => {
-            const jsPDFClass = window.jspdf?.jsPDF ?? window.jsPDF ?? null;
+            const jsPDFClass = window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }
