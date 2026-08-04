@@ -47,7 +47,7 @@
         }
 
         var uri = new Uri(NavigationManager.Uri);
-        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        var query = ParseQueryString(uri.Query);
         if (query.TryGetValue("message", out var message))
         {
             loginMessage = message;
@@ -61,7 +61,7 @@
         if (success)
         {
             var uri = new Uri(NavigationManager.Uri);
-            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            var query = ParseQueryString(uri.Query);
             if (query.TryGetValue("redirectUri", out var redirectUri))
             {
                 NavigationManager.NavigateTo(redirectUri);
@@ -75,5 +75,31 @@
         {
             errorMessage = "Nom d'utilisateur ou mot de passe invalide.";
         }
+    }
+
+    private static Dictionary<string, string> ParseQueryString(string query)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return result;
+        }
+
+        if (query.StartsWith("?"))
+        {
+            query = query[1..];
+        }
+
+        var pairs = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var pair in pairs)
+        {
+            var parts = pair.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                result[Uri.UnescapeDataString(parts[0])] = Uri.UnescapeDataString(parts[1]);
+            }
+        }
+
+        return result;
     }
 }
