@@ -49,6 +49,18 @@
             return window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
         };
 
+        const getNumber = (obj, pascal, camel) => {
+            if (!obj) return 0;
+            if (obj[pascal] !== undefined && obj[pascal] !== null) return obj[pascal];
+            if (obj[camel] !== undefined && obj[camel] !== null) return obj[camel];
+            return 0;
+        };
+
+        const getString = (obj, pascal, camel) => {
+            if (!obj) return '';
+            return obj[pascal] ?? obj[camel] ?? '';
+        };
+
         const drawLabelValue = (doc, label, value, x, y) => {
             doc.setFont('helvetica', 'bold');
             doc.text(label, x, y);
@@ -140,6 +152,8 @@
             const margin = 40;
             let y = margin;
             const formatNumber = (value) => Number(value ?? 0).toFixed(3);
+            const summary = data.summary ?? data.Summary ?? {};
+            const rows = data.rows ?? data.Rows ?? [];
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(22);
@@ -148,16 +162,16 @@
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
-            doc.text(`Date : ${data.summary?.Date || ''}`, margin, y);
-            doc.text(`Centre : ${data.summary?.Centre || ''}`, 260, y);
-            doc.text(`Nbre séances : ${data.summary?.NbreSeances ?? 0}`, 520, y, { align: 'right' });
+            doc.text(`Date : ${summary.Date ?? summary.date ?? ''}`, margin, y);
+            doc.text(`Centre : ${summary.Centre ?? summary.centre ?? ''}`, 260, y);
+            doc.text(`Nbre séances : ${summary.NbreSeances ?? summary.nbreSeances ?? 0}`, 520, y, { align: 'right' });
             y += 16;
-            doc.text(`Année : ${data.summary?.Annee || ''}`, margin, y);
-            doc.text(`Nb factures : ${data.summary?.NbFactures ?? 0}`, 260, y);
-            doc.text(`Montant total TTC : ${formatNumber(data.summary?.MontantTotalTTC)} DT`, 520, y, { align: 'right' });
+            doc.text(`Année : ${summary.Annee ?? summary.annee ?? ''}`, margin, y);
+            doc.text(`Nb factures : ${summary.NbFactures ?? summary.nbFactures ?? 0}`, 260, y);
+            doc.text(`Montant total TTC : ${formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC)} DT`, 520, y, { align: 'right' });
             y += 16;
-            doc.text(`Montant HT : ${formatNumber(data.summary?.MontantHT)} DT`, margin, y);
-            doc.text(`Montant TVA : ${formatNumber(data.summary?.MontantTVA)} DT`, 260, y);
+            doc.text(`Montant HT : ${formatNumber(summary.MontantHT ?? summary.montantHT)} DT`, margin, y);
+            doc.text(`Montant TVA : ${formatNumber(summary.MontantTVA ?? summary.montantTVA)} DT`, 260, y);
             y += 20;
 
             doc.setLineWidth(0.5);
@@ -180,21 +194,21 @@
             y += 14;
             doc.setFont('helvetica', 'normal');
 
-            (data.rows || []).forEach((row) => {
+            (rows || []).forEach((row) => {
                 if (y > 760) {
                     doc.addPage();
                     y = margin;
                 }
                 x = margin;
                 const values = [
-                    row.FactureNumber || '',
-                    row.DateFacture || '',
-                    row.PriseEnCharge || '',
-                    row.NumeroAssuree || '',
-                    row.PatientName || '',
-                    formatNumber(row.MontantHT),
-                    formatNumber(row.MontantTVA),
-                    formatNumber(row.MontantTTC)
+                    row.FactureNumber ?? row.factureNumber ?? '',
+                    row.DateFacture ?? row.dateFacture ?? '',
+                    row.PriseEnCharge ?? row.priseEnCharge ?? '',
+                    row.NumeroAssuree ?? row.numeroAssuree ?? '',
+                    row.PatientName ?? row.patientName ?? '',
+                    formatNumber(row.MontantHT ?? row.montantHT),
+                    formatNumber(row.MontantTVA ?? row.montantTVA),
+                    formatNumber(row.MontantTTC ?? row.montantTTC)
                 ];
                 values.forEach((value, index) => {
                     doc.text(String(value), x, y);
@@ -209,7 +223,7 @@
             y += 16;
             doc.setFont('helvetica', 'bold');
             doc.text('Total général TTC :', margin, y);
-            doc.text(formatNumber(data.summary?.MontantTotalTTC) + ' DT', 555, y, { align: 'right' });
+            doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 555, y, { align: 'right' });
 
             doc.save(filename);
         };

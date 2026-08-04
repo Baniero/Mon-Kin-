@@ -8,7 +8,7 @@
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
     <link href="MonKineBlazor.Client.styles.css" rel="stylesheet" />
 </head>
 
@@ -26,6 +26,194 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-t67R3QwG+9dSQGkD4Yaf7YY3S+UnuF7hjl6ebsENmol+EOoH8YQ0WbuYpk2aG4u+X4A7aR0tqnb72j5O+P5v6A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        if (!window.jspdf && !window.jsPDF) {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+            fallback.crossOrigin = 'anonymous';
+            fallback.referrerPolicy = 'no-referrer';
+            document.head.appendChild(fallback);
+        }
+
+        window.downloadFile = (filename, base64Data) => {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = 'data:text/csv;base64,' + base64Data;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        const getJsPDF = () => {
+            return window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
+        };
+
+        const drawLabelValue = (doc, label, value, x, y) => {
+            doc.setFont('helvetica', 'bold');
+            doc.text(label, x, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(value, x + 120, y);
+        };
+
+        window.generateInvoicePdf = (filename, data) => {
+            const jsPDFClass = getJsPDF();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            let y = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(24);
+            doc.text('FACTURE CNAM', margin, y);
+            y += 28;
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Cabinet : ${data.cabinet.NomCabinet || ''}`, margin, y);
+            doc.text(`CNAM : ${data.cabinet.CodeEtablissement || ''}`, 520, y, { align: 'right' });
+            y += 14;
+            doc.text(`Responsable : ${data.cabinet.NomEtablissement || ''}`, margin, y);
+            doc.text(`Matricule fiscal : ${data.cabinet.MatriculeFiscal || ''}`, 520, y, { align: 'right' });
+            y += 14;
+            doc.text(`CCB : ${data.cabinet.NumeroAssuree || ''}`, margin, y);
+            doc.text(`Code CNSS : ${data.cabinet.Cle || ''}`, 520, y, { align: 'right' });
+            y += 20;
+
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Informations facture', margin, y);
+            y += 18;
+
+            doc.setFontSize(10);
+            drawLabelValue(doc, 'N° facture :', data.invoiceNumber || '', margin, y);
+            drawLabelValue(doc, 'Date facture :', data.invoiceDate || '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Patient :', data.program.PatientName || '', margin, y);
+            drawLabelValue(doc, 'N° assurée :', data.program.NumeroAssuree || '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Code patient :', data.program.CodePatient || '', margin, y);
+            drawLabelValue(doc, 'Couverture :', data.program.Couverture || '', 320, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Données de la séance', margin, y);
+            y += 18;
+            doc.setFont('helvetica', 'normal');
+            drawLabelValue(doc, 'Titre :', data.program.Titre || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Nature :', data.program.NatureSeances || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Date début :', data.program.DateDebut || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Date fin :', data.program.DateFin || '', margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Nb séances :', `${data.program.NbSeances || 0}`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Durée séance :', `${data.program.DureeSeanceMinutes || 0} min`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Prix unitaire :', `${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
+            y += 16;
+            drawLabelValue(doc, 'Total TTC :', `${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
+            y += 24;
+
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(10);
+            doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+            doc.save(filename);
+        };
+
+        window.generateBordereauPdf = (filename, data) => {
+            const jsPDFClass = getJsPDF();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            let y = margin;
+            const formatNumber = (value) => Number(value ?? 0).toFixed(3);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(22);
+            doc.text(data.title || 'Bordereau CNAM', margin, y);
+            y += 28;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Date : ${data.summary?.Date || ''}`, margin, y);
+            doc.text(`Centre : ${data.summary?.Centre || ''}`, 260, y);
+            doc.text(`Nbre séances : ${data.summary?.NbreSeances ?? 0}`, 520, y, { align: 'right' });
+            y += 16;
+            doc.text(`Année : ${data.summary?.Annee || ''}`, margin, y);
+            doc.text(`Nb factures : ${data.summary?.NbFactures ?? 0}`, 260, y);
+            doc.text(`Montant total TTC : ${formatNumber(data.summary?.MontantTotalTTC)} DT`, 520, y, { align: 'right' });
+            y += 16;
+            doc.text(`Montant HT : ${formatNumber(data.summary?.MontantHT)} DT`, margin, y);
+            doc.text(`Montant TVA : ${formatNumber(data.summary?.MontantTVA)} DT`, 260, y);
+            y += 20;
+
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 16;
+
+            const headers = ['N° facture', 'Date facture', 'Prise en charge', 'N° assuré', 'Assuré', 'M. HT', 'M TVA', 'M TTC'];
+            const widths = [70, 70, 90, 70, 100, 55, 55, 55];
+            let x = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            headers.forEach((header, index) => {
+                doc.text(header, x, y);
+                x += widths[index];
+            });
+            y += 16;
+            doc.setLineWidth(0.25);
+            doc.line(margin, y, 555, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+
+            (data.rows || []).forEach((row) => {
+                if (y > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+                x = margin;
+                const values = [
+                    row.FactureNumber || '',
+                    row.DateFacture || '',
+                    row.PriseEnCharge || '',
+                    row.NumeroAssuree || '',
+                    row.PatientName || '',
+                    formatNumber(row.MontantHT),
+                    formatNumber(row.MontantTVA),
+                    formatNumber(row.MontantTTC)
+                ];
+                values.forEach((value, index) => {
+                    doc.text(String(value), x, y);
+                    x += widths[index];
+                });
+                y += 16;
+            });
+
+            y += 18;
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, 555, y);
+            y += 16;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total général TTC :', margin, y);
+            doc.text(formatNumber(data.summary?.MontantTotalTTC) + ' DT', 555, y, { align: 'right' });
+
+            doc.save(filename);
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
