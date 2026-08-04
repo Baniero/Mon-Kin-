@@ -7,11 +7,15 @@
 
 @if (!string.IsNullOrEmpty(loginMessage))
 {
-    <div class="alert alert-info">@loginMessage</div>
+    <div class="alert alert-primary border-0 shadow-sm">
+        <strong>Information :</strong> @loginMessage
+    </div>
 }
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger border-0 shadow-sm">
+        <strong>Erreur :</strong> @errorMessage
+    </div>
 }
 
 <div class="card mb-4">
