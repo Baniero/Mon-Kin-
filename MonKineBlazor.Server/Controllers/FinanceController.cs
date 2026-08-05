@@ -459,8 +459,8 @@ public class FinanceController : ControllerBase
             return Unauthorized();
         }
 
-        int? cabinetId = currentUser.CabinetId;
-        if (!IsAdmin() && !cabinetId.HasValue)
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
         {
             return Forbid();
         }
@@ -510,7 +510,7 @@ public class FinanceController : ControllerBase
         cmd.Parameters.AddWithValue("@end", end.Date);
         if (!IsAdmin())
         {
-            cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
 
         using var reader = cmd.ExecuteReader();
@@ -542,8 +542,8 @@ public class FinanceController : ControllerBase
                 return Unauthorized();
             }
 
-            int? cabinetId = currentUser.CabinetId;
-            if (!IsAdmin() && !cabinetId.HasValue)
+            int? currentCabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !currentCabinetId.HasValue)
             {
                 return Forbid();
             }
@@ -593,7 +593,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!IsAdmin())
             {
-                cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+                cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
 
             using var reader = cmd.ExecuteReader();
@@ -630,8 +630,8 @@ public class FinanceController : ControllerBase
                 return Unauthorized();
             }
 
-            int? cabinetId = currentUser.CabinetId;
-            if (!IsAdmin() && !cabinetId.HasValue)
+            int? currentCabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !currentCabinetId.HasValue)
             {
                 return Forbid();
             }
@@ -666,7 +666,7 @@ public class FinanceController : ControllerBase
                 {
                     return Forbid();
                 }
-                checkCmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+                checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
             var programIdObj = checkCmd.ExecuteScalar();
             if (programIdObj == null)
@@ -722,7 +722,7 @@ public class FinanceController : ControllerBase
                 {
                     return Forbid();
                 }
-                fetchCmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+                fetchCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
 
             using var reader = fetchCmd.ExecuteReader();
