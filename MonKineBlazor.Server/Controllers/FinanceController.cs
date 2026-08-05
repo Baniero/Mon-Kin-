@@ -27,7 +27,7 @@ public class FinanceController : ControllerBase
             return false;
         }
 
-        var cabinetId = currentUser.CabinetId.Value;
+        var cabinetId = cabinetId.Value;
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -91,7 +91,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!IsAdmin())
             {
-                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
 
             using var reader = cmd.ExecuteReader();
@@ -120,7 +120,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!IsAdmin())
             {
-                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
 
             using var reader = cmd.ExecuteReader();
@@ -324,7 +324,7 @@ public class FinanceController : ControllerBase
         cmd.Parameters.AddWithValue("@end", end.Date);
         if (!IsAdmin())
         {
-            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
         }
 
         using var reader = cmd.ExecuteReader();
@@ -418,7 +418,7 @@ public class FinanceController : ControllerBase
         cmd.Parameters.AddWithValue("@end", end.Date);
         if (!IsAdmin())
         {
-            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
         }
 
         using var reader = cmd.ExecuteReader();
@@ -504,7 +504,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!IsAdmin())
             {
-                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
 
             using var reader = cmd.ExecuteReader();
@@ -581,7 +581,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!IsAdmin())
             {
-                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
 
             using var reader = cmd.ExecuteReader();
@@ -648,7 +648,7 @@ public class FinanceController : ControllerBase
                 {
                     return Forbid();
                 }
-                checkCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                checkCmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
             var programIdObj = checkCmd.ExecuteScalar();
             if (programIdObj == null)
@@ -704,7 +704,7 @@ public class FinanceController : ControllerBase
                 {
                     return Forbid();
                 }
-                fetchCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+                fetchCmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
             }
 
             using var reader = fetchCmd.ExecuteReader();
