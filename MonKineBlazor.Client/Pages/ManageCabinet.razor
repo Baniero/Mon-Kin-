@@ -53,6 +53,22 @@
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.CodeCnam" />
                 </div>
                 <div class="col-md-4">
+                    <label class="form-label">Adresse du cabinet</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.AdresseCabinet" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nom cabinet en arabe</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomCabinetArabe" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nom du kiné en arabe</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomKineArabe" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Adresse du kiné en arabe</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.AdresseKineArabe" />
+                </div>
+                <div class="col-md-4">
                     <label class="form-label">Qualité</label>
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.Qualite" />
                 </div>
@@ -137,6 +153,22 @@
                     <div class="col-md-4">
                         <label class="form-label">Code CNAM</label>
                         <InputText class="form-control" @bind-Value="cabinetForm.CodeCnam" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Adresse du cabinet</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nom cabinet en arabe</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nom du kiné en arabe</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NomKineArabe" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Adresse du kiné en arabe</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.AdresseKineArabe" />
                     </div>
                     <div class="col-md-12 d-flex justify-content-end">
                         <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
@@ -306,7 +338,11 @@ else
                 Qualite = cabinetInfo.Qualite,
                 CodeEtablissement = cabinetInfo.CodeEtablissement,
                 MatriculeFiscal = cabinetInfo.MatriculeFiscal,
-                NomEtablissement = cabinetInfo.NomEtablissement
+                NomEtablissement = cabinetInfo.NomEtablissement,
+                AdresseCabinet = cabinetInfo.AdresseCabinet,
+                NomCabinetArabe = cabinetInfo.NomCabinetArabe,
+                NomKineArabe = cabinetInfo.NomKineArabe,
+                AdresseKineArabe = cabinetInfo.AdresseKineArabe
             };
         }
         catch (Exception ex)
@@ -385,7 +421,11 @@ else
                     MatriculeFiscal = cabinetForm.MatriculeFiscal,
                     NumeroEmployeur = cabinetForm.NumeroEmployeur,
                     CodeCnam = cabinetForm.CodeCnam,
-                    Qualite = cabinetForm.Qualite
+                    Qualite = cabinetForm.Qualite,
+                    AdresseCabinet = cabinetForm.AdresseCabinet,
+                    NomCabinetArabe = cabinetForm.NomCabinetArabe,
+                    NomKineArabe = cabinetForm.NomKineArabe,
+                    AdresseKineArabe = cabinetForm.AdresseKineArabe
                 };
                 response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
             }
@@ -400,7 +440,11 @@ else
                     MatriculeFiscal = cabinetForm.MatriculeFiscal,
                     NumeroEmployeur = cabinetForm.NumeroEmployeur,
                     CodeCnam = cabinetForm.CodeCnam,
-                    Qualite = cabinetForm.Qualite
+                    Qualite = cabinetForm.Qualite,
+                    AdresseCabinet = cabinetForm.AdresseCabinet,
+                    NomCabinetArabe = cabinetForm.NomCabinetArabe,
+                    NomKineArabe = cabinetForm.NomKineArabe,
+                    AdresseKineArabe = cabinetForm.AdresseKineArabe
                 };
                 response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
             }

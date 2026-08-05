@@ -26,7 +26,8 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite
+            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
+                   adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe
             FROM cabinets
             ORDER BY nom_cabinet
         ";
@@ -43,7 +44,11 @@ public class CabinetsController : ControllerBase
                 NomEtablissement = reader.IsDBNull(4) ? null : reader.GetString(4),
                 NumeroEmployeur = reader.IsDBNull(5) ? null : reader.GetString(5),
                 CodeCnam = reader.IsDBNull(6) ? null : reader.GetString(6),
-                Qualite = reader.IsDBNull(7) ? null : reader.GetString(7)
+                Qualite = reader.IsDBNull(7) ? null : reader.GetString(7),
+                AdresseCabinet = reader.IsDBNull(8) ? null : reader.GetString(8),
+                NomCabinetArabe = reader.IsDBNull(9) ? null : reader.GetString(9),
+                NomKineArabe = reader.IsDBNull(10) ? null : reader.GetString(10),
+                AdresseKineArabe = reader.IsDBNull(11) ? null : reader.GetString(11)
             });
         }
 
@@ -63,7 +68,8 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite
+            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
+                   adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe
             FROM cabinets
             WHERE id = @id
         ";
@@ -84,7 +90,11 @@ public class CabinetsController : ControllerBase
             NomEtablissement = reader.IsDBNull(4) ? null : reader.GetString(4),
             NumeroEmployeur = reader.IsDBNull(5) ? null : reader.GetString(5),
             CodeCnam = reader.IsDBNull(6) ? null : reader.GetString(6),
-            Qualite = reader.IsDBNull(7) ? null : reader.GetString(7)
+            Qualite = reader.IsDBNull(7) ? null : reader.GetString(7),
+            AdresseCabinet = reader.IsDBNull(8) ? null : reader.GetString(8),
+            NomCabinetArabe = reader.IsDBNull(9) ? null : reader.GetString(9),
+            NomKineArabe = reader.IsDBNull(10) ? null : reader.GetString(10),
+            AdresseKineArabe = reader.IsDBNull(11) ? null : reader.GetString(11)
         });
     }
 
@@ -101,8 +111,10 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite)
-            VALUES (@nom_cabinet, @code_etablissement, @matricule_fiscal, @nom_etablissement, @numero_employeur, @code_cnam, @qualite)
+            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
+                                  adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe)
+            VALUES (@nom_cabinet, @code_etablissement, @matricule_fiscal, @nom_etablissement, @numero_employeur, @code_cnam, @qualite,
+                    @adresse_cabinet, @nom_cabinet_arabe, @nom_kine_arabe, @adresse_kine_arabe)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
@@ -112,6 +124,10 @@ public class CabinetsController : ControllerBase
         cmd.Parameters.AddWithValue("@numero_employeur", (object?)request.NumeroEmployeur ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_cnam", (object?)request.CodeCnam ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)request.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@adresse_cabinet", (object?)request.AdresseCabinet ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nom_cabinet_arabe", (object?)request.NomCabinetArabe ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nom_kine_arabe", (object?)request.NomKineArabe ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@adresse_kine_arabe", (object?)request.AdresseKineArabe ?? DBNull.Value);
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetById), new { id }, new CabinetDto
@@ -152,7 +168,11 @@ public class CabinetsController : ControllerBase
                 nom_etablissement = @nom_etablissement,
                 racine = @numero_employeur,
                 cle = @code_cnam,
-                qualite = @qualite
+                qualite = @qualite,
+                adresse_cabinet = @adresse_cabinet,
+                nom_cabinet_arabe = @nom_cabinet_arabe,
+                nom_kine_arabe = @nom_kine_arabe,
+                adresse_kine_arabe = @adresse_kine_arabe
             WHERE id = @id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
@@ -162,6 +182,10 @@ public class CabinetsController : ControllerBase
         cmd.Parameters.AddWithValue("@numero_employeur", (object?)request.NumeroEmployeur ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_cnam", (object?)request.CodeCnam ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)request.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@adresse_cabinet", (object?)request.AdresseCabinet ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nom_cabinet_arabe", (object?)request.NomCabinetArabe ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nom_kine_arabe", (object?)request.NomKineArabe ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@adresse_kine_arabe", (object?)request.AdresseKineArabe ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         var rows = cmd.ExecuteNonQuery();

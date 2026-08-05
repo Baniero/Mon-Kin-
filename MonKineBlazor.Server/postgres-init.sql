@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS cabinets (
     racine TEXT,
     cle TEXT,
     qualite TEXT,
+    adresse_cabinet TEXT,
+    nom_cabinet_arabe TEXT,
+    nom_kine_arabe TEXT,
+    adresse_kine_arabe TEXT,
     numero_assuree TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -241,6 +241,10 @@ public class CabinetInfoDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
+    public string? AdresseCabinet { get; set; }
+    public string? NomCabinetArabe { get; set; }
+    public string? NomKineArabe { get; set; }
+    public string? AdresseKineArabe { get; set; }
 }
 
 public class CabinetInfoRequestDto
@@ -252,6 +256,10 @@ public class CabinetInfoRequestDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
+    public string? AdresseCabinet { get; set; }
+    public string? NomCabinetArabe { get; set; }
+    public string? NomKineArabe { get; set; }
+    public string? AdresseKineArabe { get; set; }
 }
 
 public class CabinetDto
@@ -264,6 +272,10 @@ public class CabinetDto
     public string? NumeroEmployeur { get; set; }
     public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
+    public string? AdresseCabinet { get; set; }
+    public string? NomCabinetArabe { get; set; }
+    public string? NomKineArabe { get; set; }
+    public string? AdresseKineArabe { get; set; }
 }
 
 public class CabinetCreateRequestDto
@@ -275,6 +287,10 @@ public class CabinetCreateRequestDto
     public string? NumeroEmployeur { get; set; }
     public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
+    public string? AdresseCabinet { get; set; }
+    public string? NomCabinetArabe { get; set; }
+    public string? NomKineArabe { get; set; }
+    public string? AdresseKineArabe { get; set; }
 }
 
 public class CabinetUpdateRequestDto
@@ -287,4 +303,8 @@ public class CabinetUpdateRequestDto
     public string? NumeroEmployeur { get; set; }
     public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
+    public string? AdresseCabinet { get; set; }
+    public string? NomCabinetArabe { get; set; }
+    public string? NomKineArabe { get; set; }
+    public string? AdresseKineArabe { get; set; }
 }

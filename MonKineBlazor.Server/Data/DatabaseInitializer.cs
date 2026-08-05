@@ -63,7 +63,11 @@ public static class DatabaseInitializer
                 numero_assuree TEXT,
                 code_etablissement TEXT,
                 matricule_fiscal TEXT,
-                nom_etablissement TEXT
+                nom_etablissement TEXT,
+                adresse_cabinet TEXT,
+                nom_cabinet_arabe TEXT,
+                nom_kine_arabe TEXT,
+                adresse_kine_arabe TEXT
             )
         ";
         cmd.ExecuteNonQuery();
@@ -71,6 +75,10 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "cabinet_info", "code_etablissement", "TEXT");
         EnsureColumnExists(connection, "cabinet_info", "matricule_fiscal", "TEXT");
         EnsureColumnExists(connection, "cabinet_info", "nom_etablissement", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "adresse_cabinet", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "nom_cabinet_arabe", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "nom_kine_arabe", "TEXT");
+        EnsureColumnExists(connection, "cabinet_info", "adresse_kine_arabe", "TEXT");
     }
 
     private static void EnsureColumnExists(NpgsqlConnection connection, string tableName, string columnName, string columnType)
