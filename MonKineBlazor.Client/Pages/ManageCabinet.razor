@@ -67,6 +67,94 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Cabinets</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCreateCabinet">Nouveau cabinet</button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom du cabinet</th>
+                        <th>Responsable / établissement</th>
+                        <th>Code établissement</th>
+                        <th>Matricule fiscal</th>
+                        <th>Qualité</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cabinet in cabinets)
+                    {
+                        <tr>
+                            <td>@cabinet.NomCabinet</td>
+                            <td>@cabinet.NomEtablissement</td>
+                            <td>@cabinet.CodeEtablissement</td>
+                            <td>@cabinet.MatriculeFiscal</td>
+                            <td>@cabinet.Qualite</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary me-2" @onclick="() => EditCabinet(cabinet)">Modifier</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteCabinet(cabinet.Id)">Supprimer</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (showCabinetForm)
+{
+    <div class="card mb-4">
+        <div class="card-header">@((selectedCabinet?.Id ?? 0) == 0 ? "Créer un nouveau cabinet" : "Modifier le cabinet")</div>
+        <div class="card-body">
+            <EditForm Model="cabinetForm" OnValidSubmit="SaveCabinetAsync">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nom du cabinet / établissement</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NomCabinet" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Responsable / Nom de l'établissement</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NomEtablissement" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Code établissement / professionnel</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.CodeEtablissement" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Matricule fiscal</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.MatriculeFiscal" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Qualité</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.Qualite" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Racine</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.Racine" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Clé</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.Cle" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">N° assurée</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NumeroAssuree" />
+                    </div>
+                    <div class="col-md-12 d-flex justify-content-end">
+                        <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
+                        <button class="btn btn-outline-secondary ms-2" type="button" @onclick="HideCabinetForm">Annuler</button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger">@errorMessage</div>
