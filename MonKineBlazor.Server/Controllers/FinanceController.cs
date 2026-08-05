@@ -459,15 +459,12 @@ public class FinanceController : ControllerBase
                 return Unauthorized();
             }
 
-            var rows = new List<CnamBordereauEntryDto>();
-            using var conn = DatabaseConnectionProvider.CreateConnection();
-            conn.Open();
+            int? cabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !cabinetId.HasValue)
+            {
+                return Forbid();
+            }
 
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = IsAdmin() ? @"
-                SELECT
-                    pp.id,
-                    pp.date_debut,
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
                     COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -534,6 +531,12 @@ public class FinanceController : ControllerBase
             if (currentUser == null)
             {
                 return Unauthorized();
+            }
+
+            int? cabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !cabinetId.HasValue)
+            {
+                return Forbid();
             }
 
             var rows = new List<CnamBordereauEntryDto>();
@@ -616,6 +619,12 @@ public class FinanceController : ControllerBase
             if (currentUser == null)
             {
                 return Unauthorized();
+            }
+
+            int? cabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !cabinetId.HasValue)
+            {
+                return Forbid();
             }
 
             using var checkCmd = conn.CreateCommand();
