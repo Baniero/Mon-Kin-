@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using MonKineBlazor.Server.Data;
+using MonKineBlazor.Server.Services;
 using MonKineBlazor.Shared.Models;
 
 namespace MonKineBlazor.Server.Controllers;
@@ -9,9 +10,47 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class PatientProgramsController : ControllerBase
 {
+    private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
+    private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
+    private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
+    private bool IsProgramAccessible(int programId)
+    {
+        if (IsAdmin())
+        {
+            return true;
+        }
+
+        var currentUser = GetCurrentUser();
+        if (currentUser?.CabinetId == null)
+        {
+            return false;
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT 1
+            FROM patient_programs pp
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE pp.id = @programId
+              AND p.cabinet_id = @cabinet_id
+        ";
+        cmd.Parameters.AddWithValue("@programId", programId);
+        cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+
+        return cmd.ExecuteScalar() != null;
+    }
+
     [HttpGet("patient/{patientId}")]
     public ActionResult<IEnumerable<PatientProgramDto>> GetByPatient(int patientId)
     {
+        if (!IsAdmin() && !IsPatientAccessible(patientId))
+        {
+            return Forbid();
+        }
+
         var programs = new List<PatientProgramDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -81,6 +120,11 @@ public class PatientProgramsController : ControllerBase
     [HttpPost]
     public ActionResult<PatientProgramDto> Create(PatientProgramDto program)
     {
+        if (!IsAdmin() && !IsPatientAccessible(program.PatientId))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -129,6 +173,16 @@ public class PatientProgramsController : ControllerBase
         if (id != program.Id)
         {
             return BadRequest("Le programme ID ne correspond pas.");
+        }
+
+        if (!IsAdmin() && !IsProgramAccessible(id))
+        {
+            return Forbid();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(program.PatientId))
+        {
+            return Forbid();
         }
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
@@ -194,6 +248,11 @@ public class PatientProgramsController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
+        if (!IsAdmin() && !IsProgramAccessible(id))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 

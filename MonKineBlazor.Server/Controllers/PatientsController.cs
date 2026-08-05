@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using MonKineBlazor.Server.Data;
+using MonKineBlazor.Server.Services;
 using MonKineBlazor.Shared.Models;
 
 namespace MonKineBlazor.Server.Controllers;
@@ -9,39 +10,84 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class PatientsController : ControllerBase
 {
+    private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
+    private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
+    private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
+
     [HttpGet]
     public ActionResult<IEnumerable<PatientDto>> GetAll()
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         var patients = new List<PatientDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT
-                id,
-                COALESCE(code_patient, ''),
-                COALESCE(dossier_patient, ''),
-                nom,
-                COALESCE(prenom, ''),
-                CASE
-                    WHEN date_naissance IS NOT NULL
-                        THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
-                    ELSE COALESCE(age, 0)
-                END AS age,
-                date_naissance,
-                COALESCE(sexe, ''),
-                COALESCE(telephone1, ''),
-                COALESCE(telephone2, ''),
-                COALESCE(adresse, ''),
-                COALESCE(couverture, ''),
-                COALESCE(racine, ''),
-                COALESCE(cle, ''),
-                COALESCE(qualite, ''),
-                COALESCE(n_assuree, '')
-            FROM patients
-            ORDER BY nom, prenom
-        ";
+        if (IsAdmin())
+        {
+            cmd.CommandText = @"
+                SELECT
+                    id,
+                    cabinet_id,
+                    COALESCE(code_patient, ''),
+                    COALESCE(dossier_patient, ''),
+                    nom,
+                    COALESCE(prenom, ''),
+                    CASE
+                        WHEN date_naissance IS NOT NULL
+                            THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
+                        ELSE COALESCE(age, 0)
+                    END AS age,
+                    date_naissance,
+                    COALESCE(sexe, ''),
+                    COALESCE(telephone1, ''),
+                    COALESCE(telephone2, ''),
+                    COALESCE(adresse, ''),
+                    COALESCE(couverture, ''),
+                    COALESCE(racine, ''),
+                    COALESCE(cle, ''),
+                    COALESCE(qualite, ''),
+                    COALESCE(n_assuree, '')
+                FROM patients
+                ORDER BY nom, prenom
+            ";
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT
+                    id,
+                    cabinet_id,
+                    COALESCE(code_patient, ''),
+                    COALESCE(dossier_patient, ''),
+                    nom,
+                    COALESCE(prenom, ''),
+                    CASE
+                        WHEN date_naissance IS NOT NULL
+                            THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
+                        ELSE COALESCE(age, 0)
+                    END AS age,
+                    date_naissance,
+                    COALESCE(sexe, ''),
+                    COALESCE(telephone1, ''),
+                    COALESCE(telephone2, ''),
+                    COALESCE(adresse, ''),
+                    COALESCE(couverture, ''),
+                    COALESCE(racine, ''),
+                    COALESCE(cle, ''),
+                    COALESCE(qualite, ''),
+                    COALESCE(n_assuree, '')
+                FROM patients
+                WHERE cabinet_id = @cabinet_id
+                ORDER BY nom, prenom
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.HasValue ? (object)currentUser.CabinetId.Value : DBNull.Value);
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -49,21 +95,22 @@ public class PatientsController : ControllerBase
             patients.Add(new PatientDto
             {
                 Id = reader.GetInt32(0),
-                CodePatient = reader.GetString(1),
-                DossierPatient = reader.GetString(2),
-                Nom = reader.GetString(3),
-                Prenom = reader.GetString(4),
-                Age = reader.GetInt32(5),
-                DateNaissance = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                Sexe = reader.GetString(7),
-                Telephone1 = reader.GetString(8),
-                Telephone2 = reader.GetString(9),
-                Adresse = reader.GetString(10),
-                Couverture = reader.GetString(11),
-                Racine = reader.GetString(12),
-                Cle = reader.GetString(13),
-                Qualite = reader.GetString(14),
-                NumeroAssuree = reader.GetString(15),
+                CabinetId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                CodePatient = reader.GetString(2),
+                DossierPatient = reader.GetString(3),
+                Nom = reader.GetString(4),
+                Prenom = reader.GetString(5),
+                Age = reader.GetInt32(6),
+                DateNaissance = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                Sexe = reader.GetString(8),
+                Telephone1 = reader.GetString(9),
+                Telephone2 = reader.GetString(10),
+                Adresse = reader.GetString(11),
+                Couverture = reader.GetString(12),
+                Racine = reader.GetString(13),
+                Cle = reader.GetString(14),
+                Qualite = reader.GetString(15),
+                NumeroAssuree = reader.GetString(16),
             });
         }
 
@@ -73,6 +120,12 @@ public class PatientsController : ControllerBase
     [HttpGet("{id}")]
     public ActionResult<PatientDto> GetById(int id)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -80,6 +133,7 @@ public class PatientsController : ControllerBase
         cmd.CommandText = @"
             SELECT
                 id,
+                cabinet_id,
                 COALESCE(code_patient, ''),
                 COALESCE(dossier_patient, ''),
                 nom,
@@ -110,24 +164,31 @@ public class PatientsController : ControllerBase
             return NotFound();
         }
 
+        int? cabinetId = reader.IsDBNull(1) ? null : reader.GetInt32(1);
+        if (!IsAdmin() && cabinetId != currentUser.CabinetId)
+        {
+            return Forbid();
+        }
+
         var patient = new PatientDto
         {
             Id = reader.GetInt32(0),
-            CodePatient = reader.GetString(1),
-            DossierPatient = reader.GetString(2),
-            Nom = reader.GetString(3),
-            Prenom = reader.GetString(4),
-            Age = reader.GetInt32(5),
-            DateNaissance = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-            Sexe = reader.GetString(7),
-            Telephone1 = reader.GetString(8),
-            Telephone2 = reader.GetString(9),
-            Adresse = reader.GetString(10),
-            Couverture = reader.GetString(11),
-            Racine = reader.GetString(12),
-            Cle = reader.GetString(13),
-            Qualite = reader.GetString(14),
-            NumeroAssuree = reader.GetString(15),
+            CabinetId = cabinetId,
+            CodePatient = reader.GetString(2),
+            DossierPatient = reader.GetString(3),
+            Nom = reader.GetString(4),
+            Prenom = reader.GetString(5),
+            Age = reader.GetInt32(6),
+            DateNaissance = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+            Sexe = reader.GetString(8),
+            Telephone1 = reader.GetString(9),
+            Telephone2 = reader.GetString(10),
+            Adresse = reader.GetString(11),
+            Couverture = reader.GetString(12),
+            Racine = reader.GetString(13),
+            Cle = reader.GetString(14),
+            Qualite = reader.GetString(15),
+            NumeroAssuree = reader.GetString(16),
         };
 
         return Ok(patient);
@@ -136,20 +197,40 @@ public class PatientsController : ControllerBase
     [HttpPost]
     public ActionResult<PatientDto> Create(PatientDto patient)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin())
+        {
+            if (currentUser.CabinetId == null)
+            {
+                return Forbid();
+            }
+            if (patient.CabinetId.HasValue && patient.CabinetId != currentUser.CabinetId)
+            {
+                return Forbid();
+            }
+            patient.CabinetId = currentUser.CabinetId;
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO patients (
-                code_patient, dossier_patient, nom, prenom, age, date_naissance,
-                sexe, telephone1, telephone2, adresse, couverture
+                cabinet_id, code_patient, dossier_patient, nom, prenom, age, date_naissance,
+                sexe, telephone1, telephone2, adresse, couverture, racine, cle, qualite, n_assuree
             ) VALUES (
-                @code_patient, @dossier_patient, @nom, @prenom, @age, @date_naissance,
-                @sexe, @telephone1, @telephone2, @adresse, @couverture
+                @cabinet_id, @code_patient, @dossier_patient, @nom, @prenom, @age, @date_naissance,
+                @sexe, @telephone1, @telephone2, @adresse, @couverture, @racine, @cle, @qualite, @n_assuree
             )
             RETURNING id
         ";
+        cmd.Parameters.AddWithValue("@cabinet_id", (object?)patient.CabinetId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_patient", (object?)patient.CodePatient ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@dossier_patient", (object?)patient.DossierPatient ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@nom", patient.Nom ?? string.Empty);
@@ -180,6 +261,30 @@ public class PatientsController : ControllerBase
             return BadRequest("Le patient ID ne correspond pas.");
         }
 
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin())
+        {
+            if (currentUser.CabinetId == null)
+            {
+                return Forbid();
+            }
+            if (patient.CabinetId.HasValue && patient.CabinetId != currentUser.CabinetId)
+            {
+                return Forbid();
+            }
+            patient.CabinetId = currentUser.CabinetId;
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(id))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -187,6 +292,7 @@ public class PatientsController : ControllerBase
         cmd.CommandText = @"
             UPDATE patients
             SET
+                cabinet_id = @cabinet_id,
                 code_patient = @code_patient,
                 dossier_patient = @dossier_patient,
                 nom = @nom,
@@ -204,6 +310,7 @@ public class PatientsController : ControllerBase
                 n_assuree = @n_assuree
             WHERE id = @id
         ";
+        cmd.Parameters.AddWithValue("@cabinet_id", (object?)patient.CabinetId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_patient", (object?)patient.CodePatient ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@dossier_patient", (object?)patient.DossierPatient ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@nom", patient.Nom ?? string.Empty);

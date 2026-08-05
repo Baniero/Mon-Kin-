@@ -3,6 +3,7 @@ namespace MonKineBlazor.Shared.Models;
 public class PatientDto
 {
     public int Id { get; set; }
+    public int? CabinetId { get; set; }
     public string? CodePatient { get; set; }
     public string? DossierPatient { get; set; }
     public string Nom { get; set; } = string.Empty;
@@ -71,6 +72,8 @@ public class UserDto
     public string? FullName { get; set; }
     public string Role { get; set; } = "kine";
     public bool Active { get; set; } = true;
+    public int? CabinetId { get; set; }
+    public string? CabinetName { get; set; }
 }
 
 public class UserCreateRequestDto
@@ -79,6 +82,7 @@ public class UserCreateRequestDto
     public string? FullName { get; set; }
     public string Role { get; set; } = "kine";
     public bool Active { get; set; } = true;
+    public int? CabinetId { get; set; }
     public string Password { get; set; } = string.Empty;
 }
 
@@ -89,6 +93,7 @@ public class UserUpdateRequestDto
     public string? FullName { get; set; }
     public string Role { get; set; } = "kine";
     public bool Active { get; set; } = true;
+    public int? CabinetId { get; set; }
     public string? Password { get; set; }
 }
 
@@ -249,4 +254,42 @@ public class CabinetInfoRequestDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
+}
+
+public class CabinetDto
+{
+    public int Id { get; set; }
+    public string? NomCabinet { get; set; }
+    public string? CodeEtablissement { get; set; }
+    public string? MatriculeFiscal { get; set; }
+    public string? NomEtablissement { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
+}
+
+public class CabinetCreateRequestDto
+{
+    public string? NomCabinet { get; set; }
+    public string? CodeEtablissement { get; set; }
+    public string? MatriculeFiscal { get; set; }
+    public string? NomEtablissement { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
+}
+
+public class CabinetUpdateRequestDto
+{
+    public int Id { get; set; }
+    public string? NomCabinet { get; set; }
+    public string? CodeEtablissement { get; set; }
+    public string? MatriculeFiscal { get; set; }
+    public string? NomEtablissement { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
+    public string? Qualite { get; set; }
+    public string? NumeroAssuree { get; set; }
 }

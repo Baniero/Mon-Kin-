@@ -10,18 +10,35 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
+    private bool IsAdmin()
+    {
+        return UserContextHelper.IsAdmin(HttpContext);
+    }
+
+    private bool IsAllowedUser(int id)
+    {
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+        return currentUser != null && (currentUser.Role == "admin" || currentUser.Id == id);
+    }
+
     [HttpGet]
     public ActionResult<IEnumerable<UserDto>> GetAll()
     {
+        if (!IsAdmin())
+        {
+            return Forbid();
+        }
+
         var users = new List<UserDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE)
-            FROM users
-            ORDER BY full_name, username
+            SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
+            FROM users u
+            LEFT JOIN cabinets c ON c.id = u.cabinet_id
+            ORDER BY u.full_name, u.username
         ";
 
         using var reader = cmd.ExecuteReader();
@@ -33,7 +50,9 @@ public class UsersController : ControllerBase
                 Username = reader.GetString(1),
                 FullName = reader.IsDBNull(2) ? null : reader.GetString(2),
                 Role = reader.GetString(3),
-                Active = reader.GetBoolean(4)
+                Active = reader.GetBoolean(4),
+                CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                CabinetName = reader.GetString(6)
             });
         }
 
@@ -43,17 +62,32 @@ public class UsersController : ControllerBase
     [HttpGet("kines")]
     public ActionResult<IEnumerable<UserDto>> GetKines()
     {
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
         var users = new List<UserDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE)
-            FROM users
-            WHERE role IN ('kine', 'admin') AND COALESCE(active, TRUE) = TRUE
-            ORDER BY full_name, username
-        ";
+        if (currentUser?.Role == "admin")
+        {
+            cmd.CommandText = @"
+                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+                FROM users
+                WHERE role IN ('kine', 'admin') AND COALESCE(active, TRUE) = TRUE
+                ORDER BY full_name, username
+            ";
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+                FROM users
+                WHERE role IN ('kine', 'admin') AND COALESCE(active, TRUE) = TRUE
+                  AND cabinet_id = @cabinet_id
+                ORDER BY full_name, username
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser?.CabinetId.HasValue == true ? (object)currentUser.CabinetId.Value : DBNull.Value);
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -64,7 +98,8 @@ public class UsersController : ControllerBase
                 Username = reader.GetString(1),
                 FullName = reader.IsDBNull(2) ? null : reader.GetString(2),
                 Role = reader.GetString(3),
-                Active = reader.GetBoolean(4)
+                Active = reader.GetBoolean(4),
+                CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5)
             });
         }
 
@@ -74,12 +109,18 @@ public class UsersController : ControllerBase
     [HttpGet("{id}")]
     public ActionResult<UserDto> GetById(int id)
     {
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE)
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
             FROM users
             WHERE id = @id
         ";
@@ -91,19 +132,35 @@ public class UsersController : ControllerBase
             return NotFound();
         }
 
+        int? targetCabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5);
+        if (currentUser.Role != "admin" && targetCabinetId != currentUser.CabinetId)
+        {
+            return Forbid();
+        }
+
         return Ok(new UserDto
         {
             Id = reader.GetInt32(0),
             Username = reader.GetString(1),
             FullName = reader.IsDBNull(2) ? null : reader.GetString(2),
             Role = reader.GetString(3),
-            Active = reader.GetBoolean(4)
+            Active = reader.GetBoolean(4),
+            CabinetId = targetCabinetId
         });
     }
 
     [HttpPost]
     public ActionResult<UserDto> Create(UserCreateRequestDto request)
     {
+        if (!IsAdmin())
+        {
+            var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+            if (currentUser == null || currentUser.CabinetId == null || request.CabinetId != currentUser.CabinetId)
+            {
+                return Forbid();
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
             return BadRequest("Le nom d'utilisateur et le mot de passe sont obligatoires.");
@@ -116,8 +173,8 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO users (username, full_name, role, active, password_hash)
-            VALUES (@username, @full_name, @role, @active, @password_hash)
+            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id)
+            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@username", request.Username);
@@ -125,6 +182,7 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@role", request.Role ?? "kine");
         cmd.Parameters.AddWithValue("@active", request.Active);
         cmd.Parameters.AddWithValue("@password_hash", passwordHash);
+        cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetById), new { id }, new UserDto
@@ -145,6 +203,15 @@ public class UsersController : ControllerBase
             return BadRequest("L'utilisateur ID ne correspond pas.");
         }
 
+        if (!IsAdmin())
+        {
+            var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+            if (currentUser == null || currentUser.CabinetId == null || request.CabinetId != currentUser.CabinetId)
+            {
+                return Forbid();
+            }
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -153,7 +220,8 @@ public class UsersController : ControllerBase
                 username = @username,
                 full_name = @full_name,
                 role = @role,
-                active = @active";
+                active = @active,
+                cabinet_id = @cabinet_id";
 
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
@@ -168,6 +236,7 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@full_name", (object?)request.FullName ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@role", request.Role ?? "kine");
         cmd.Parameters.AddWithValue("@active", request.Active);
+        cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         if (!string.IsNullOrWhiteSpace(request.Password))
@@ -207,7 +276,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash, cabinet_id
             FROM users
             WHERE username = @username
         ";
@@ -225,6 +294,7 @@ public class UsersController : ControllerBase
         var role = reader.GetString(3);
         var active = reader.GetBoolean(4);
         var passwordHash = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
+        int? cabinetId = reader.IsDBNull(6) ? null : reader.GetInt32(6);
 
         if (!active || string.IsNullOrWhiteSpace(passwordHash) || !PasswordHasher.Verify(passwordHash, request.Password))
         {
@@ -237,7 +307,8 @@ public class UsersController : ControllerBase
             Username = username,
             FullName = fullName,
             Role = role,
-            Active = active
+            Active = active,
+            CabinetId = cabinetId
         });
     }
 }

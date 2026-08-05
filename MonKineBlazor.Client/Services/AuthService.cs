@@ -29,6 +29,7 @@ public class AuthService
             if (!string.IsNullOrWhiteSpace(json))
             {
                 CurrentUser = System.Text.Json.JsonSerializer.Deserialize<UserDto>(json);
+                ApplyCurrentUserHeader();
             }
             else
             {
@@ -57,6 +58,7 @@ public class AuthService
         CurrentUser = await response.Content.ReadFromJsonAsync<UserDto>();
         if (CurrentUser != null)
         {
+            ApplyCurrentUserHeader();
             var json = System.Text.Json.JsonSerializer.Serialize(CurrentUser);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
             NotifyStateChanged();
@@ -69,8 +71,18 @@ public class AuthService
     public async Task LogoutAsync()
     {
         CurrentUser = null;
+        _http.DefaultRequestHeaders.Remove("X-User-Id");
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", StorageKey);
         NotifyStateChanged();
+    }
+
+    private void ApplyCurrentUserHeader()
+    {
+        _http.DefaultRequestHeaders.Remove("X-User-Id");
+        if (CurrentUser != null)
+        {
+            _http.DefaultRequestHeaders.Add("X-User-Id", CurrentUser.Id.ToString());
+        }
     }
 
     private void NotifyStateChanged() => OnChange?.Invoke();

@@ -1,7 +1,21 @@
 -- PostgreSQL initialization script for MonKineBlazor
 
+CREATE TABLE IF NOT EXISTS cabinets (
+    id SERIAL PRIMARY KEY,
+    nom_cabinet TEXT NOT NULL,
+    code_etablissement TEXT,
+    matricule_fiscal TEXT,
+    nom_etablissement TEXT,
+    racine TEXT,
+    cle TEXT,
+    qualite TEXT,
+    numero_assuree TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS patients (
     id SERIAL PRIMARY KEY,
+    cabinet_id INTEGER REFERENCES cabinets(id),
     code_patient TEXT UNIQUE,
     dossier_patient TEXT,
     nom TEXT NOT NULL,
@@ -19,6 +33,7 @@ CREATE TABLE IF NOT EXISTS patients (
     n_assuree TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS cabinet_id INTEGER REFERENCES cabinets(id);
 
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS racine TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS cle TEXT;
@@ -50,9 +65,11 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT,
     active BOOLEAN DEFAULT TRUE,
     password_hash TEXT,
+    cabinet_id INTEGER REFERENCES cabinets(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cabinet_id INTEGER REFERENCES cabinets(id);
 
 CREATE TABLE IF NOT EXISTS patient_programs (
     id SERIAL PRIMARY KEY,

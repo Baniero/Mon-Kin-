@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MonKineBlazor.Server.Data;
+using MonKineBlazor.Server.Services;
 using MonKineBlazor.Shared.Models;
 using Npgsql;
 
@@ -9,36 +10,107 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class AppointmentsController : ControllerBase
 {
-    [HttpGet]
-    public ActionResult<IEnumerable<AppointmentDto>> GetAll()
+    private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
+    private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
+    private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
+
+    private bool IsAppointmentAccessible(int appointmentId)
     {
-        var appointments = new List<AppointmentDto>();
+        if (IsAdmin())
+        {
+            return true;
+        }
+
+        var currentUser = GetCurrentUser();
+        if (currentUser?.CabinetId == null)
+        {
+            return false;
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT
-                a.id,
-                a.patient_id,
-                COALESCE(p.nom || ' ' || p.prenom, ''),
-                a.kine_id,
-                COALESCE(u.full_name, u.username, ''),
-                a.start_datetime,
-                a.end_datetime,
-                COALESCE(a.acte, ''),
-                COALESCE(a.room, ''),
-                COALESCE(a.status, ''),
-                COALESCE(a.payment_status, ''),
-                COALESCE(a.amount, 0),
-                COALESCE(a.paid_amount, 0),
-                COALESCE(a.cnam_covered, 0),
-                COALESCE(a.notes, '')
+            SELECT 1
             FROM appointments a
             JOIN patients p ON p.id = a.patient_id
-            LEFT JOIN users u ON u.id = a.kine_id
-            ORDER BY a.start_datetime DESC
+            WHERE a.id = @appointmentId
+              AND p.cabinet_id = @cabinet_id
         ";
+        cmd.Parameters.AddWithValue("@appointmentId", appointmentId);
+        cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+
+        var result = cmd.ExecuteScalar();
+        return result != null;
+    }
+
+    [HttpGet]
+    public ActionResult<IEnumerable<AppointmentDto>> GetAll()
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        var appointments = new List<AppointmentDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        if (IsAdmin())
+        {
+            cmd.CommandText = @"
+                SELECT
+                    a.id,
+                    a.patient_id,
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    a.kine_id,
+                    COALESCE(u.full_name, u.username, ''),
+                    a.start_datetime,
+                    a.end_datetime,
+                    COALESCE(a.acte, ''),
+                    COALESCE(a.room, ''),
+                    COALESCE(a.status, ''),
+                    COALESCE(a.payment_status, ''),
+                    COALESCE(a.amount, 0),
+                    COALESCE(a.paid_amount, 0),
+                    COALESCE(a.cnam_covered, 0),
+                    COALESCE(a.notes, '')
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                LEFT JOIN users u ON u.id = a.kine_id
+                ORDER BY a.start_datetime DESC
+            ";
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT
+                    a.id,
+                    a.patient_id,
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    a.kine_id,
+                    COALESCE(u.full_name, u.username, ''),
+                    a.start_datetime,
+                    a.end_datetime,
+                    COALESCE(a.acte, ''),
+                    COALESCE(a.room, ''),
+                    COALESCE(a.status, ''),
+                    COALESCE(a.payment_status, ''),
+                    COALESCE(a.amount, 0),
+                    COALESCE(a.paid_amount, 0),
+                    COALESCE(a.cnam_covered, 0),
+                    COALESCE(a.notes, '')
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                LEFT JOIN users u ON u.id = a.kine_id
+                WHERE p.cabinet_id = @cabinet_id
+                ORDER BY a.start_datetime DESC
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.HasValue ? (object)currentUser.CabinetId.Value : DBNull.Value);
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -69,6 +141,17 @@ public class AppointmentsController : ControllerBase
     [HttpGet("patient/{patientId}")]
     public ActionResult<IEnumerable<AppointmentDto>> GetByPatient(int patientId)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(patientId))
+        {
+            return Forbid();
+        }
+
         var appointments = new List<AppointmentDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -128,6 +211,17 @@ public class AppointmentsController : ControllerBase
     [HttpPost]
     public ActionResult<AppointmentDto> Create(AppointmentDto appointment)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(appointment.PatientId))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -167,6 +261,22 @@ public class AppointmentsController : ControllerBase
         if (id != appointment.Id)
         {
             return BadRequest("L'ID du rendez-vous ne correspond pas.");
+        }
+
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && !IsAppointmentAccessible(id))
+        {
+            return Forbid();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(appointment.PatientId))
+        {
+            return Forbid();
         }
 
         if (appointment.KineId.HasValue && appointment.Start.HasValue && appointment.End.HasValue)
@@ -223,6 +333,17 @@ public class AppointmentsController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && !IsAppointmentAccessible(id))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 

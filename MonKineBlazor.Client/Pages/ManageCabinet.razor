@@ -84,6 +84,7 @@ else
                 <tr>
                     <th>Nom</th>
                     <th>Username</th>
+                    <th>Cabinet</th>
                     <th>Rôle</th>
                     <th>Actif</th>
                     <th>Actions</th>
@@ -95,6 +96,7 @@ else
                     <tr>
                         <td>@user.FullName</td>
                         <td>@user.Username</td>
+                        <td>@user.CabinetName</td>
                         <td>@user.Role</td>
                         <td>@(user.Active ? "Oui" : "Non")</td>
                         <td>
@@ -131,8 +133,22 @@ else
                         </InputSelect>
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label">Cabinet</label>
+                        <InputSelect class="form-select" @bind-Value="userForm.CabinetId">
+                            <option value="">Sélectionner un cabinet</option>
+                            @foreach (var cabinet in cabinets)
+                            {
+                                <option value="@cabinet.Id">@cabinet.NomCabinet</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Actif</label>
                         <InputCheckbox class="form-check-input" @bind-Value="userForm.Active" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mot de passe</label>
+                        <InputText class="form-control" type="password" @bind-Value="userPassword" />
                     </div>
                     <div class="col-md-12">
                         <button class="btn btn-success" type="submit">Enregistrer</button>
@@ -147,10 +163,12 @@ else
 @code {
     private List<UserDto> users = new();
     private List<UserDto> allUsers = new();
+    private List<CabinetDto> cabinets = new();
     private UserDto userForm = new() { Role = "kine", Active = true };
     private UserDto? selectedUser;
     private bool showForm;
     private string searchKeyword = string.Empty;
+    private string userPassword = string.Empty;
     private string? errorMessage;
     private CabinetInfoDto cabinetInfo = new();
     private CabinetInfoRequestDto cabinetInfoForm = new();
@@ -158,8 +176,22 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCabinets();
         await LoadUsers();
         await LoadCabinetInfo();
+    }
+
+    private async Task LoadCabinets()
+    {
+        errorMessage = null;
+        try
+        {
+            cabinets = await Http.GetFromJsonAsync<List<CabinetDto>>("api/cabinets") ?? new List<CabinetDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
     }
 
     private async Task LoadUsers()
@@ -241,7 +273,8 @@ else
     private void ShowCreateUser()
     {
         selectedUser = null;
-        userForm = new UserDto { Role = "kine", Active = true };
+        userForm = new UserDto { Role = "kine", Active = true, CabinetId = cabinets.FirstOrDefault()?.Id };
+        userPassword = string.Empty;
         showForm = true;
     }
 
@@ -254,8 +287,10 @@ else
             Username = user.Username,
             FullName = user.FullName,
             Role = user.Role,
-            Active = user.Active
+            Active = user.Active,
+            CabinetId = user.CabinetId
         };
+        userPassword = string.Empty;
         showForm = true;
     }
 
@@ -273,7 +308,17 @@ else
         {
             if (selectedUser == null || selectedUser.Id == 0)
             {
-                var response = await Http.PostAsJsonAsync("api/users", userForm);
+                var createRequest = new UserCreateRequestDto
+                {
+                    Username = userForm.Username,
+                    FullName = userForm.FullName,
+                    Role = userForm.Role,
+                    Active = userForm.Active,
+                    CabinetId = userForm.CabinetId,
+                    Password = userPassword
+                };
+
+                var response = await Http.PostAsJsonAsync("api/users", createRequest);
                 if (response.IsSuccessStatusCode)
                 {
                     await LoadUsers();
@@ -286,7 +331,18 @@ else
             }
             else
             {
-                var response = await Http.PutAsJsonAsync($"api/users/{selectedUser.Id}", userForm);
+                var updateRequest = new UserUpdateRequestDto
+                {
+                    Id = selectedUser.Id,
+                    Username = userForm.Username,
+                    FullName = userForm.FullName,
+                    Role = userForm.Role,
+                    Active = userForm.Active,
+                    CabinetId = userForm.CabinetId,
+                    Password = string.IsNullOrWhiteSpace(userPassword) ? null : userPassword
+                };
+
+                var response = await Http.PutAsJsonAsync($"api/users/{selectedUser.Id}", updateRequest);
                 if (response.IsSuccessStatusCode)
                 {
                     await LoadUsers();

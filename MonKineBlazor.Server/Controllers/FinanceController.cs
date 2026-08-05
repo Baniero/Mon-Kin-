@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using MonKineBlazor.Server.Data;
+using MonKineBlazor.Server.Services;
 using MonKineBlazor.Shared.Models;
 using Npgsql;
 using System.Linq;
@@ -10,6 +11,9 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class FinanceController : ControllerBase
 {
+    private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
+    private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
+    private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
     [HttpGet("cash-closings")]
     public ActionResult<IEnumerable<CashClosingDto>> GetCashClosings(DateTime start, DateTime end)
     {
