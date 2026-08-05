@@ -174,8 +174,12 @@ CREATE TABLE IF NOT EXISTS cnam_bordereau_executed (
     program_id INTEGER NOT NULL UNIQUE REFERENCES patient_programs(id) ON DELETE CASCADE,
     executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     executed_by TEXT,
+    facture_number TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE IF NOT EXISTS cnam_bordereau_executed
+    ADD COLUMN IF NOT EXISTS facture_number TEXT;
 
 CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,

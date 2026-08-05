@@ -562,7 +562,8 @@ public class FinanceController : ControllerBase
                     COALESCE(p.nom || ' ' || p.prenom, ''),
                     COALESCE(pp.prix_ttc, 0),
                     e.executed_at,
-                    COALESCE(e.executed_by, '')
+                    COALESCE(e.executed_by, ''),
+                    COALESCE(e.facture_number, '')
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
@@ -579,7 +580,8 @@ public class FinanceController : ControllerBase
                     COALESCE(p.nom || ' ' || p.prenom, ''),
                     COALESCE(pp.prix_ttc, 0),
                     e.executed_at,
-                    COALESCE(e.executed_by, '')
+                    COALESCE(e.executed_by, ''),
+                    COALESCE(e.facture_number, '')
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
@@ -604,7 +606,7 @@ public class FinanceController : ControllerBase
                 rows.Add(new CnamBordereauEntryDto
                 {
                     ProgramId = programId,
-                    FactureNumber = dateDebut.HasValue ? $"INV-{programId}-{dateDebut:yyyyMMdd}" : $"INV-{programId}",
+                    FactureNumber = reader.GetString(8),
                     DateFacture = dateDebut,
                     CodePatient = reader.GetString(2),
                     NumeroAssuree = reader.GetString(3),
@@ -623,6 +625,7 @@ public class FinanceController : ControllerBase
         {
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
+            using var transaction = conn.BeginTransaction();
 
             var currentUser = GetCurrentUser();
             if (currentUser == null)
@@ -637,8 +640,9 @@ public class FinanceController : ControllerBase
             }
 
             using var checkCmd = conn.CreateCommand();
+            checkCmd.Transaction = transaction;
             checkCmd.CommandText = IsAdmin() ? @"
-                SELECT pp.id
+                SELECT p.cabinet_id
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 WHERE pp.id = @programId
@@ -648,7 +652,7 @@ public class FinanceController : ControllerBase
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
             " : @"
-                SELECT pp.id
+                SELECT p.cabinet_id
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 WHERE pp.id = @programId
@@ -668,23 +672,45 @@ public class FinanceController : ControllerBase
                 }
                 checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
-            var programIdObj = checkCmd.ExecuteScalar();
-            if (programIdObj == null)
+            var cabinetIdObj = checkCmd.ExecuteScalar();
+            if (cabinetIdObj == null || cabinetIdObj == DBNull.Value)
             {
                 return BadRequest("Programme introuvable ou déjà exécuté.");
             }
 
+            var programCabinetId = Convert.ToInt32(cabinetIdObj);
+            var invoiceYear = DateTime.UtcNow.Year;
+            using var sequenceCmd = conn.CreateCommand();
+            sequenceCmd.Transaction = transaction;
+            sequenceCmd.CommandText = @"
+                SELECT COALESCE(MAX((split_part(facture_number, '/', 1))::int), 0)
+                FROM cnam_bordereau_executed e
+                JOIN patient_programs pp ON pp.id = e.program_id
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE p.cabinet_id = @cabinet_id
+                  AND EXTRACT(YEAR FROM e.executed_at) = @year
+                  AND e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+            ";
+            sequenceCmd.Parameters.AddWithValue("@cabinet_id", programCabinetId);
+            sequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
+            var currentNumberObj = sequenceCmd.ExecuteScalar();
+            var nextSequence = Convert.ToInt32(currentNumberObj ?? 0) + 1;
+            var factureNumber = $"{nextSequence}/{invoiceYear}";
+
             using var insertCmd = conn.CreateCommand();
+            insertCmd.Transaction = transaction;
             insertCmd.CommandText = @"
-                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by)
-                VALUES (@programId, NOW(), @executedBy)
+                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, facture_number)
+                VALUES (@programId, NOW(), @executedBy, @factureNumber)
                 ON CONFLICT (program_id) DO NOTHING
             ";
             insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+            insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
             insertCmd.ExecuteNonQuery();
 
             using var fetchCmd = conn.CreateCommand();
+            fetchCmd.Transaction = transaction;
             fetchCmd.CommandText = IsAdmin() ? @"
                 SELECT
                     pp.id,
@@ -694,7 +720,8 @@ public class FinanceController : ControllerBase
                     COALESCE(p.nom || ' ' || p.prenom, ''),
                     COALESCE(pp.prix_ttc, 0),
                     e.executed_at,
-                    COALESCE(e.executed_by, '')
+                    COALESCE(e.executed_by, ''),
+                    COALESCE(e.facture_number, '')
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
@@ -708,7 +735,8 @@ public class FinanceController : ControllerBase
                     COALESCE(p.nom || ' ' || p.prenom, ''),
                     COALESCE(pp.prix_ttc, 0),
                     e.executed_at,
-                    COALESCE(e.executed_by, '')
+                    COALESCE(e.executed_by, ''),
+                    COALESCE(e.facture_number, '')
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
@@ -735,7 +763,7 @@ public class FinanceController : ControllerBase
             var executedEntry = new CnamBordereauEntryDto
             {
                 ProgramId = reader.GetInt32(0),
-                FactureNumber = dateDebut.HasValue ? $"INV-{reader.GetInt32(0)}-{dateDebut:yyyyMMdd}" : $"INV-{reader.GetInt32(0)}",
+                FactureNumber = reader.GetString(8),
                 DateFacture = dateDebut,
                 CodePatient = reader.GetString(2),
                 NumeroAssuree = reader.GetString(3),
@@ -745,6 +773,7 @@ public class FinanceController : ControllerBase
                 ExecutedBy = reader.GetString(7)
             };
 
+            transaction.Commit();
             return Ok(executedEntry);
         }
 
