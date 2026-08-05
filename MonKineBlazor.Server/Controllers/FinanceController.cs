@@ -53,6 +53,12 @@ public class FinanceController : ControllerBase
             return Unauthorized();
         }
 
+        int? cabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !cabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
         var sessionsByDay = new Dictionary<DateTime, decimal>();
         var advancesByDay = new Dictionary<DateTime, decimal>();
         var closingsByDay = new Dictionary<DateTime, CashClosingDto>();
@@ -273,6 +279,12 @@ public class FinanceController : ControllerBase
             return Unauthorized();
         }
 
+        int? cabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !cabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
         var rows = new List<CnamRecoveryDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -335,6 +347,12 @@ public class FinanceController : ControllerBase
         if (currentUser == null)
         {
             return Unauthorized();
+        }
+
+        int? cabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !cabinetId.HasValue)
+        {
+            return Forbid();
         }
 
         var programs = new List<CnamProgramInvoiceDto>();
@@ -624,6 +642,10 @@ public class FinanceController : ControllerBase
             checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             if (!IsAdmin())
             {
+                if (currentUser.CabinetId == null)
+                {
+                    return Forbid();
+                }
                 checkCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
             }
             var programIdObj = checkCmd.ExecuteScalar();
@@ -676,6 +698,10 @@ public class FinanceController : ControllerBase
             fetchCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             if (!IsAdmin())
             {
+                if (currentUser.CabinetId == null)
+                {
+                    return Forbid();
+                }
                 fetchCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
             }
 

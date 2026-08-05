@@ -479,7 +479,10 @@
         {
             await LoadCashClosings();
             await LoadCnamRecovery();
-            await LoadAllTransactions();
+            if (AuthService.CurrentUser?.Role == "admin")
+            {
+                await LoadAllTransactions();
+            }
             if (selectedPatientId > 0)
             {
                 await LoadAdvanceData();
@@ -560,7 +563,7 @@
     private async Task SetSection(FinanceSection section)
     {
         activeSection = section;
-        if (section == FinanceSection.Transactions)
+        if (section == FinanceSection.Transactions && AuthService.CurrentUser?.Role == "admin")
         {
             await LoadAllTransactions();
         }
