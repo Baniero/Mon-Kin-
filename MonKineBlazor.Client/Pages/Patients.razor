@@ -198,6 +198,7 @@ else
                                             <td>@(program.DateDebut.HasValue ? program.DateDebut.Value.ToString("dd/MM/yyyy") : string.Empty)</td>
                                             <td>@program.Statut</td>
                                             <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => ExportSignatureSheet(program)">Feuille signature</button>
                                                 <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditProgram(program)">Modifier</button>
                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteProgram(program.Id)">Supprimer</button>
                                             </td>
@@ -517,6 +518,69 @@ else
         MontantTVA = 0,
         PrixTTC = 0,
     };
+
+    private class SignatureSessionRow
+    {
+        public int Sequence { get; set; }
+        public string Date { get; set; } = string.Empty;
+        public string SignaturePatient { get; set; } = string.Empty;
+        public string SignatureKine { get; set; } = string.Empty;
+    }
+
+    private async Task ExportSignatureSheet(PatientProgramDto program)
+    {
+        if (selectedPatient == null)
+        {
+            errorMessage = "Sélectionnez d'abord un patient.";
+            return;
+        }
+
+        if (patientAppointments == null)
+        {
+            await LoadPatientAppointments();
+        }
+
+        var rows = BuildSignatureRows(program);
+        var payload = new
+        {
+            program,
+            patient = selectedPatient,
+            rows
+        };
+
+        await JSRuntime.InvokeVoidAsync("generateSignatureSheetPdf", $"FeuilleSignature_{program.Id}_{selectedPatient.CodePatient}.pdf", payload);
+    }
+
+    private List<SignatureSessionRow> BuildSignatureRows(PatientProgramDto program)
+    {
+        var rows = new List<SignatureSessionRow>();
+        if (program.NbSeances <= 0)
+        {
+            return rows;
+        }
+
+        var appointmentDates = (patientAppointments ?? new List<AppointmentDto>())
+            .Where(a => a.Start.HasValue)
+            .Where(a =>
+                (!program.DateDebut.HasValue || a.Start.Value.Date >= program.DateDebut.Value.Date) &&
+                (!program.DateFin.HasValue || a.Start.Value.Date <= program.DateFin.Value.Date))
+            .OrderBy(a => a.Start)
+            .Select(a => a.Start.Value.Date)
+            .Distinct()
+            .ToList();
+
+        for (var sequence = 1; sequence <= program.NbSeances; sequence++)
+        {
+            rows.Add(new SignatureSessionRow
+            {
+                Sequence = sequence,
+                Date = sequence <= appointmentDates.Count ? appointmentDates[sequence - 1].ToString("dd/MM/yyyy") : string.Empty
+            });
+        }
+
+        return rows;
+    }
+
     private bool isEditingProgram;
     private PatientProgramDto? editingProgram;
     private string? statusMessage;

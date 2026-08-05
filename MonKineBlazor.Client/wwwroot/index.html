@@ -252,6 +252,71 @@
             doc.save(filename);
         };
 
+        window.generateSignatureSheetPdf = async (filename, data) => {
+            const jsPDFClass = getJsPDF();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            let y = renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
+
+            doc.setFontSize(10);
+            const patient = data.patient ?? data.Patient ?? {};
+            const program = data.program ?? data.Program ?? {};
+
+            drawLabelValue(doc, 'Patient :', `${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin, y);
+            drawLabelValue(doc, 'Code patient :', patient.CodePatient ?? '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Programme :', program.Titre ?? '', margin, y);
+            drawLabelValue(doc, 'Nature :', program.NatureSeances ?? '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Date début :', program.DateDebut ?? '', margin, y);
+            drawLabelValue(doc, 'Date fin :', program.DateFin ?? '', 320, y);
+            y += 24;
+
+            const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
+            const widths = [60, 120, 165, 165];
+            let x = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            headers.forEach((header, index) => {
+                doc.text(header, x, y);
+                x += widths[index];
+            });
+            y += 16;
+            doc.setLineWidth(0.25);
+            doc.line(margin, y, 555, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+
+            const rows = data.rows ?? data.Rows ?? [];
+            rows.forEach((row) => {
+                if (y > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                x = margin;
+                const sequence = row.Sequence ?? row.sequence ?? '';
+                const date = row.Date ?? row.date ?? '';
+                const values = [String(sequence), String(date), '', ''];
+                values.forEach((value, index) => {
+                    doc.text(String(value), x, y);
+                    x += widths[index];
+                });
+                y += 18;
+            });
+
+            y += 18;
+            doc.setFontSize(9);
+            doc.text('Remarques :', margin, y);
+            doc.save(filename);
+        };
+
         window.generateBordereauPdf = async (filename, data) => {
             const jsPDFClass = getJsPDF();
             if (!jsPDFClass) {
@@ -327,6 +392,71 @@
             doc.text('Total général TTC :', margin, y);
             doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 555, y, { align: 'right' });
 
+            doc.save(filename);
+        };
+
+        window.generateSignatureSheetPdf = async (filename, data) => {
+            const jsPDFClass = getJsPDF();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            const margin = 40;
+            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            let y = renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
+
+            doc.setFontSize(10);
+            const patient = data.patient ?? data.Patient ?? {};
+            const program = data.program ?? data.Program ?? {};
+
+            drawLabelValue(doc, 'Patient :', `${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin, y);
+            drawLabelValue(doc, 'Code patient :', patient.CodePatient ?? '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Programme :', program.Titre ?? '', margin, y);
+            drawLabelValue(doc, 'Nature :', program.NatureSeances ?? '', 320, y);
+            y += 16;
+            drawLabelValue(doc, 'Date début :', program.DateDebut ?? '', margin, y);
+            drawLabelValue(doc, 'Date fin :', program.DateFin ?? '', 320, y);
+            y += 24;
+
+            const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
+            const widths = [70, 140, 170, 170];
+            let x = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            headers.forEach((header, index) => {
+                doc.text(header, x, y);
+                x += widths[index];
+            });
+            y += 16;
+            doc.setLineWidth(0.25);
+            doc.line(margin, y, 555, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+
+            const rows = data.rows ?? data.Rows ?? [];
+            rows.forEach((row) => {
+                if (y > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                x = margin;
+                const seq = row.Sequence ?? row.sequence ?? '';
+                const date = row.Date ?? row.date ?? '';
+                const values = [String(seq), String(date), '', ''];
+                values.forEach((value, index) => {
+                    doc.text(String(value), x, y);
+                    x += widths[index];
+                });
+                y += 20;
+            });
+
+            y += 20;
+            doc.setFontSize(9);
+            doc.text('Remarques :', margin, y);
             doc.save(filename);
         };
     </script>

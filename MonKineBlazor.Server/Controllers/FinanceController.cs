@@ -465,7 +465,7 @@ public class FinanceController : ControllerBase
             return Forbid();
         }
 
-        var rows = new List<CnamBordereauEntryDto>();
+        var pendingRows = new List<(int ProgramId, DateTime? DateDebut, string CodePatient, string NumeroAssuree, string PatientName, decimal TotalTTC, int? CabinetId)>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -477,7 +477,8 @@ public class FinanceController : ControllerBase
                 COALESCE(p.code_patient, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
-                COALESCE(pp.prix_ttc, 0)
+                COALESCE(pp.prix_ttc, 0),
+                p.cabinet_id
             FROM patient_programs pp
             JOIN patients p ON p.id = pp.patient_id
             WHERE DATE(pp.date_debut) BETWEEN @start AND @end
@@ -494,7 +495,8 @@ public class FinanceController : ControllerBase
                 COALESCE(p.code_patient, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
-                COALESCE(pp.prix_ttc, 0)
+                COALESCE(pp.prix_ttc, 0),
+                p.cabinet_id
             FROM patient_programs pp
             JOIN patients p ON p.id = pp.patient_id
             WHERE DATE(pp.date_debut) BETWEEN @start AND @end
@@ -516,112 +518,80 @@ public class FinanceController : ControllerBase
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            var programId = reader.GetInt32(0);
-            var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+            pendingRows.Add((
+                ProgramId: reader.GetInt32(0),
+                DateDebut: reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
+                CodePatient: reader.GetString(2),
+                NumeroAssuree: reader.GetString(3),
+                PatientName: reader.GetString(4),
+                TotalTTC: reader.GetDecimal(5),
+                CabinetId: reader.IsDBNull(6) ? null : reader.GetInt32(6)
+            ));
+        }
+
+        var sequences = new Dictionary<(int? CabinetId, int Year), int>();
+        using var seqCmd = conn.CreateCommand();
+        seqCmd.CommandText = IsAdmin() ? @"
+            SELECT
+                p.cabinet_id,
+                EXTRACT(YEAR FROM e.executed_at)::int AS year,
+                COALESCE(MAX((split_part(e.facture_number, '/', 1))::int), 0) AS max_sequence
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+            GROUP BY p.cabinet_id, EXTRACT(YEAR FROM e.executed_at)
+        " : @"
+            SELECT
+                p.cabinet_id,
+                EXTRACT(YEAR FROM e.executed_at)::int AS year,
+                COALESCE(MAX((split_part(e.facture_number, '/', 1))::int), 0) AS max_sequence
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+              AND p.cabinet_id = @cabinet_id
+            GROUP BY p.cabinet_id, EXTRACT(YEAR FROM e.executed_at)
+        ";
+        if (!IsAdmin())
+        {
+            seqCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+
+        using var seqReader = seqCmd.ExecuteReader();
+        while (seqReader.Read())
+        {
+            var cabinetId = seqReader.IsDBNull(0) ? null : (int?)seqReader.GetInt32(0);
+            var year = seqReader.GetInt32(1);
+            var maxSequence = seqReader.GetInt32(2);
+            sequences[(cabinetId, year)] = maxSequence;
+        }
+
+        var rows = new List<CnamBordereauEntryDto>();
+        foreach (var item in pendingRows.OrderBy(x => x.DateDebut ?? DateTime.MaxValue))
+        {
+            var year = item.DateDebut?.Year ?? DateTime.Today.Year;
+            var key = (item.CabinetId, year);
+            var currentSequence = sequences.ContainsKey(key) ? sequences[key] + 1 : 1;
+            sequences[key] = currentSequence;
+
             rows.Add(new CnamBordereauEntryDto
             {
-                ProgramId = programId,
-                FactureNumber = dateDebut.HasValue ? $"INV-{programId}-{dateDebut:yyyyMMdd}" : $"INV-{programId}",
-                DateFacture = dateDebut,
-                CodePatient = reader.GetString(2),
-                NumeroAssuree = reader.GetString(3),
-                PatientName = reader.GetString(4),
-                TotalTTC = reader.GetDecimal(5)
+                ProgramId = item.ProgramId,
+                FactureNumber = $"{currentSequence:000}/{year}",
+                DateFacture = item.DateDebut,
+                CodePatient = item.CodePatient,
+                NumeroAssuree = item.NumeroAssuree,
+                PatientName = item.PatientName,
+                TotalTTC = item.TotalTTC
             });
         }
 
         return Ok(rows);
     }
 
-        [HttpGet("cnam-bordereau-executed")]
-        public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereauExecuted(DateTime start, DateTime end)
-        {
-            var currentUser = GetCurrentUser();
-            if (currentUser == null)
-            {
-                return Unauthorized();
-            }
-
-            int? currentCabinetId = currentUser.CabinetId;
-            if (!IsAdmin() && !currentCabinetId.HasValue)
-            {
-                return Forbid();
-            }
-
-            var rows = new List<CnamBordereauEntryDto>();
-            using var conn = DatabaseConnectionProvider.CreateConnection();
-            conn.Open();
-
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = IsAdmin() ? @"
-                SELECT
-                    pp.id,
-                    pp.date_debut,
-                    COALESCE(p.code_patient, ''),
-                    COALESCE(p.n_assuree, ''),
-                    COALESCE(p.nom || ' ' || p.prenom, ''),
-                    COALESCE(pp.prix_ttc, 0),
-                    e.executed_at,
-                    COALESCE(e.executed_by, ''),
-                    COALESCE(e.facture_number, '')
-                FROM patient_programs pp
-                JOIN patients p ON p.id = pp.patient_id
-                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
-                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
-                  AND COALESCE(p.couverture, '') <> ''
-                  AND COALESCE(p.n_assuree, '') <> ''
-                ORDER BY e.executed_at DESC
-            " : @"
-                SELECT
-                    pp.id,
-                    pp.date_debut,
-                    COALESCE(p.code_patient, ''),
-                    COALESCE(p.n_assuree, ''),
-                    COALESCE(p.nom || ' ' || p.prenom, ''),
-                    COALESCE(pp.prix_ttc, 0),
-                    e.executed_at,
-                    COALESCE(e.executed_by, ''),
-                    COALESCE(e.facture_number, '')
-                FROM patient_programs pp
-                JOIN patients p ON p.id = pp.patient_id
-                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
-                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
-                  AND COALESCE(p.couverture, '') <> ''
-                  AND COALESCE(p.n_assuree, '') <> ''
-                  AND p.cabinet_id = @cabinet_id
-                ORDER BY e.executed_at DESC
-            ";
-            cmd.Parameters.AddWithValue("@start", start.Date);
-            cmd.Parameters.AddWithValue("@end", end.Date);
-            if (!IsAdmin())
-            {
-                cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
-            }
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                var programId = reader.GetInt32(0);
-                var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
-                rows.Add(new CnamBordereauEntryDto
-                {
-                    ProgramId = programId,
-                    FactureNumber = reader.GetString(8),
-                    DateFacture = dateDebut,
-                    CodePatient = reader.GetString(2),
-                    NumeroAssuree = reader.GetString(3),
-                    PatientName = reader.GetString(4),
-                    TotalTTC = reader.GetDecimal(5),
-                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    ExecutedBy = reader.GetString(7)
-                });
-            }
-
-            return Ok(rows);
-        }
-
-        [HttpPost("cnam-bordereau/execute")]
-        public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau(CnamBordereauExecuteRequestDto request)
+    [HttpPost("cnam-bordereau/execute")]
+    public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau(CnamBordereauExecuteRequestDto request)
         {
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();

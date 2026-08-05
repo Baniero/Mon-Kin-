@@ -23,6 +23,7 @@ public static class DatabaseInitializer
 
         EnsureAdminUser(connection);
         EnsureCabinetInfoTable(connection);
+        EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection)
