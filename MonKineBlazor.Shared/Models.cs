@@ -132,6 +132,7 @@ public class AdvanceTransactionDto
 {
     public int Id { get; set; }
     public int PatientId { get; set; }
+    public string? PatientName { get; set; }
     public decimal Amount { get; set; }
     public DateTime TransactionDate { get; set; }
     public string? Note { get; set; }

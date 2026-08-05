@@ -98,6 +98,9 @@
     <div class="col-md-3">
         <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Cnam)"><i class="bi bi-shield-fill-check me-2"></i>CNAM</button>
     </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Transactions)"><i class="bi bi-list-check me-2"></i>Transactions</button>
+    </div>
 </div>
 
 @if (activeSection == FinanceSection.Cash)
@@ -382,6 +385,55 @@
     </div>
 }
 
+@if (activeSection == FinanceSection.Transactions)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Transactions d'avances</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(allTransactions, "transactions_avances.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            @if (!allTransactions.Any())
+            {
+                <div class="alert alert-info">Aucune transaction d'avance trouvée.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Montant</th>
+                                <th>Note</th>
+                                <th>Par</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var transaction in allTransactions)
+                            {
+                                <tr>
+                                    <td>@transaction.TransactionDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td>@(transaction.PatientName ?? GetPatientName(transaction.PatientId))</td>
+                                    <td>@($"{transaction.Amount:F2} DT")</td>
+                                    <td>@transaction.Note</td>
+                                    <td>@transaction.CreatedBy</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditTransaction(transaction)">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAdvanceTransaction(transaction.Id)">Supprimer</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @code {
     private string? errorMessage;
     private string? successMessage;
@@ -391,6 +443,7 @@
     private List<CashClosingDto> cashClosings = new();
     private List<PatientDto> patients = new();
     private List<AdvanceTransactionDto> advanceTransactions = new();
+    private List<AdvanceTransactionDto> allTransactions = new();
     private List<AdvanceLotDto> advanceLots = new();
     private List<PaymentProjectionEntryDto> paymentProjections = new();
     private List<CnamRecoveryDto> cnamRecovery = new();
@@ -426,6 +479,7 @@
         {
             await LoadCashClosings();
             await LoadCnamRecovery();
+            await LoadAllTransactions();
             if (selectedPatientId > 0)
             {
                 await LoadAdvanceData();
@@ -460,6 +514,11 @@
 
         advanceTransactions = await Http.GetFromJsonAsync<List<AdvanceTransactionDto>>($"api/finance/advance-transactions/patient/{selectedPatientId}") ?? new List<AdvanceTransactionDto>();
         patientFinance = await Http.GetFromJsonAsync<PatientFinanceDto>($"api/finance/patient-finance/{selectedPatientId}");
+    }
+
+    private async Task LoadAllTransactions()
+    {
+        allTransactions = await Http.GetFromJsonAsync<List<AdvanceTransactionDto>>("api/finance/advance-transactions") ?? new List<AdvanceTransactionDto>();
     }
 
     private async Task LoadAdvanceLots()
@@ -498,9 +557,13 @@
         await LoadFinanceData();
     }
 
-    private void SetSection(FinanceSection section)
+    private async Task SetSection(FinanceSection section)
     {
         activeSection = section;
+        if (section == FinanceSection.Transactions)
+        {
+            await LoadAllTransactions();
+        }
     }
 
     private async Task ValidateCashClosing()
@@ -526,12 +589,12 @@
         }
     }
 
-    private void EditCashClosing(CashClosingDto row)
+    private async Task EditCashClosing(CashClosingDto row)
     {
         cashClosingRequest.DateJour = row.DateJour;
         cashClosingRequest.ActualAmount = row.ActualAmount;
         cashClosingRequest.ValidatedBy = row.ValidatedBy;
-        SetSection(FinanceSection.Cash);
+        await SetSection(FinanceSection.Cash);
     }
 
     private async Task DeleteCashClosing(DateTime dateJour)
@@ -629,6 +692,7 @@
         {
             await LoadAdvanceData();
             await LoadAdvanceLots();
+            await LoadAllTransactions();
             await ShowSuccessMessage("Avance annulée.");
         }
         else
@@ -646,6 +710,16 @@
             await LoadAdvanceLots();
             await LoadPaymentProjections();
         }
+    }
+
+    private async Task EditTransaction(AdvanceTransactionDto transaction)
+    {
+        selectedPatientId = transaction.PatientId;
+        await LoadAdvanceData();
+        await LoadAdvanceLots();
+        await LoadPaymentProjections();
+        BeginEditAdvance(transaction);
+        await SetSection(FinanceSection.Advances);
     }
 
     private void FilterPatients()
@@ -728,11 +802,18 @@
     private decimal TotalAdvances => advanceTransactions.Sum(a => a.Amount);
     private decimal TotalCnamRecovered => cnamRecovery.Sum(c => c.MontantCnam);
 
+    private string GetPatientName(int patientId)
+    {
+        var patient = patients.FirstOrDefault(p => p.Id == patientId);
+        return patient is null ? string.Empty : $"{patient.Nom} {patient.Prenom}".Trim();
+    }
+
     private enum FinanceSection
     {
         Cash,
         Advances,
         Projections,
-        Cnam
+        Cnam,
+        Transactions
     }
 }

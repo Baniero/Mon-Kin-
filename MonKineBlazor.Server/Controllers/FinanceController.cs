@@ -678,10 +678,11 @@ public class FinanceController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, patient_id, amount, transaction_date, COALESCE(note, ''), COALESCE(created_by, '')
-            FROM advance_transactions
-            WHERE patient_id = @patientId
-            ORDER BY transaction_date DESC
+            SELECT t.id, t.patient_id, COALESCE(p.nom || ' ' || p.prenom, ''), t.amount, t.transaction_date, COALESCE(t.note, ''), COALESCE(t.created_by, '')
+            FROM advance_transactions t
+            JOIN patients p ON p.id = t.patient_id
+            WHERE t.patient_id = @patientId
+            ORDER BY t.transaction_date DESC
         ";
         cmd.Parameters.AddWithValue("@patientId", patientId);
 
@@ -692,14 +693,65 @@ public class FinanceController : ControllerBase
             {
                 Id = reader.GetInt32(0),
                 PatientId = reader.GetInt32(1),
-                Amount = reader.GetDecimal(2),
-                TransactionDate = reader.GetDateTime(3),
-                Note = reader.GetString(4),
-                CreatedBy = reader.GetString(5)
+                PatientName = reader.GetString(2),
+                Amount = reader.GetDecimal(3),
+                TransactionDate = reader.GetDateTime(4),
+                Note = reader.GetString(5),
+                CreatedBy = reader.GetString(6)
             });
         }
 
         return Ok(transactions);
+    }
+
+    [HttpGet("advance-transactions")]
+    public ActionResult<IEnumerable<AdvanceTransactionDto>> GetAllAdvanceTransactions()
+    {
+        var transactions = new List<AdvanceTransactionDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT t.id, t.patient_id, COALESCE(p.nom || ' ' || p.prenom, ''), t.amount, t.transaction_date, COALESCE(t.note, ''), COALESCE(t.created_by, '')
+            FROM advance_transactions t
+            JOIN patients p ON p.id = t.patient_id
+            ORDER BY t.transaction_date DESC
+        ";
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            transactions.Add(new AdvanceTransactionDto
+            {
+                Id = reader.GetInt32(0),
+                PatientId = reader.GetInt32(1),
+                PatientName = reader.GetString(2),
+                Amount = reader.GetDecimal(3),
+                TransactionDate = reader.GetDateTime(4),
+                Note = reader.GetString(5),
+                CreatedBy = reader.GetString(6)
+            });
+        }
+
+        return Ok(transactions);
+    }
+
+    [HttpDelete("advance-transactions/{transactionId}")]
+    public IActionResult DeleteAdvanceTransaction(int transactionId)
+    {
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            DELETE FROM advance_transactions
+            WHERE id = @transactionId
+        ";
+        cmd.Parameters.AddWithValue("@transactionId", transactionId);
+
+        var rows = cmd.ExecuteNonQuery();
+        return rows == 0 ? NotFound() : NoContent();
     }
 
     [HttpPut("advance-transactions/{transactionId}")]
