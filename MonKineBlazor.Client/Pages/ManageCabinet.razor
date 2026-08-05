@@ -1,6 +1,7 @@
 @page "/manage-cabinet"
 @attribute [AdminOnly]
 @using MonKineBlazor.Shared.Models
+@using Microsoft.JSInterop
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
@@ -44,20 +45,16 @@
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.MatriculeFiscal" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Racine</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Racine" />
+                    <label class="form-label">N° EMPLOYEUR</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NumeroEmployeur" />
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Clé</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Cle" />
+                    <label class="form-label">Code CNAM</label>
+                    <InputText class="form-control" @bind-Value="cabinetInfoForm.CodeCnam" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Qualité</label>
                     <InputText class="form-control" @bind-Value="cabinetInfoForm.Qualite" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">N° assurée</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NumeroAssuree" />
                 </div>
                 <div class="col-md-12 d-flex justify-content-end">
                     <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
@@ -134,16 +131,12 @@
                         <InputText class="form-control" @bind-Value="cabinetForm.Qualite" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Racine</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.Racine" />
+                        <label class="form-label">N° EMPLOYEUR</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.NumeroEmployeur" />
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Clé</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.Cle" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">N° assurée</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.NumeroAssuree" />
+                        <label class="form-label">Code CNAM</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.CodeCnam" />
                     </div>
                     <div class="col-md-12 d-flex justify-content-end">
                         <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
@@ -308,10 +301,9 @@ else
             cabinetInfoForm = new CabinetInfoRequestDto
             {
                 NomCabinet = cabinetInfo.NomCabinet,
-                Racine = cabinetInfo.Racine,
-                Cle = cabinetInfo.Cle,
+                NumeroEmployeur = cabinetInfo.NumeroEmployeur,
+                CodeCnam = cabinetInfo.CodeCnam,
                 Qualite = cabinetInfo.Qualite,
-                NumeroAssuree = cabinetInfo.NumeroAssuree,
                 CodeEtablissement = cabinetInfo.CodeEtablissement,
                 MatriculeFiscal = cabinetInfo.MatriculeFiscal,
                 NomEtablissement = cabinetInfo.NomEtablissement
@@ -363,10 +355,9 @@ else
             NomEtablissement = cabinet.NomEtablissement,
             CodeEtablissement = cabinet.CodeEtablissement,
             MatriculeFiscal = cabinet.MatriculeFiscal,
-            Racine = cabinet.Racine,
-            Cle = cabinet.Cle,
-            Qualite = cabinet.Qualite,
-            NumeroAssuree = cabinet.NumeroAssuree
+            NumeroEmployeur = cabinet.NumeroEmployeur,
+            CodeCnam = cabinet.CodeCnam,
+            Qualite = cabinet.Qualite
         };
         showCabinetForm = true;
     }
@@ -392,10 +383,9 @@ else
                     NomEtablissement = cabinetForm.NomEtablissement,
                     CodeEtablissement = cabinetForm.CodeEtablissement,
                     MatriculeFiscal = cabinetForm.MatriculeFiscal,
-                    Racine = cabinetForm.Racine,
-                    Cle = cabinetForm.Cle,
-                    Qualite = cabinetForm.Qualite,
-                    NumeroAssuree = cabinetForm.NumeroAssuree
+                    NumeroEmployeur = cabinetForm.NumeroEmployeur,
+                    CodeCnam = cabinetForm.CodeCnam,
+                    Qualite = cabinetForm.Qualite
                 };
                 response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
             }
@@ -408,10 +398,9 @@ else
                     NomEtablissement = cabinetForm.NomEtablissement,
                     CodeEtablissement = cabinetForm.CodeEtablissement,
                     MatriculeFiscal = cabinetForm.MatriculeFiscal,
-                    Racine = cabinetForm.Racine,
-                    Cle = cabinetForm.Cle,
-                    Qualite = cabinetForm.Qualite,
-                    NumeroAssuree = cabinetForm.NumeroAssuree
+                    NumeroEmployeur = cabinetForm.NumeroEmployeur,
+                    CodeCnam = cabinetForm.CodeCnam,
+                    Qualite = cabinetForm.Qualite
                 };
                 response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
             }

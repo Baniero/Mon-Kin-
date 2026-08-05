@@ -27,7 +27,7 @@ public class FinanceController : ControllerBase
             return false;
         }
 
-        var cabinetId = cabinetId.Value;
+        var cabinetId = currentUser.CabinetId.Value;
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();

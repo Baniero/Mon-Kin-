@@ -26,7 +26,7 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite, numero_assuree
+            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite
             FROM cabinets
             ORDER BY nom_cabinet
         ";
@@ -41,10 +41,9 @@ public class CabinetsController : ControllerBase
                 CodeEtablissement = reader.IsDBNull(2) ? null : reader.GetString(2),
                 MatriculeFiscal = reader.IsDBNull(3) ? null : reader.GetString(3),
                 NomEtablissement = reader.IsDBNull(4) ? null : reader.GetString(4),
-                Racine = reader.IsDBNull(5) ? null : reader.GetString(5),
-                Cle = reader.IsDBNull(6) ? null : reader.GetString(6),
-                Qualite = reader.IsDBNull(7) ? null : reader.GetString(7),
-                NumeroAssuree = reader.IsDBNull(8) ? null : reader.GetString(8)
+                NumeroEmployeur = reader.IsDBNull(5) ? null : reader.GetString(5),
+                CodeCnam = reader.IsDBNull(6) ? null : reader.GetString(6),
+                Qualite = reader.IsDBNull(7) ? null : reader.GetString(7)
             });
         }
 
@@ -64,7 +63,7 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite, numero_assuree
+            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite
             FROM cabinets
             WHERE id = @id
         ";
@@ -83,10 +82,9 @@ public class CabinetsController : ControllerBase
             CodeEtablissement = reader.IsDBNull(2) ? null : reader.GetString(2),
             MatriculeFiscal = reader.IsDBNull(3) ? null : reader.GetString(3),
             NomEtablissement = reader.IsDBNull(4) ? null : reader.GetString(4),
-            Racine = reader.IsDBNull(5) ? null : reader.GetString(5),
-            Cle = reader.IsDBNull(6) ? null : reader.GetString(6),
-            Qualite = reader.IsDBNull(7) ? null : reader.GetString(7),
-            NumeroAssuree = reader.IsDBNull(8) ? null : reader.GetString(8)
+            NumeroEmployeur = reader.IsDBNull(5) ? null : reader.GetString(5),
+            CodeCnam = reader.IsDBNull(6) ? null : reader.GetString(6),
+            Qualite = reader.IsDBNull(7) ? null : reader.GetString(7)
         });
     }
 
@@ -103,18 +101,17 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite, numero_assuree)
-            VALUES (@nom_cabinet, @code_etablissement, @matricule_fiscal, @nom_etablissement, @racine, @cle, @qualite, @numero_assuree)
+            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite)
+            VALUES (@nom_cabinet, @code_etablissement, @matricule_fiscal, @nom_etablissement, @numero_employeur, @code_cnam, @qualite)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_etablissement", (object?)request.CodeEtablissement ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@matricule_fiscal", (object?)request.MatriculeFiscal ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@nom_etablissement", (object?)request.NomEtablissement ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@racine", (object?)request.Racine ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@cle", (object?)request.Cle ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@numero_employeur", (object?)request.NumeroEmployeur ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@code_cnam", (object?)request.CodeCnam ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)request.Qualite ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@numero_assuree", (object?)request.NumeroAssuree ?? DBNull.Value);
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetById), new { id }, new CabinetDto
@@ -124,10 +121,9 @@ public class CabinetsController : ControllerBase
             CodeEtablissement = request.CodeEtablissement,
             MatriculeFiscal = request.MatriculeFiscal,
             NomEtablissement = request.NomEtablissement,
-            Racine = request.Racine,
-            Cle = request.Cle,
-            Qualite = request.Qualite,
-            NumeroAssuree = request.NumeroAssuree
+            NumeroEmployeur = request.NumeroEmployeur,
+            CodeCnam = request.CodeCnam,
+            Qualite = request.Qualite
         });
     }
 
@@ -154,20 +150,18 @@ public class CabinetsController : ControllerBase
                 code_etablissement = @code_etablissement,
                 matricule_fiscal = @matricule_fiscal,
                 nom_etablissement = @nom_etablissement,
-                racine = @racine,
-                cle = @cle,
-                qualite = @qualite,
-                numero_assuree = @numero_assuree
+                racine = @numero_employeur,
+                cle = @code_cnam,
+                qualite = @qualite
             WHERE id = @id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@code_etablissement", (object?)request.CodeEtablissement ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@matricule_fiscal", (object?)request.MatriculeFiscal ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@nom_etablissement", (object?)request.NomEtablissement ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@racine", (object?)request.Racine ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@cle", (object?)request.Cle ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@numero_employeur", (object?)request.NumeroEmployeur ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@code_cnam", (object?)request.CodeCnam ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)request.Qualite ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@numero_assuree", (object?)request.NumeroAssuree ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         var rows = cmd.ExecuteNonQuery();

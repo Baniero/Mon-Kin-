@@ -235,10 +235,9 @@ public class CabinetInfoDto
 {
     public int Id { get; set; }
     public string? NomCabinet { get; set; }
-    public string? Racine { get; set; }
-    public string? Cle { get; set; }
+    public string? NumeroEmployeur { get; set; }
+    public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
-    public string? NumeroAssuree { get; set; }
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
@@ -247,10 +246,9 @@ public class CabinetInfoDto
 public class CabinetInfoRequestDto
 {
     public string? NomCabinet { get; set; }
-    public string? Racine { get; set; }
-    public string? Cle { get; set; }
+    public string? NumeroEmployeur { get; set; }
+    public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
-    public string? NumeroAssuree { get; set; }
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
@@ -263,10 +261,9 @@ public class CabinetDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
-    public string? Racine { get; set; }
-    public string? Cle { get; set; }
+    public string? NumeroEmployeur { get; set; }
+    public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
-    public string? NumeroAssuree { get; set; }
 }
 
 public class CabinetCreateRequestDto
@@ -275,10 +272,9 @@ public class CabinetCreateRequestDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
-    public string? Racine { get; set; }
-    public string? Cle { get; set; }
+    public string? NumeroEmployeur { get; set; }
+    public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
-    public string? NumeroAssuree { get; set; }
 }
 
 public class CabinetUpdateRequestDto
@@ -288,8 +284,7 @@ public class CabinetUpdateRequestDto
     public string? CodeEtablissement { get; set; }
     public string? MatriculeFiscal { get; set; }
     public string? NomEtablissement { get; set; }
-    public string? Racine { get; set; }
-    public string? Cle { get; set; }
+    public string? NumeroEmployeur { get; set; }
+    public string? CodeCnam { get; set; }
     public string? Qualite { get; set; }
-    public string? NumeroAssuree { get; set; }
 }
