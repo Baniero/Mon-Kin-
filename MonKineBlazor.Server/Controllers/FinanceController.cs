@@ -27,6 +27,8 @@ public class FinanceController : ControllerBase
             return false;
         }
 
+        var cabinetId = currentUser.CabinetId.Value;
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -39,7 +41,7 @@ public class FinanceController : ControllerBase
               AND p.cabinet_id = @cabinet_id
         ";
         cmd.Parameters.AddWithValue("@transactionId", transactionId);
-        cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+        cmd.Parameters.AddWithValue("@cabinet_id", cabinetId);
 
         return cmd.ExecuteScalar() != null;
     }
