@@ -110,7 +110,33 @@
             doc.text(value, x + 120, y);
         };
 
-        const renderPdfHeader = (doc, data, title) => {
+        const loadImageDataUrl = (src) => {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) {
+                            reject(new Error('Impossible de créer le contexte canvas.'));
+                            return;
+                        }
+                        ctx.drawImage(img, 0, 0);
+                        resolve(canvas.toDataURL('image/png'));
+                    }
+                    catch (error) {
+                        reject(error);
+                    }
+                };
+                img.onerror = () => reject(new Error(`Impossible de charger l'image : ${src}`));
+                img.src = src;
+            });
+        };
+
+        const renderPdfHeader = (doc, data, title, imageDataUrl) => {
             const margin = 40;
             const headerHeight = 90;
             const centerX = 297.5;
@@ -122,6 +148,11 @@
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(18);
             doc.text(title, centerX, topY - 10, { align: 'center' });
+
+            if (imageDataUrl) {
+                const imageSize = 48;
+                doc.addImage(imageDataUrl, 'PNG', centerX - imageSize / 2, topY + 10, imageSize, imageSize);
+            }
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
@@ -155,16 +186,12 @@
                 currentY += lineSpacing;
             });
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(48);
-            doc.text('⚕', centerX, topY + 50, { align: 'center' });
-
             doc.setLineWidth(0.5);
             doc.line(margin, topY + headerHeight, 555, topY + headerHeight);
             return topY + headerHeight + 20;
         };
 
-        window.generateInvoicePdf = (filename, data) => {
+        window.generateInvoicePdf = async (filename, data) => {
             const jsPDFClass = getJsPDF();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
@@ -172,7 +199,8 @@
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
-            let y = renderPdfHeader(doc, data, 'FACTURE CNAM');
+            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            let y = renderPdfHeader(doc, data, 'FACTURE CNAM', iconDataUrl);
 
             doc.setFontSize(10);
             drawLabelValue(doc, 'N° facture :', data.invoiceNumber || '', margin, y);
@@ -224,7 +252,7 @@
             doc.save(filename);
         };
 
-        window.generateBordereauPdf = (filename, data) => {
+        window.generateBordereauPdf = async (filename, data) => {
             const jsPDFClass = getJsPDF();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
@@ -232,7 +260,8 @@
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
-            let y = renderPdfHeader(doc, data, 'BORDEREAU CNAM');
+            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            let y = renderPdfHeader(doc, data, 'BORDEREAU CNAM', iconDataUrl);
             const formatNumber = (value) => Number(value ?? 0).toFixed(3);
             const summary = data.summary ?? data.Summary ?? {};
             const rows = data.rows ?? data.Rows ?? [];
