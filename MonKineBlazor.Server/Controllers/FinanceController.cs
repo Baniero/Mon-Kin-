@@ -14,9 +14,45 @@ public class FinanceController : ControllerBase
     private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
     private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
     private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
+    private bool IsAdvanceTransactionAccessible(int transactionId)
+    {
+        if (IsAdmin())
+        {
+            return true;
+        }
+
+        var currentUser = GetCurrentUser();
+        if (currentUser?.CabinetId == null)
+        {
+            return false;
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT 1
+            FROM advance_transactions t
+            JOIN patients p ON p.id = t.patient_id
+            WHERE t.id = @transactionId
+              AND p.cabinet_id = @cabinet_id
+        ";
+        cmd.Parameters.AddWithValue("@transactionId", transactionId);
+        cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+
+        return cmd.ExecuteScalar() != null;
+    }
+
     [HttpGet("cash-closings")]
     public ActionResult<IEnumerable<CashClosingDto>> GetCashClosings(DateTime start, DateTime end)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         var sessionsByDay = new Dictionary<DateTime, decimal>();
         var advancesByDay = new Dictionary<DateTime, decimal>();
         var closingsByDay = new Dictionary<DateTime, CashClosingDto>();
@@ -26,16 +62,29 @@ public class FinanceController : ControllerBase
 
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = @"
+            cmd.CommandText = IsAdmin() ? @"
                 SELECT DATE(a.start_datetime), COALESCE(SUM(a.paid_amount - COALESCE(au.amount_used, 0)), 0)
                 FROM appointments a
                 LEFT JOIN advance_usage au ON au.appointment_id = a.id
                 WHERE DATE(a.start_datetime) BETWEEN @start AND @end
                   AND a.status IN ('present', 'effectue')
                 GROUP BY DATE(a.start_datetime)
+            " : @"
+                SELECT DATE(a.start_datetime), COALESCE(SUM(a.paid_amount - COALESCE(au.amount_used, 0)), 0)
+                FROM appointments a
+                LEFT JOIN advance_usage au ON au.appointment_id = a.id
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.status IN ('present', 'effectue')
+                  AND p.cabinet_id = @cabinet_id
+                GROUP BY DATE(a.start_datetime)
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!IsAdmin())
+            {
+                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -46,11 +95,39 @@ public class FinanceController : ControllerBase
 
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = @"
+            cmd.CommandText = IsAdmin() ? @"
                 SELECT DATE(transaction_date), COALESCE(SUM(amount), 0)
                 FROM advance_transactions
                 WHERE DATE(transaction_date) BETWEEN @start AND @end
                 GROUP BY DATE(transaction_date)
+            " : @"
+                SELECT DATE(t.transaction_date), COALESCE(SUM(t.amount), 0)
+                FROM advance_transactions t
+                JOIN patients p ON p.id = t.patient_id
+                WHERE DATE(t.transaction_date) BETWEEN @start AND @end
+                  AND p.cabinet_id = @cabinet_id
+                GROUP BY DATE(t.transaction_date)
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!IsAdmin())
+            {
+                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                advancesByDay[reader.GetDateTime(0).Date] = reader.GetDecimal(1);
+            }
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT date_jour, COALESCE(expected_amount, 0), COALESCE(actual_amount, 0), COALESCE(validated, FALSE), COALESCE(validated_by, '')
+                FROM cash_closings
+                WHERE date_jour BETWEEN @start AND @end
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
@@ -58,7 +135,16 @@ public class FinanceController : ControllerBase
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
-                advancesByDay[reader.GetDateTime(0).Date] = reader.GetDecimal(1);
+                var date = reader.GetDateTime(0).Date;
+                closingsByDay[date] = new CashClosingDto
+                {
+                    DateJour = date,
+                    ExpectedAmount = reader.GetDecimal(1),
+                    ActualAmount = reader.GetDecimal(2),
+                    Diff = reader.GetDecimal(2) - reader.GetDecimal(1),
+                    Validated = reader.GetBoolean(3),
+                    ValidatedBy = reader.GetString(4)
+                };
             }
         }
 
@@ -159,6 +245,11 @@ public class FinanceController : ControllerBase
     [HttpDelete("cash-closings/{dateJour:datetime}")]
     public IActionResult DeleteCashClosing(DateTime dateJour)
     {
+        if (!IsAdmin())
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -176,12 +267,18 @@ public class FinanceController : ControllerBase
     [HttpGet("cnam-recovery")]
     public ActionResult<IEnumerable<CnamRecoveryDto>> GetCnamRecovery(DateTime start, DateTime end)
     {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         var rows = new List<CnamRecoveryDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        cmd.CommandText = IsAdmin() ? @"
             SELECT
                 COALESCE(p.nom || ' ' || p.prenom, ''),
                 COALESCE(p.couverture, ''),
@@ -194,9 +291,27 @@ public class FinanceController : ControllerBase
               AND COALESCE(a.cnam_covered, 0) > 0
             GROUP BY p.id
             ORDER BY COALESCE(SUM(a.cnam_covered), 0) DESC
+        " : @"
+            SELECT
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(p.couverture, ''),
+                COUNT(a.id),
+                COALESCE(SUM(a.cnam_covered), 0)
+            FROM appointments a
+            JOIN patients p ON p.id = a.patient_id
+            WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+              AND a.status IN ('present', 'effectue')
+              AND COALESCE(a.cnam_covered, 0) > 0
+              AND p.cabinet_id = @cabinet_id
+            GROUP BY p.id
+            ORDER BY COALESCE(SUM(a.cnam_covered), 0) DESC
         ";
         cmd.Parameters.AddWithValue("@start", start.Date);
         cmd.Parameters.AddWithValue("@end", end.Date);
+        if (!IsAdmin())
+        {
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -213,81 +328,123 @@ public class FinanceController : ControllerBase
         return Ok(rows);
     }
 
-        [HttpGet("cnam-programs")]
-        public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(DateTime start, DateTime end)
+    [HttpGet("cnam-programs")]
+    public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(DateTime start, DateTime end)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
         {
-            var programs = new List<CnamProgramInvoiceDto>();
-            using var conn = DatabaseConnectionProvider.CreateConnection();
-            conn.Open();
-
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT
-                    pp.id,
-                    p.id,
-                    COALESCE(p.nom || ' ' || p.prenom, ''),
-                    COALESCE(p.code_patient, ''),
-                    COALESCE(p.n_assuree, ''),
-                    COALESCE(p.couverture, ''),
-                    COALESCE(pp.titre, ''),
-                    COALESCE(pp.nature_seances, ''),
-                    COALESCE(pp.nb_seances, 0),
-                    COALESCE(pp.duree_seance_minutes, 0),
-                    pp.date_debut,
-                    pp.date_fin,
-                    COALESCE(pp.prix_unitaire, 0),
-                    COALESCE(pp.prix_ttc, 0),
-                    COALESCE(pp.code_bureau, ''),
-                    COALESCE(pp.annee, ''),
-                    COALESCE(pp.numero_decision, ''),
-                    COALESCE(pp.numero_ordre, '')
-                FROM patient_programs pp
-                JOIN patients p ON p.id = pp.patient_id
-                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
-                  AND COALESCE(p.couverture, '') <> ''
-                ORDER BY pp.date_debut DESC
-            ";
-            cmd.Parameters.AddWithValue("@start", start.Date);
-            cmd.Parameters.AddWithValue("@end", end.Date);
-
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
-            {
-                programs.Add(new CnamProgramInvoiceDto
-                {
-                    ProgramId = reader.GetInt32(0),
-                    PatientId = reader.GetInt32(1),
-                    PatientName = reader.GetString(2),
-                    CodePatient = reader.GetString(3),
-                    NumeroAssuree = reader.GetString(4),
-                    Couverture = reader.GetString(5),
-                    Titre = reader.GetString(6),
-                    NatureSeances = reader.GetString(7),
-                    NbSeances = reader.GetInt32(8),
-                    DureeSeanceMinutes = reader.GetInt32(9),
-                    DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                    DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
-                    PrixUnitaire = reader.GetDecimal(12),
-                    PrixTTC = reader.GetDecimal(13),
-                    CodeBureau = reader.GetString(14),
-                    Annee = reader.GetString(15),
-                    NumeroDecision = reader.GetString(16),
-                    NumeroOrdre = reader.GetString(17)
-                });
-            }
-
-            return Ok(programs);
+            return Unauthorized();
         }
 
-        [HttpGet("cnam-bordereau")]
+        var programs = new List<CnamProgramInvoiceDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = IsAdmin() ? @"
+            SELECT
+                pp.id,
+                p.id,
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(p.code_patient, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(p.couverture, ''),
+                COALESCE(pp.titre, ''),
+                COALESCE(pp.nature_seances, ''),
+                COALESCE(pp.nb_seances, 0),
+                COALESCE(pp.duree_seance_minutes, 0),
+                pp.date_debut,
+                pp.date_fin,
+                COALESCE(pp.prix_unitaire, 0),
+                COALESCE(pp.prix_ttc, 0),
+                COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.annee, ''),
+                COALESCE(pp.numero_decision, ''),
+                COALESCE(pp.numero_ordre, '')
+            FROM patient_programs pp
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+              AND COALESCE(p.couverture, '') <> ''
+            ORDER BY pp.date_debut DESC
+        " : @"
+            SELECT
+                pp.id,
+                p.id,
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(p.code_patient, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(p.couverture, ''),
+                COALESCE(pp.titre, ''),
+                COALESCE(pp.nature_seances, ''),
+                COALESCE(pp.nb_seances, 0),
+                COALESCE(pp.duree_seance_minutes, 0),
+                pp.date_debut,
+                pp.date_fin,
+                COALESCE(pp.prix_unitaire, 0),
+                COALESCE(pp.prix_ttc, 0),
+                COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.annee, ''),
+                COALESCE(pp.numero_decision, ''),
+                COALESCE(pp.numero_ordre, '')
+            FROM patient_programs pp
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+              AND COALESCE(p.couverture, '') <> ''
+              AND p.cabinet_id = @cabinet_id
+            ORDER BY pp.date_debut DESC
+        ";
+        cmd.Parameters.AddWithValue("@start", start.Date);
+        cmd.Parameters.AddWithValue("@end", end.Date);
+        if (!IsAdmin())
+        {
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+        }
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            programs.Add(new CnamProgramInvoiceDto
+            {
+                ProgramId = reader.GetInt32(0),
+                PatientId = reader.GetInt32(1),
+                PatientName = reader.GetString(2),
+                CodePatient = reader.GetString(3),
+                NumeroAssuree = reader.GetString(4),
+                Couverture = reader.GetString(5),
+                Titre = reader.GetString(6),
+                NatureSeances = reader.GetString(7),
+                NbSeances = reader.GetInt32(8),
+                DureeSeanceMinutes = reader.GetInt32(9),
+                DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                PrixUnitaire = reader.GetDecimal(12),
+                PrixTTC = reader.GetDecimal(13),
+                CodeBureau = reader.GetString(14),
+                Annee = reader.GetString(15),
+                NumeroDecision = reader.GetString(16),
+                NumeroOrdre = reader.GetString(17)
+            });
+        }
+
+        return Ok(programs);
+    }
+
+    [HttpGet("cnam-bordereau")]
         public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereau(DateTime start, DateTime end)
         {
+            var currentUser = GetCurrentUser();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             var rows = new List<CnamBordereauEntryDto>();
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
 
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText = IsAdmin() ? @"
                 SELECT
                     pp.id,
                     pp.date_debut,
@@ -304,9 +461,31 @@ public class FinanceController : ControllerBase
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
                 ORDER BY pp.date_debut
+            " : @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0)
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
+                  AND p.cabinet_id = @cabinet_id
+                  AND NOT EXISTS (
+                      SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
+                  )
+                ORDER BY pp.date_debut
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!IsAdmin())
+            {
+                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -331,12 +510,18 @@ public class FinanceController : ControllerBase
         [HttpGet("cnam-bordereau-executed")]
         public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereauExecuted(DateTime start, DateTime end)
         {
+            var currentUser = GetCurrentUser();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             var rows = new List<CnamBordereauEntryDto>();
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
 
             using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
+            cmd.CommandText = IsAdmin() ? @"
                 SELECT
                     pp.id,
                     pp.date_debut,
@@ -353,9 +538,31 @@ public class FinanceController : ControllerBase
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
                 ORDER BY e.executed_at DESC
+            " : @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0),
+                    e.executed_at,
+                    COALESCE(e.executed_by, '')
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
+                  AND p.cabinet_id = @cabinet_id
+                ORDER BY e.executed_at DESC
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!IsAdmin())
+            {
+                cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
 
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -385,8 +592,14 @@ public class FinanceController : ControllerBase
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
 
+            var currentUser = GetCurrentUser();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
+
             using var checkCmd = conn.CreateCommand();
-            checkCmd.CommandText = @"
+            checkCmd.CommandText = IsAdmin() ? @"
                 SELECT pp.id
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
@@ -396,8 +609,23 @@ public class FinanceController : ControllerBase
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
+            " : @"
+                SELECT pp.id
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE pp.id = @programId
+                  AND COALESCE(p.couverture, '') <> ''
+                  AND COALESCE(p.n_assuree, '') <> ''
+                  AND p.cabinet_id = @cabinet_id
+                  AND NOT EXISTS (
+                      SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
+                  )
             ";
             checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+            if (!IsAdmin())
+            {
+                checkCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
             var programIdObj = checkCmd.ExecuteScalar();
             if (programIdObj == null)
             {
@@ -415,7 +643,7 @@ public class FinanceController : ControllerBase
             insertCmd.ExecuteNonQuery();
 
             using var fetchCmd = conn.CreateCommand();
-            fetchCmd.CommandText = @"
+            fetchCmd.CommandText = IsAdmin() ? @"
                 SELECT
                     pp.id,
                     pp.date_debut,
@@ -429,8 +657,27 @@ public class FinanceController : ControllerBase
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
                 WHERE pp.id = @programId
+            " : @"
+                SELECT
+                    pp.id,
+                    pp.date_debut,
+                    COALESCE(p.code_patient, ''),
+                    COALESCE(p.n_assuree, ''),
+                    COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.prix_ttc, 0),
+                    e.executed_at,
+                    COALESCE(e.executed_by, '')
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+                WHERE pp.id = @programId
+                  AND p.cabinet_id = @cabinet_id
             ";
             fetchCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+            if (!IsAdmin())
+            {
+                fetchCmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+            }
 
             using var reader = fetchCmd.ExecuteReader();
             if (!reader.Read())
@@ -676,6 +923,11 @@ public class FinanceController : ControllerBase
     [HttpGet("advance-transactions/patient/{patientId}")]
     public ActionResult<IEnumerable<AdvanceTransactionDto>> GetAdvanceTransactions(int patientId)
     {
+        if (!IsAdmin() && !IsPatientAccessible(patientId))
+        {
+            return Forbid();
+        }
+
         var transactions = new List<AdvanceTransactionDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -711,6 +963,11 @@ public class FinanceController : ControllerBase
     [HttpGet("advance-transactions")]
     public ActionResult<IEnumerable<AdvanceTransactionDto>> GetAllAdvanceTransactions()
     {
+        if (!IsAdmin())
+        {
+            return Forbid();
+        }
+
         var transactions = new List<AdvanceTransactionDto>();
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -744,6 +1001,11 @@ public class FinanceController : ControllerBase
     [HttpDelete("advance-transactions/{transactionId}")]
     public IActionResult DeleteAdvanceTransaction(int transactionId)
     {
+        if (!IsAdmin() && !IsAdvanceTransactionAccessible(transactionId))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -761,6 +1023,16 @@ public class FinanceController : ControllerBase
     [HttpPut("advance-transactions/{transactionId}")]
     public IActionResult UpdateAdvanceTransaction(int transactionId, AdvanceTransactionRequestDto request)
     {
+        if (!IsAdmin() && !IsAdvanceTransactionAccessible(transactionId))
+        {
+            return Forbid();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(request.PatientId))
+        {
+            return Forbid();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
