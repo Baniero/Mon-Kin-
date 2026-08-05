@@ -255,9 +255,12 @@ else
     private UserDto userForm = new() { Role = "kine", Active = true };
     private UserDto? selectedUser;
     private bool showForm;
+    private bool showCabinetForm;
     private string searchKeyword = string.Empty;
     private string userPassword = string.Empty;
     private string? errorMessage;
+    private CabinetDto cabinetForm = new();
+    private CabinetDto? selectedCabinet;
     private CabinetInfoDto cabinetInfo = new();
     private CabinetInfoRequestDto cabinetInfoForm = new();
     private string? cabinetMessage;
