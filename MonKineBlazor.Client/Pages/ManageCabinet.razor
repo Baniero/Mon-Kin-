@@ -343,6 +343,111 @@ else
         }
     }
 
+    private void ShowCreateCabinet()
+    {
+        selectedCabinet = null;
+        cabinetForm = new CabinetDto();
+        showCabinetForm = true;
+    }
+
+    private void EditCabinet(CabinetDto cabinet)
+    {
+        selectedCabinet = cabinet;
+        cabinetForm = new CabinetDto
+        {
+            Id = cabinet.Id,
+            NomCabinet = cabinet.NomCabinet,
+            NomEtablissement = cabinet.NomEtablissement,
+            CodeEtablissement = cabinet.CodeEtablissement,
+            MatriculeFiscal = cabinet.MatriculeFiscal,
+            Racine = cabinet.Racine,
+            Cle = cabinet.Cle,
+            Qualite = cabinet.Qualite,
+            NumeroAssuree = cabinet.NumeroAssuree
+        };
+        showCabinetForm = true;
+    }
+
+    private void HideCabinetForm()
+    {
+        showCabinetForm = false;
+        selectedCabinet = null;
+        cabinetForm = new CabinetDto();
+    }
+
+    private async Task SaveCabinetAsync()
+    {
+        errorMessage = null;
+        try
+        {
+            HttpResponseMessage response;
+            if (selectedCabinet == null || selectedCabinet.Id == 0)
+            {
+                var createRequest = new CabinetCreateRequestDto
+                {
+                    NomCabinet = cabinetForm.NomCabinet,
+                    NomEtablissement = cabinetForm.NomEtablissement,
+                    CodeEtablissement = cabinetForm.CodeEtablissement,
+                    MatriculeFiscal = cabinetForm.MatriculeFiscal,
+                    Racine = cabinetForm.Racine,
+                    Cle = cabinetForm.Cle,
+                    Qualite = cabinetForm.Qualite,
+                    NumeroAssuree = cabinetForm.NumeroAssuree
+                };
+                response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
+            }
+            else
+            {
+                var updateRequest = new CabinetUpdateRequestDto
+                {
+                    Id = selectedCabinet.Id,
+                    NomCabinet = cabinetForm.NomCabinet,
+                    NomEtablissement = cabinetForm.NomEtablissement,
+                    CodeEtablissement = cabinetForm.CodeEtablissement,
+                    MatriculeFiscal = cabinetForm.MatriculeFiscal,
+                    Racine = cabinetForm.Racine,
+                    Cle = cabinetForm.Cle,
+                    Qualite = cabinetForm.Qualite,
+                    NumeroAssuree = cabinetForm.NumeroAssuree
+                };
+                response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadCabinets();
+                HideCabinetForm();
+            }
+            else
+            {
+                errorMessage = "Impossible d'enregistrer le cabinet.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task DeleteCabinet(int cabinetId)
+    {
+        errorMessage = null;
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Supprimer ce cabinet ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/cabinets/{cabinetId}");
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadCabinets();
+        }
+        else
+        {
+            errorMessage = "Impossible de supprimer le cabinet.";
+        }
+    }
+
     private List<UserDto> FilteredUsers()
     {
         if (string.IsNullOrWhiteSpace(searchKeyword))
