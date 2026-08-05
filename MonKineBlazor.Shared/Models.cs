@@ -245,6 +245,8 @@ public class CabinetInfoDto
     public string? NomCabinetArabe { get; set; }
     public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? Telephone { get; set; }
+    public string? Rib { get; set; }
 }
 
 public class CabinetInfoRequestDto
@@ -260,6 +262,8 @@ public class CabinetInfoRequestDto
     public string? NomCabinetArabe { get; set; }
     public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? Telephone { get; set; }
+    public string? Rib { get; set; }
 }
 
 public class CabinetDto
@@ -276,6 +280,8 @@ public class CabinetDto
     public string? NomCabinetArabe { get; set; }
     public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? Telephone { get; set; }
+    public string? Rib { get; set; }
 }
 
 public class CabinetCreateRequestDto
@@ -291,6 +297,8 @@ public class CabinetCreateRequestDto
     public string? NomCabinetArabe { get; set; }
     public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? Telephone { get; set; }
+    public string? Rib { get; set; }
 }
 
 public class CabinetUpdateRequestDto
