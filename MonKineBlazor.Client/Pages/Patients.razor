@@ -580,7 +580,7 @@ else
 
     private async Task PrintPatientDetails()
     {
-        await JSRuntime.InvokeVoidAsync("window.print");
+        await JSRuntime.InvokeVoidAsync("printElement", "patientDetailsPrintArea");
     }
 
     private async Task LoadPatientAppointments()
