@@ -244,74 +244,95 @@
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
-            const title = 'FACTURE CNAM';
+            const pageWidth = doc.internal.pageSize.getWidth();
             const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
-            let y = title === 'FACTURE CNAM' ? 60 : 50;
+            let y = 50;
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(18);
-            doc.text(title, 297.5, y, { align: 'center' });
-            y += 30;
+            doc.text('FACTURE CNAM', pageWidth / 2, y, { align: 'center' });
+            y += 28;
 
             if (iconDataUrl) {
-                doc.addImage(iconDataUrl, 'PNG', 520, 20, 48, 48);
+                doc.addImage(iconDataUrl, 'PNG', pageWidth - margin - 60, 40, 48, 48);
             }
+
+            const cabinet = data?.cabinet ?? {};
+            const program = data?.program ?? {};
+
+            const headerLines = [
+                `Responsable : ${cabinet.NomEtablissement || ''}`,
+                `Cabinet : ${cabinet.NomCabinet || ''}`,
+                `Adresse : ${cabinet.AdresseCabinet || ''}`,
+                `Tél / GSM : ${cabinet.Telephone || ''}`,
+                `Matricule fiscal : ${cabinet.MatriculeFiscal || ''}`,
+                `Code CNAM : ${cabinet.CodeCnam || cabinet.CodeEtablissement || ''}`
+            ];
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
-            const cabinet = data.cabinet ?? {};
-            const program = data.program ?? {};
-
-            doc.text(`Responsable : ${cabinet.NomEtablissement || ''}`, margin, y);
-            doc.text(`Cabinet : ${cabinet.NomCabinet || ''}`, 320, y);
-            y += 14;
-            doc.text(`Adresse : ${cabinet.AdresseCabinet || ''}`, margin, y);
-            doc.text(`N° employeur : ${cabinet.NumeroEmployeur || ''}`, 320, y);
-            y += 14;
-            doc.text(`Matricule fiscal : ${cabinet.MatriculeFiscal || ''}`, margin, y);
-            doc.text(`Code CNAM : ${cabinet.CodeCnam || cabinet.CodeEtablissement || ''}`, 320, y);
-            y += 24;
-
-            doc.setFont('helvetica', 'bold');
-            doc.text('Facture', margin, y);
-            y += 16;
-            doc.setFont('helvetica', 'normal');
-            doc.text(`N° facture : ${data.invoiceNumber || ''}`, margin, y);
-            doc.text(`Date facture : ${data.invoiceDate || ''}`, 320, y);
-            y += 18;
-            doc.text(`Patient : ${program.PatientName || ''}`, margin, y);
-            doc.text(`N° assurée : ${program.NumeroAssuree || ''}`, 320, y);
-            y += 18;
-            doc.text(`Code patient : ${program.CodePatient || ''}`, margin, y);
-            doc.text(`Couverture : ${program.Couverture || ''}`, 320, y);
-            y += 22;
-
-            doc.setFont('helvetica', 'bold');
-            doc.text('Détails du programme', margin, y);
-            y += 16;
-            doc.setFont('helvetica', 'normal');
-            const details = [
-                [`Titre`, program.Titre || ''],
-                [`Nature`, program.NatureSeances || ''],
-                [`Date début`, program.DateDebut || ''],
-                [`Date fin`, program.DateFin || ''],
-                [`Nb séances`, program.NbSeances ?? 0],
-                [`Durée`, `${program.DureeSeanceMinutes ?? 0} min`],
-                [`Prix unitaire`, `${(program.PrixUnitaire ?? 0).toFixed(2)} DT`],
-                [`Total TTC`, `${(program.PrixTTC ?? 0).toFixed(2)} DT`],
-                [`Code bureau`, program.CodeBureau || ''],
-                [`Année`, program.Annee || ''],
-                [`N° décision`, program.NumeroDecision || ''],
-                [`N° ordre`, program.NumeroOrdre || '']
-            ];
-
-            details.forEach(([label, value]) => {
-                doc.text(`${label} :`, margin, y);
-                doc.text(String(value), margin + 120, y);
+            headerLines.forEach((line) => {
+                doc.text(line, margin, y);
                 y += 14;
             });
 
             y += 12;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Facture', margin, y);
+            y += 16;
+
+            const invoiceFields = [
+                ['N° facture', data.invoiceNumber || 'N/A'],
+                ['Date facture', data.invoiceDate || 'N/A'],
+                ['Patient', program.PatientName || 'N/A'],
+                ['N° assurée', program.NumeroAssuree || 'N/A'],
+                ['Code patient', program.CodePatient || 'N/A'],
+                ['Couverture', program.Couverture || 'N/A']
+            ];
+
+            doc.setFont('helvetica', 'normal');
+            invoiceFields.forEach(([label, value]) => {
+                doc.text(`${label} :`, margin, y);
+                doc.text(String(value), margin + 130, y);
+                y += 14;
+            });
+
+            y += 16;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Détails du programme', margin, y);
+            y += 16;
+            doc.setFont('helvetica', 'normal');
+
+            const details = [
+                ['Titre', program.Titre || 'N/A'],
+                ['Nature', program.NatureSeances || 'N/A'],
+                ['Date début', program.DateDebut || 'N/A'],
+                ['Date fin', program.DateFin || 'N/A'],
+                ['Nb séances', program.NbSeances ?? 0],
+                ['Durée séance', `${program.DureeSeanceMinutes ?? 0} min`],
+                ['Prix unitaire', `${(program.PrixUnitaire ?? 0).toFixed(2)} DT`],
+                ['Total TTC', `${(program.PrixTTC ?? 0).toFixed(2)} DT`],
+                ['Code bureau', program.CodeBureau || 'N/A'],
+                ['Année', program.Annee || 'N/A'],
+                ['N° décision', program.NumeroDecision || 'N/A'],
+                ['N° ordre', program.NumeroOrdre || 'N/A']
+            ];
+
+            details.forEach(([label, value]) => {
+                if (y > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+                doc.text(`${label} :`, margin, y);
+                doc.text(String(value), margin + 130, y);
+                y += 14;
+            });
+
+            y += 24;
+            if (y > 760) {
+                doc.addPage();
+                y = margin;
+            }
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
