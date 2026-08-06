@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS cnam_bordereau_executed (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE IF NOT EXISTS cnam_bordereau_executed
+ALTER TABLE cnam_bordereau_executed
     ADD COLUMN IF NOT EXISTS facture_number TEXT;
 
 CREATE TABLE IF NOT EXISTS appointments (
