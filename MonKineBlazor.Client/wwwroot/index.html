@@ -267,6 +267,34 @@
             }
         };
 
+        const renderRightHeaderImage = async (lines, width, lineHeight) => {
+            const padding = 10;
+            const height = Math.ceil(lines.length * lineHeight + padding * 2);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(width);
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return null;
+            }
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000000';
+            ctx.font = '10pt Arial, "Noto Naskh Arabic", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.direction = 'rtl';
+
+            const x = canvas.width - padding;
+            let y = padding + lineHeight;
+            lines.forEach((line) => {
+                ctx.fillText(line, x, y);
+                y += lineHeight;
+            });
+
+            return canvas.toDataURL('image/png');
+        };
+
         const renderPdfHeader = async (doc, data, title, imageDataUrl) => {
             const margin = 40;
             const headerHeight = 90;
@@ -320,26 +348,11 @@
             });
 
             currentY = topY + 20;
-            await loadArabicFont(doc);
-            try {
-                doc.setFont(arabicFont, 'normal');
+            const rightImageDataUrl = await renderRightHeaderImage(rightLines, 220, lineSpacing + 4);
+            if (rightImageDataUrl) {
+                const imageHeight = rightLines.length * (lineSpacing + 4) + 10;
+                doc.addImage(rightImageDataUrl, 'PNG', rightX - 220, topY + 10, 220, imageHeight);
             }
-            catch (fontError) {
-                console.warn('Impossible de définir la police arabe dans jsPDF, utilisation de Helvetica à la place.', fontError);
-                doc.setFont('helvetica', 'normal');
-            }
-            rightLines.forEach((line) => {
-                try {
-                    doc.text(line, rightX, currentY, { align: 'right' });
-                }
-                catch (textError) {
-                    console.warn('Erreur de rendu texte arabe jsPDF :', textError);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(line, rightX, currentY, { align: 'right' });
-                }
-                currentY += lineSpacing;
-            });
-            doc.setFont('helvetica', 'normal');
 
             doc.setLineWidth(0.5);
             doc.line(margin, topY + headerHeight, 555, topY + headerHeight);
