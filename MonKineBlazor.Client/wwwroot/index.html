@@ -271,47 +271,20 @@
             }
         };
 
-        const renderRightHeaderImage = async (lines, width, lineHeight) => {
-            const padding = 10;
-            const height = Math.ceil(lines.length * lineHeight + padding * 2);
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.ceil(width);
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return null;
-            }
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#000000';
-            ctx.font = '10pt "Noto Naskh Arabic", Arial, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.direction = 'rtl';
-
-            const x = canvas.width - padding;
-            let y = padding + lineHeight;
-            ctx.direction = 'rtl';
-            lines.forEach((line) => {
-                if (line) {
-                    ctx.fillText(line, x, y);
-                }
-                y += lineHeight;
-            });
-
-            return canvas.toDataURL('image/png');
-        };
-
         const renderPdfHeader = async (doc, data, title, imageDataUrl) => {
             const margin = 40;
             const headerHeight = 90;
             const centerX = 297.5;
             const leftX = margin;
-            const rightX = 360;
             const topY = 40;
             const lineSpacing = 12;
             const pageWidth = doc.internal.pageSize.getWidth();
             const cabinet = data?.cabinet ?? data?.Cabinet ?? {};
+            const rightAreaWidth = 200;
+            const rightAreaX = pageWidth - 40 - rightAreaWidth;
+            const rightAreaRightX = rightAreaX + rightAreaWidth;
+
+            await loadArabicFont(doc);
 
             if (imageDataUrl) {
                 const imageSize = 48;
@@ -347,12 +320,19 @@
             });
 
             currentY = topY + 20;
-            const rightImageDataUrl = await renderRightHeaderImage(rightLines, rightAreaWidth, lineSpacing + 4);
-            if (rightImageDataUrl) {
-                const imageHeight = rightLines.length * (lineSpacing + 4) + 10;
-                doc.addImage(rightImageDataUrl, 'PNG', rightAreaX, topY + 10, rightAreaWidth, imageHeight);
-            }
+            doc.setFont('NotoNaskhArabic', 'normal');
+            doc.setFontSize(10);
+            rightLines.forEach((line) => {
+                if (line) {
+                    doc.text(line, rightAreaRightX, currentY, {
+                        align: 'right',
+                        direction: 'rtl'
+                    });
+                }
+                currentY += lineSpacing;
+            });
 
+            doc.setFont('helvetica', 'normal');
             doc.setLineWidth(0.5);
             doc.line(margin, topY + headerHeight, 555, topY + headerHeight);
 
