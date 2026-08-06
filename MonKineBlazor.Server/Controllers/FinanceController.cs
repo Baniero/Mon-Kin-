@@ -529,18 +529,20 @@ public class FinanceController : ControllerBase
                 cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
 
-            using var reader = cmd.ExecuteReader();
-            while (reader.Read())
+            using (var reader = cmd.ExecuteReader())
             {
-                pendingRows.Add((
-                    ProgramId: reader.GetInt32(0),
-                    DateDebut: reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
-                    CodePatient: reader.GetString(2),
-                    NumeroAssuree: reader.GetString(3),
-                    PatientName: reader.GetString(4),
-                    TotalTTC: reader.GetDecimal(5),
-                    CabinetId: reader.IsDBNull(6) ? null : reader.GetInt32(6)
-                ));
+                while (reader.Read())
+                {
+                    pendingRows.Add((
+                        ProgramId: reader.GetInt32(0),
+                        DateDebut: reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
+                        CodePatient: reader.GetString(2),
+                        NumeroAssuree: reader.GetString(3),
+                        PatientName: reader.GetString(4),
+                        TotalTTC: reader.GetDecimal(5),
+                        CabinetId: reader.IsDBNull(6) ? null : reader.GetInt32(6)
+                    ));
+                }
             }
 
             var sequences = new Dictionary<(int? CabinetId, int Year), int>();
