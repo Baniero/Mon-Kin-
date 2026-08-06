@@ -328,44 +328,18 @@
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             await loadArabicFont(doc);
             const margin = 40;
-            const pageWidth = doc.internal.pageSize.getWidth();
             const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
-            let y = 50;
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text('FACTURE CNAM', pageWidth / 2, y, { align: 'center' });
-            y += 28;
-
-            if (iconDataUrl) {
-                doc.addImage(iconDataUrl, 'PNG', pageWidth - margin - 60, 40, 48, 48);
-            }
-
             const cabinet = data?.cabinet ?? {};
             const program = data?.program ?? {};
             const invoiceNumber = data?.invoiceNumber ?? data?.invoice_number ?? 'N/A';
             const invoiceDate = data?.invoiceDate ?? data?.invoice_date ?? 'N/A';
 
-            const headerLines = [
-                `Responsable : ${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
-                `Cabinet : ${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
-                `Adresse : ${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
-                `Tél / GSM : ${getString(cabinet, 'Telephone', 'telephone')}`,
-                `Matricule fiscal : ${getString(cabinet, 'MatriculeFiscal', 'matriculeFiscal')}`,
-                `Code CNAM : ${getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement')}`
-            ];
+            let y = await renderPdfHeader(doc, data, 'FACTURE CNAM', iconDataUrl);
 
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            headerLines.forEach((line) => {
-                doc.text(line, margin, y);
-                y += 14;
-            });
-
-            y += 12;
             doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
             doc.text('Facture', margin, y);
-            y += 16;
+            y += 18;
 
             const invoiceFields = [
                 ['N° facture', invoiceNumber],
