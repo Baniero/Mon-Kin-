@@ -37,6 +37,8 @@
                         <th>Responsable / établissement</th>
                         <th>Code établissement</th>
                         <th>Matricule fiscal</th>
+                        <th>Tél / GSM</th>
+                        <th>RIB / RIP</th>
                         <th>Qualité</th>
                         <th>Actions</th>
                     </tr>
@@ -49,6 +51,8 @@
                             <td>@cabinet.NomEtablissement</td>
                             <td>@cabinet.CodeEtablissement</td>
                             <td>@cabinet.MatriculeFiscal</td>
+                            <td>@cabinet.Telephone</td>
+                            <td>@cabinet.Rib</td>
                             <td>@cabinet.Qualite</td>
                             <td>
                                 <button class="btn btn-sm btn-primary me-2" @onclick="() => EditCabinet(cabinet)">Modifier</button>
@@ -96,6 +100,14 @@
                     <div class="col-md-4">
                         <label class="form-label">Code CNAM</label>
                         <InputText class="form-control" @bind-Value="cabinetForm.CodeCnam" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tél / GSM</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.Telephone" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">RIB / RIP</label>
+                        <InputText class="form-control" @bind-Value="cabinetForm.Rib" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Adresse du cabinet</label>
@@ -282,7 +294,13 @@ else
             MatriculeFiscal = cabinet.MatriculeFiscal,
             NumeroEmployeur = cabinet.NumeroEmployeur,
             CodeCnam = cabinet.CodeCnam,
-            Qualite = cabinet.Qualite
+            Qualite = cabinet.Qualite,
+            AdresseCabinet = cabinet.AdresseCabinet,
+            NomCabinetArabe = cabinet.NomCabinetArabe,
+            NomKineArabe = cabinet.NomKineArabe,
+            AdresseKineArabe = cabinet.AdresseKineArabe,
+            Telephone = cabinet.Telephone,
+            Rib = cabinet.Rib
         };
         showCabinetForm = true;
     }
@@ -314,40 +332,30 @@ else
                     AdresseCabinet = cabinetForm.AdresseCabinet,
                     NomCabinetArabe = cabinetForm.NomCabinetArabe,
                     NomKineArabe = cabinetForm.NomKineArabe,
-                    AdresseKineArabe = cabinetForm.AdresseKineArabe
-                };
-                response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
-            }
-            else
-            {
-                var updateRequest = new CabinetUpdateRequestDto
+                        AdresseKineArabe = cabinetForm.AdresseKineArabe,
+                        Telephone = cabinetForm.Telephone,
+                        Rib = cabinetForm.Rib
+                    };
+                    response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
+                }
+                else
                 {
-                    Id = selectedCabinet.Id,
-                    NomCabinet = cabinetForm.NomCabinet,
-                    NomEtablissement = cabinetForm.NomEtablissement,
-                    CodeEtablissement = cabinetForm.CodeEtablissement,
-                    MatriculeFiscal = cabinetForm.MatriculeFiscal,
-                    NumeroEmployeur = cabinetForm.NumeroEmployeur,
-                    CodeCnam = cabinetForm.CodeCnam,
-                    Qualite = cabinetForm.Qualite,
-                    AdresseCabinet = cabinetForm.AdresseCabinet,
-                    NomCabinetArabe = cabinetForm.NomCabinetArabe,
-                    NomKineArabe = cabinetForm.NomKineArabe,
-                    AdresseKineArabe = cabinetForm.AdresseKineArabe
-                };
-                response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
-            }
-
-            if (response.IsSuccessStatusCode)
-            {
-                await LoadCabinets();
-                HideCabinetForm();
-            }
-            else
-            {
-                errorMessage = "Impossible d'enregistrer le cabinet.";
-            }
-        }
+                    var updateRequest = new CabinetUpdateRequestDto
+                    {
+                        Id = selectedCabinet.Id,
+                        NomCabinet = cabinetForm.NomCabinet,
+                        NomEtablissement = cabinetForm.NomEtablissement,
+                        CodeEtablissement = cabinetForm.CodeEtablissement,
+                        MatriculeFiscal = cabinetForm.MatriculeFiscal,
+                        NumeroEmployeur = cabinetForm.NumeroEmployeur,
+                        CodeCnam = cabinetForm.CodeCnam,
+                        Qualite = cabinetForm.Qualite,
+                        AdresseCabinet = cabinetForm.AdresseCabinet,
+                        NomCabinetArabe = cabinetForm.NomCabinetArabe,
+                        NomKineArabe = cabinetForm.NomKineArabe,
+                        AdresseKineArabe = cabinetForm.AdresseKineArabe,
+                        Telephone = cabinetForm.Telephone,
+                        Rib = cabinetForm.Rib
         catch (Exception ex)
         {
             errorMessage = ex.Message;

@@ -351,7 +351,27 @@
     {
         try
         {
-            cabinetInfo = await Http.GetFromJsonAsync<CabinetInfoDto>("api/cabinetinfo") ?? new CabinetInfoDto();
+            var cabinets = await Http.GetFromJsonAsync<List<CabinetDto>>("api/cabinets") ?? new List<CabinetDto>();
+            var cabinet = cabinets.FirstOrDefault();
+            cabinetInfo = cabinet != null
+                ? new CabinetInfoDto
+                {
+                    Id = cabinet.Id,
+                    NomCabinet = cabinet.NomCabinet,
+                    NumeroEmployeur = cabinet.NumeroEmployeur,
+                    CodeCnam = cabinet.CodeCnam,
+                    Qualite = cabinet.Qualite,
+                    CodeEtablissement = cabinet.CodeEtablissement,
+                    MatriculeFiscal = cabinet.MatriculeFiscal,
+                    NomEtablissement = cabinet.NomEtablissement,
+                    AdresseCabinet = cabinet.AdresseCabinet,
+                    NomCabinetArabe = cabinet.NomCabinetArabe,
+                    NomKineArabe = cabinet.NomKineArabe,
+                    AdresseKineArabe = cabinet.AdresseKineArabe,
+                    Telephone = cabinet.Telephone,
+                    Rib = cabinet.Rib
+                }
+                : new CabinetInfoDto();
         }
         catch (Exception ex)
         {

@@ -13,9 +13,14 @@ CREATE TABLE IF NOT EXISTS cabinets (
     nom_cabinet_arabe TEXT,
     nom_kine_arabe TEXT,
     adresse_kine_arabe TEXT,
+    telephone TEXT,
+    rib TEXT,
     numero_assuree TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS telephone TEXT;
+ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS rib TEXT;
 
 CREATE TABLE IF NOT EXISTS patients (
     id SERIAL PRIMARY KEY,

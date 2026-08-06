@@ -315,4 +315,6 @@ public class CabinetUpdateRequestDto
     public string? NomCabinetArabe { get; set; }
     public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? Telephone { get; set; }
+    public string? Rib { get; set; }
 }
