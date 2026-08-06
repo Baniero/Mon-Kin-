@@ -607,7 +607,12 @@ public class FinanceController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetCnamBordereau failed for X-User-Id={XUserId}, start={Start}, end={End}.", xUserId, start, end);
-            return Problem("Erreur interne lors du chargement des factures CNAM. Voir les logs serveur.");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                error = "Erreur interne lors du chargement des factures CNAM.",
+                exception = ex.Message,
+                stackTrace = ex.StackTrace
+            });
         }
     }
 

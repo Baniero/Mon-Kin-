@@ -42,6 +42,7 @@ public class AuthService
         }
         finally
         {
+            LogHeaderState("InitializeAsync");
             IsInitialized = true;
             NotifyStateChanged();
         }
@@ -59,6 +60,7 @@ public class AuthService
         if (CurrentUser != null)
         {
             ApplyCurrentUserHeader();
+            LogHeaderState("LoginAsync");
             var json = System.Text.Json.JsonSerializer.Serialize(CurrentUser);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
             NotifyStateChanged();
@@ -83,6 +85,13 @@ public class AuthService
         {
             _http.DefaultRequestHeaders.Add("X-User-Id", CurrentUser.Id.ToString());
         }
+    }
+
+    private void LogHeaderState(string origin)
+    {
+        var hasHeader = _http.DefaultRequestHeaders.Contains("X-User-Id");
+        var headerValue = hasHeader ? string.Join(",", _http.DefaultRequestHeaders.GetValues("X-User-Id")) : "<missing>";
+        Console.WriteLine($"[AuthService] {origin}: X-User-Id present={hasHeader}, value={headerValue}");
     }
 
     private void NotifyStateChanged() => OnChange?.Invoke();
