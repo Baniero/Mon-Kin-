@@ -159,30 +159,40 @@
             const fontFileName = 'NotoNaskhArabic-Regular.ttf';
             const fontName = 'NotoNaskhArabic';
 
-            if (!window._jspdfArabicFontBase64) {
-                const response = await fetch(fontUrl);
-                if (!response.ok) {
-                    throw new Error(`Impossible de charger la police arabe depuis ${fontUrl}`);
+            try {
+                if (!window._jspdfArabicFontBase64) {
+                    const response = await fetch(fontUrl);
+                    if (!response.ok) {
+                        console.warn(`Impossible de charger la police arabe depuis ${fontUrl} : statut ${response.status}`);
+                        return;
+                    }
+
+                    const buffer = await response.arrayBuffer();
+                    window._jspdfArabicFontBase64 = arrayBufferToBase64(buffer);
                 }
 
-                const buffer = await response.arrayBuffer();
-                window._jspdfArabicFontBase64 = arrayBufferToBase64(buffer);
-            }
+                if (!window._jspdfArabicFontBase64) {
+                    return;
+                }
 
-            try {
-                if (typeof doc.getFontList === 'function') {
-                    const fonts = doc.getFontList();
-                    if (!fonts || !fonts[fontName]) {
+                try {
+                    if (typeof doc.getFontList === 'function') {
+                        const fonts = doc.getFontList();
+                        if (!fonts || !fonts[fontName]) {
+                            doc.addFileToVFS(fontFileName, window._jspdfArabicFontBase64);
+                            doc.addFont(fontFileName, fontName, 'normal');
+                        }
+                    } else {
                         doc.addFileToVFS(fontFileName, window._jspdfArabicFontBase64);
                         doc.addFont(fontFileName, fontName, 'normal');
                     }
-                } else {
-                    doc.addFileToVFS(fontFileName, window._jspdfArabicFontBase64);
-                    doc.addFont(fontFileName, fontName, 'normal');
+                }
+                catch (error) {
+                    console.warn('Impossible d\'ajouter la police arabe à jsPDF :', error);
                 }
             }
             catch (error) {
-                console.warn('Impossible d\'ajouter la police arabe à jsPDF :', error);
+                console.warn('Erreur lors du chargement de la police arabe :', error);
             }
         };
 
@@ -311,9 +321,22 @@
 
             currentY = topY + 20;
             await loadArabicFont(doc);
-            doc.setFont(arabicFont, 'normal');
+            try {
+                doc.setFont(arabicFont, 'normal');
+            }
+            catch (fontError) {
+                console.warn('Impossible de définir la police arabe dans jsPDF, utilisation de Helvetica à la place.', fontError);
+                doc.setFont('helvetica', 'normal');
+            }
             rightLines.forEach((line) => {
-                doc.text(line, rightX, currentY, { align: 'right' });
+                try {
+                    doc.text(line, rightX, currentY, { align: 'right' });
+                }
+                catch (textError) {
+                    console.warn('Erreur de rendu texte arabe jsPDF :', textError);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(line, rightX, currentY, { align: 'right' });
+                }
                 currentY += lineSpacing;
             });
             doc.setFont('helvetica', 'normal');

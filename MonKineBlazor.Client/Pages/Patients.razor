@@ -529,6 +529,9 @@ else
 
     private async Task ExportSignatureSheet(PatientProgramDto program)
     {
+        errorMessage = null;
+        statusMessage = null;
+
         if (selectedPatient == null)
         {
             errorMessage = "Sélectionnez d'abord un patient.";
@@ -548,7 +551,20 @@ else
             rows
         };
 
-        await JSRuntime.InvokeVoidAsync("generateSignatureSheetPdf", $"FeuilleSignature_{program.Id}_{selectedPatient.CodePatient}.pdf", payload);
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("generateSignatureSheetPdf", $"FeuilleSignature_{program.Id}_{selectedPatient.CodePatient}.pdf", payload);
+        }
+        catch (JSException jsEx)
+        {
+            errorMessage = "Erreur lors de l'export de la feuille de signature : " + jsEx.Message;
+            Console.Error.WriteLine(jsEx);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur inattendue lors de l'export de la feuille de signature : " + ex.Message;
+            Console.Error.WriteLine(ex);
+        }
     }
 
     private List<SignatureSessionRow> BuildSignatureRows(PatientProgramDto program)
