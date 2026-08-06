@@ -590,6 +590,87 @@ public class FinanceController : ControllerBase
         return Ok(rows);
     }
 
+    [HttpGet("cnam-bordereau-executed")]
+    public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereauExecuted(DateTime start, DateTime end)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        var rows = new List<CnamBordereauEntryDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = IsAdmin() ? @"
+            SELECT
+                pp.id,
+                COALESCE(pp.code_bureau, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(pp.prix_ttc, 0),
+                e.executed_at,
+                COALESCE(e.executed_by, ''),
+                COALESCE(e.facture_number, ''),
+                pp.date_debut
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE DATE(e.executed_at) BETWEEN @start AND @end
+            ORDER BY e.executed_at DESC
+        " : @"
+            SELECT
+                pp.id,
+                COALESCE(pp.code_bureau, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(pp.prix_ttc, 0),
+                e.executed_at,
+                COALESCE(e.executed_by, ''),
+                COALESCE(e.facture_number, ''),
+                pp.date_debut
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE DATE(e.executed_at) BETWEEN @start AND @end
+              AND p.cabinet_id = @cabinet_id
+            ORDER BY e.executed_at DESC
+        ";
+        cmd.Parameters.AddWithValue("@start", start.Date);
+        cmd.Parameters.AddWithValue("@end", end.Date);
+        if (!IsAdmin())
+        {
+            cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new CnamBordereauEntryDto
+            {
+                ProgramId = reader.GetInt32(0),
+                CodePatient = reader.GetString(1),
+                NumeroAssuree = reader.GetString(2),
+                PatientName = reader.GetString(3),
+                TotalTTC = reader.GetDecimal(4),
+                ExecutedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
+                ExecutedBy = reader.GetString(6),
+                FactureNumber = reader.GetString(7),
+                DateFacture = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8)
+            });
+        }
+
+        return Ok(rows);
+    }
+
     [HttpPost("cnam-bordereau/execute")]
     public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau(CnamBordereauExecuteRequestDto request)
         {
