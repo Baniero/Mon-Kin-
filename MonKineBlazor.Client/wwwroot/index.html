@@ -240,11 +240,22 @@
             }
 
             try {
-                return window.ArabicReshaper?.convertArabic(text) ?? text;
+                const reshaped = window.ArabicReshaper?.convertArabic(text) ?? text;
+                const bidi = window.bidi_js?.();
+                if (!bidi) {
+                    return reshaped.split('').reverse().join('');
+                }
+
+                const levels = bidi.getEmbeddingLevels(reshaped, 'auto');
+                if (typeof bidi.getReorderedString === 'function') {
+                    return bidi.getReorderedString(reshaped, levels);
+                }
+
+                return reshaped.split('').reverse().join('');
             }
             catch (error) {
                 console.warn('Impossible de transformer le texte arabe :', error);
-                return text;
+                return text.split('').reverse().join('');
             }
         };
 
@@ -418,24 +429,31 @@
             const patient = data.patient ?? data.Patient ?? {};
             const program = data.program ?? data.Program ?? {};
 
+            const patientName = `${getString(patient, 'Nom', 'nom')} ${getString(patient, 'Prenom', 'prenom')}`.trim();
+            const patientCode = getString(patient, 'CodePatient', 'codePatient');
+            const programTitle = getString(program, 'Titre', 'titre');
+            const programNature = getString(program, 'NatureSeances', 'natureSeances');
+            const programDateDebut = getString(program, 'DateDebut', 'dateDebut');
+            const programDateFin = getString(program, 'DateFin', 'dateFin');
+
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.text('Patient :', margin, y);
-            doc.text(`${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin + 80, y);
+            doc.text(patientName, margin + 80, y);
             doc.text('Code patient :', 320, y);
-            doc.text(patient.CodePatient ?? '', 420, y);
+            doc.text(patientCode, 420, y);
             y += 16;
 
             doc.text('Programme :', margin, y);
-            doc.text(program.Titre ?? '', margin + 80, y);
+            doc.text(programTitle, margin + 80, y);
             doc.text('Nature :', 320, y);
-            doc.text(program.NatureSeances ?? '', 420, y);
+            doc.text(programNature, 420, y);
             y += 16;
 
             doc.text('Date début :', margin, y);
-            doc.text(program.DateDebut ?? '', margin + 80, y);
+            doc.text(programDateDebut, margin + 80, y);
             doc.text('Date fin :', 320, y);
-            doc.text(program.DateFin ?? '', 420, y);
+            doc.text(programDateFin, 420, y);
             y += 24;
 
             const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
