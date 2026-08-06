@@ -142,6 +142,48 @@
             return obj[pascal] ?? obj[camel] ?? '';
         };
 
+        const arrayBufferToBase64 = (buffer) => {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+            }
+            return window.btoa(binary);
+        };
+
+        const loadArabicFont = async (doc) => {
+            const fontUrl = 'https://raw.githubusercontent.com/googlefonts/noto-fonts/main/hinted/ttf/NotoNaskhArabic/NotoNaskhArabic-Regular.ttf';
+            const fontFileName = 'NotoNaskhArabic-Regular.ttf';
+            const fontName = 'NotoNaskhArabic';
+
+            if (!window._jspdfArabicFontBase64) {
+                const response = await fetch(fontUrl);
+                if (!response.ok) {
+                    throw new Error(`Impossible de charger la police arabe depuis ${fontUrl}`);
+                }
+
+                const buffer = await response.arrayBuffer();
+                window._jspdfArabicFontBase64 = arrayBufferToBase64(buffer);
+            }
+
+            try {
+                if (typeof doc.getFontList === 'function') {
+                    const fonts = doc.getFontList();
+                    if (!fonts || !fonts[fontName]) {
+                        doc.addFileToVFS(fontFileName, window._jspdfArabicFontBase64);
+                        doc.addFont(fontFileName, fontName, 'normal');
+                    }
+                } else {
+                    doc.addFileToVFS(fontFileName, window._jspdfArabicFontBase64);
+                    doc.addFont(fontFileName, fontName, 'normal');
+                }
+            }
+            catch (error) {
+                console.warn('Impossible d\'ajouter la police arabe à jsPDF :', error);
+            }
+        };
+
         const drawLabelValue = (doc, label, value, x, y) => {
             doc.setFont('helvetica', 'bold');
             doc.text(label, x, y);
@@ -180,7 +222,7 @@
             });
         };
 
-        const renderPdfHeader = (doc, data, title, imageDataUrl) => {
+        const renderPdfHeader = async (doc, data, title, imageDataUrl) => {
             const margin = 40;
             const headerHeight = 90;
             const centerX = 297.5;
@@ -198,6 +240,8 @@
                 const imageSize = 48;
                 doc.addImage(imageDataUrl, 'PNG', centerX - imageSize / 2, topY + 10, imageSize, imageSize);
             }
+
+            const arabicFont = 'NotoNaskhArabic';
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
@@ -226,10 +270,13 @@
             });
 
             currentY = topY + 20;
+            await loadArabicFont(doc);
+            doc.setFont(arabicFont, 'normal');
             rightLines.forEach((line) => {
                 doc.text(line, rightX, currentY);
                 currentY += lineSpacing;
             });
+            doc.setFont('helvetica', 'normal');
 
             doc.setLineWidth(0.5);
             doc.line(margin, topY + headerHeight, 555, topY + headerHeight);
@@ -244,6 +291,7 @@
             }
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            await loadArabicFont(doc);
             const margin = 40;
             const pageWidth = doc.internal.pageSize.getWidth();
             const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
@@ -356,7 +404,7 @@
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
             const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
-            let y = renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
+            let y = await renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
 
             doc.setFontSize(10);
             const patient = data.patient ?? data.Patient ?? {};
@@ -421,7 +469,7 @@
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
             const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
-            let y = renderPdfHeader(doc, data, 'BORDEREAU CNAM', iconDataUrl);
+            let y = await renderPdfHeader(doc, data, 'BORDEREAU CNAM', iconDataUrl);
             const formatNumber = (value) => Number(value ?? 0).toFixed(3);
             const summary = data.summary ?? data.Summary ?? {};
             const rows = data.rows ?? data.Rows ?? [];
