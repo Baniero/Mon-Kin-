@@ -111,7 +111,7 @@
         };
 
         const loadImageDataUrl = (src) => {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
@@ -121,17 +121,22 @@
                         canvas.height = img.naturalHeight;
                         const ctx = canvas.getContext('2d');
                         if (!ctx) {
-                            reject(new Error('Impossible de créer le contexte canvas.'));
+                            console.warn('Impossible de créer le contexte canvas pour l\'image.');
+                            resolve(null);
                             return;
                         }
                         ctx.drawImage(img, 0, 0);
                         resolve(canvas.toDataURL('image/png'));
                     }
                     catch (error) {
-                        reject(error);
+                        console.warn('Erreur lors de la conversion de l\'image en DataURL :', error);
+                        resolve(null);
                     }
                 };
-                img.onerror = () => reject(new Error(`Impossible de charger l'image : ${src}`));
+                img.onerror = () => {
+                    console.warn(`Impossible de charger l'image : ${src}`);
+                    resolve(null);
+                };
                 img.src = src;
             });
         };
@@ -192,6 +197,7 @@
         };
 
         window.generateInvoicePdf = async (filename, data) => {
+            console.log('generateInvoicePdf', filename, data);
             const jsPDFClass = getJsPDF();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
@@ -199,53 +205,74 @@
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
+            const title = 'FACTURE CNAM';
             const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
-            let y = renderPdfHeader(doc, data, 'FACTURE CNAM', iconDataUrl);
+            let y = title === 'FACTURE CNAM' ? 60 : 50;
 
-            doc.setFontSize(10);
-            drawLabelValue(doc, 'N° facture :', data.invoiceNumber || '', margin, y);
-            drawLabelValue(doc, 'Date facture :', data.invoiceDate || '', 320, y);
-            y += 16;
-            drawLabelValue(doc, 'Patient :', data.program.PatientName || '', margin, y);
-            if (data.program.NumeroAssuree) {
-                drawLabelValue(doc, 'N° assurée :', data.program.NumeroAssuree || '', 320, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text(title, 297.5, y, { align: 'center' });
+            y += 30;
+
+            if (iconDataUrl) {
+                doc.addImage(iconDataUrl, 'PNG', 520, 20, 48, 48);
             }
-            y += 16;
-            drawLabelValue(doc, 'Code patient :', data.program.CodePatient || '', margin, y);
-            drawLabelValue(doc, 'Couverture :', data.program.Couverture || '', 320, y);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            const cabinet = data.cabinet ?? {};
+            const program = data.program ?? {};
+
+            doc.text(`Responsable : ${cabinet.NomEtablissement || ''}`, margin, y);
+            doc.text(`Cabinet : ${cabinet.NomCabinet || ''}`, 320, y);
+            y += 14;
+            doc.text(`Adresse : ${cabinet.AdresseCabinet || ''}`, margin, y);
+            doc.text(`N° employeur : ${cabinet.NumeroEmployeur || ''}`, 320, y);
+            y += 14;
+            doc.text(`Matricule fiscal : ${cabinet.MatriculeFiscal || ''}`, margin, y);
+            doc.text(`Code CNAM : ${cabinet.CodeCnam || cabinet.CodeEtablissement || ''}`, 320, y);
             y += 24;
 
             doc.setFont('helvetica', 'bold');
-            doc.text('Données de la séance', margin, y);
-            y += 18;
+            doc.text('Facture', margin, y);
+            y += 16;
             doc.setFont('helvetica', 'normal');
-            drawLabelValue(doc, 'Titre :', data.program.Titre || '', margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Nature :', data.program.NatureSeances || '', margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Date début :', data.program.DateDebut || '', margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Date fin :', data.program.DateFin || '', margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Nb séances :', `${data.program.NbSeances || 0}`, margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Durée séance :', `${data.program.DureeSeanceMinutes || 0} min`, margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Prix unitaire :', `${(data.program.PrixUnitaire || 0).toFixed(2)} DT`, margin, y);
-            y += 16;
-            drawLabelValue(doc, 'Total TTC :', `${(data.program.PrixTTC || 0).toFixed(2)} DT`, margin, y);
-            y += 24;
-            if (data.program.NumeroAssuree) {
-                drawLabelValue(doc, 'Code bureau :', data.program.CodeBureau || '', margin, y);
-                y += 16;
-                drawLabelValue(doc, 'Année :', data.program.Annee || '', margin, y);
-                y += 16;
-                drawLabelValue(doc, 'N° décision :', data.program.NumeroDecision || '', margin, y);
-                y += 16;
-                drawLabelValue(doc, 'N° ordre :', data.program.NumeroOrdre || '', margin, y);
-                y += 24;
-            }
+            doc.text(`N° facture : ${data.invoiceNumber || ''}`, margin, y);
+            doc.text(`Date facture : ${data.invoiceDate || ''}`, 320, y);
+            y += 18;
+            doc.text(`Patient : ${program.PatientName || ''}`, margin, y);
+            doc.text(`N° assurée : ${program.NumeroAssuree || ''}`, 320, y);
+            y += 18;
+            doc.text(`Code patient : ${program.CodePatient || ''}`, margin, y);
+            doc.text(`Couverture : ${program.Couverture || ''}`, 320, y);
+            y += 22;
 
+            doc.setFont('helvetica', 'bold');
+            doc.text('Détails du programme', margin, y);
+            y += 16;
+            doc.setFont('helvetica', 'normal');
+            const details = [
+                [`Titre`, program.Titre || ''],
+                [`Nature`, program.NatureSeances || ''],
+                [`Date début`, program.DateDebut || ''],
+                [`Date fin`, program.DateFin || ''],
+                [`Nb séances`, program.NbSeances ?? 0],
+                [`Durée`, `${program.DureeSeanceMinutes ?? 0} min`],
+                [`Prix unitaire`, `${(program.PrixUnitaire ?? 0).toFixed(2)} DT`],
+                [`Total TTC`, `${(program.PrixTTC ?? 0).toFixed(2)} DT`],
+                [`Code bureau`, program.CodeBureau || ''],
+                [`Année`, program.Annee || ''],
+                [`N° décision`, program.NumeroDecision || ''],
+                [`N° ordre`, program.NumeroOrdre || '']
+            ];
+
+            details.forEach(([label, value]) => {
+                doc.text(`${label} :`, margin, y);
+                doc.text(String(value), margin + 120, y);
+                y += 14;
+            });
+
+            y += 12;
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
@@ -392,71 +419,6 @@
             doc.text('Total général TTC :', margin, y);
             doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 555, y, { align: 'right' });
 
-            doc.save(filename);
-        };
-
-        window.generateSignatureSheetPdf = async (filename, data) => {
-            const jsPDFClass = getJsPDF();
-            if (!jsPDFClass) {
-                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
-            }
-
-            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
-            const margin = 40;
-            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
-            let y = renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
-
-            doc.setFontSize(10);
-            const patient = data.patient ?? data.Patient ?? {};
-            const program = data.program ?? data.Program ?? {};
-
-            drawLabelValue(doc, 'Patient :', `${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin, y);
-            drawLabelValue(doc, 'Code patient :', patient.CodePatient ?? '', 320, y);
-            y += 16;
-            drawLabelValue(doc, 'Programme :', program.Titre ?? '', margin, y);
-            drawLabelValue(doc, 'Nature :', program.NatureSeances ?? '', 320, y);
-            y += 16;
-            drawLabelValue(doc, 'Date début :', program.DateDebut ?? '', margin, y);
-            drawLabelValue(doc, 'Date fin :', program.DateFin ?? '', 320, y);
-            y += 24;
-
-            const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
-            const widths = [70, 140, 170, 170];
-            let x = margin;
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            headers.forEach((header, index) => {
-                doc.text(header, x, y);
-                x += widths[index];
-            });
-            y += 16;
-            doc.setLineWidth(0.25);
-            doc.line(margin, y, 555, y);
-            y += 14;
-            doc.setFont('helvetica', 'normal');
-
-            const rows = data.rows ?? data.Rows ?? [];
-            rows.forEach((row) => {
-                if (y > 760) {
-                    doc.addPage();
-                    y = margin;
-                }
-
-                x = margin;
-                const seq = row.Sequence ?? row.sequence ?? '';
-                const date = row.Date ?? row.date ?? '';
-                const values = [String(seq), String(date), '', ''];
-                values.forEach((value, index) => {
-                    doc.text(String(value), x, y);
-                    x += widths[index];
-                });
-                y += 20;
-            });
-
-            y += 20;
-            doc.setFontSize(9);
-            doc.text('Remarques :', margin, y);
             doc.save(filename);
         };
     </script>
