@@ -484,6 +484,7 @@ else
     private List<AdvanceTransactionDto>? patientAdvanceTransactions;
     private bool showPatientDetails;
     private PatientDto patientForm = new();
+    private CabinetDto cabinetInfo = new();
     private bool _isCnam;
     private bool isCnam
     {
@@ -546,6 +547,7 @@ else
         var rows = BuildSignatureRows(program);
         var payload = new
         {
+            cabinet = cabinetInfo,
             program,
             patient = selectedPatient,
             rows
@@ -604,7 +606,22 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCabinetInfo();
         await LoadPatients();
+    }
+
+    private async Task LoadCabinetInfo()
+    {
+        try
+        {
+            var cabinets = await Http.GetFromJsonAsync<List<CabinetDto>>("api/cabinets") ?? new List<CabinetDto>();
+            cabinetInfo = cabinets.FirstOrDefault() ?? new CabinetDto();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors du chargement des informations du cabinet : " + ex.Message;
+            cabinetInfo = new CabinetDto();
+        }
     }
 
     private async Task LoadPatients()

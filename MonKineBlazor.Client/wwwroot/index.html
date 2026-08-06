@@ -484,21 +484,30 @@
 
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
-            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
             let y = await renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
 
-            doc.setFontSize(10);
             const patient = data.patient ?? data.Patient ?? {};
             const program = data.program ?? data.Program ?? {};
 
-            drawLabelValue(doc, 'Patient :', `${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin, y);
-            drawLabelValue(doc, 'Code patient :', patient.CodePatient ?? '', 320, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Patient :', margin, y);
+            doc.text(`${patient.Nom ?? ''} ${patient.Prenom ?? ''}`.trim(), margin + 80, y);
+            doc.text('Code patient :', 320, y);
+            doc.text(patient.CodePatient ?? '', 420, y);
             y += 16;
-            drawLabelValue(doc, 'Programme :', program.Titre ?? '', margin, y);
-            drawLabelValue(doc, 'Nature :', program.NatureSeances ?? '', 320, y);
+
+            doc.text('Programme :', margin, y);
+            doc.text(program.Titre ?? '', margin + 80, y);
+            doc.text('Nature :', 320, y);
+            doc.text(program.NatureSeances ?? '', 420, y);
             y += 16;
-            drawLabelValue(doc, 'Date début :', program.DateDebut ?? '', margin, y);
-            drawLabelValue(doc, 'Date fin :', program.DateFin ?? '', 320, y);
+
+            doc.text('Date début :', margin, y);
+            doc.text(program.DateDebut ?? '', margin + 80, y);
+            doc.text('Date fin :', 320, y);
+            doc.text(program.DateFin ?? '', 420, y);
             y += 24;
 
             const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
