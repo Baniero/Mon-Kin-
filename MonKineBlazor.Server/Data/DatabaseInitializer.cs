@@ -21,8 +21,9 @@ public static class DatabaseInitializer
         using var command = new NpgsqlCommand(script, connection);
         command.ExecuteNonQuery();
 
-        EnsureAdminUser(connection);
         EnsureCabinetsTable(connection);
+        var adminCabinetId = EnsureCabinetExists(connection, "CabinetAdmin");
+        EnsureAdminUser(connection, adminCabinetId);
         EnsureCabinetInfoTable(connection);
         EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
     }
@@ -60,9 +61,38 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "cabinets", "nom_cabinet_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinets", "nom_kine_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinets", "adresse_kine_arabe", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "numero_assuree", "TEXT");
     }
 
-    private static void EnsureAdminUser(NpgsqlConnection connection)
+    private static int EnsureCabinetExists(NpgsqlConnection connection, string cabinetName)
+    {
+        using var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = @"
+            SELECT id
+            FROM cabinets
+            WHERE nom_cabinet = @nomCabinet
+            LIMIT 1
+        ";
+        checkCmd.Parameters.AddWithValue("@nomCabinet", cabinetName);
+
+        var existingId = checkCmd.ExecuteScalar();
+        if (existingId != null && existingId != DBNull.Value)
+        {
+            return Convert.ToInt32(existingId);
+        }
+
+        using var insertCmd = connection.CreateCommand();
+        insertCmd.CommandText = @"
+            INSERT INTO cabinets (nom_cabinet, created_at)
+            VALUES (@nomCabinet, NOW())
+            RETURNING id
+        ";
+        insertCmd.Parameters.AddWithValue("@nomCabinet", cabinetName);
+
+        return Convert.ToInt32(insertCmd.ExecuteScalar());
+    }
+
+    private static void EnsureAdminUser(NpgsqlConnection connection, int adminCabinetId)
     {
         using var checkCmd = connection.CreateCommand();
         checkCmd.CommandText = "SELECT COUNT(*) FROM users WHERE username = @username";
@@ -70,20 +100,38 @@ public static class DatabaseInitializer
         var existingAdmin = Convert.ToInt32(checkCmd.ExecuteScalar());
         if (existingAdmin > 0)
         {
+            using var updateCmd = connection.CreateCommand();
+            updateCmd.CommandText = @"
+                UPDATE users
+                SET full_name = @full_name,
+                    role = @role,
+                    active = @active,
+                    password_hash = @password_hash,
+                    cabinet_id = @cabinet_id
+                WHERE username = @username
+            ";
+            updateCmd.Parameters.AddWithValue("@full_name", "Administrateur");
+            updateCmd.Parameters.AddWithValue("@role", "admin");
+            updateCmd.Parameters.AddWithValue("@active", true);
+            updateCmd.Parameters.AddWithValue("@password_hash", PasswordHasher.Hash("Admin123!"));
+            updateCmd.Parameters.AddWithValue("@cabinet_id", adminCabinetId);
+            updateCmd.Parameters.AddWithValue("@username", "admin");
+            updateCmd.ExecuteNonQuery();
             return;
         }
 
         var passwordHash = PasswordHasher.Hash("Admin123!");
         using var insertCmd = connection.CreateCommand();
         insertCmd.CommandText = @"
-            INSERT INTO users (username, full_name, role, active, password_hash)
-            VALUES (@username, @full_name, @role, @active, @password_hash)
+            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id)
+            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id)
         ";
         insertCmd.Parameters.AddWithValue("@username", "admin");
         insertCmd.Parameters.AddWithValue("@full_name", "Administrateur");
         insertCmd.Parameters.AddWithValue("@role", "admin");
         insertCmd.Parameters.AddWithValue("@active", true);
         insertCmd.Parameters.AddWithValue("@password_hash", passwordHash);
+        insertCmd.Parameters.AddWithValue("@cabinet_id", adminCabinetId);
         insertCmd.ExecuteNonQuery();
     }
 
