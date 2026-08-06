@@ -21,67 +21,6 @@
 </div>
 
 <div class="card mb-4">
-    <div class="card-header">Données Cabinet</div>
-    <div class="card-body">
-        @if (!string.IsNullOrEmpty(cabinetMessage))
-        {
-            <div class="alert alert-success">@cabinetMessage</div>
-        }
-        <EditForm Model="cabinetInfoForm" OnValidSubmit="SaveCabinetInfoAsync">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Nom du cabinet / établissement</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomCabinet" />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Responsable / Nom de l'établissement</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomEtablissement" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Code établissement / professionnel</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.CodeEtablissement" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Matricule fiscal</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.MatriculeFiscal" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">N° EMPLOYEUR</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NumeroEmployeur" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Code CNAM</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.CodeCnam" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Adresse du cabinet</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.AdresseCabinet" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Nom cabinet en arabe</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomCabinetArabe" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Nom du kiné en arabe</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.NomKineArabe" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Adresse du kiné en arabe</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.AdresseKineArabe" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Qualité</label>
-                    <InputText class="form-control" @bind-Value="cabinetInfoForm.Qualite" />
-                </div>
-                <div class="col-md-12 d-flex justify-content-end">
-                    <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
-                </div>
-            </div>
-        </EditForm>
-    </div>
-</div>
-
-<div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>Cabinets</span>
         @if (AuthService.CurrentUser?.Role == "admin")
@@ -290,15 +229,11 @@ else
     private string? errorMessage;
     private CabinetDto cabinetForm = new();
     private CabinetDto? selectedCabinet;
-    private CabinetInfoDto cabinetInfo = new();
-    private CabinetInfoRequestDto cabinetInfoForm = new();
-    private string? cabinetMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCabinets();
         await LoadUsers();
-        await LoadCabinetInfo();
     }
 
     private async Task LoadCabinets()
@@ -321,56 +256,6 @@ else
         {
             allUsers = await Http.GetFromJsonAsync<List<UserDto>>("api/users") ?? new List<UserDto>();
             users = allUsers;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-    }
-
-    private async Task LoadCabinetInfo()
-    {
-        cabinetMessage = null;
-        try
-        {
-            cabinetInfo = await Http.GetFromJsonAsync<CabinetInfoDto>("api/cabinetinfo") ?? new CabinetInfoDto();
-            cabinetInfoForm = new CabinetInfoRequestDto
-            {
-                NomCabinet = cabinetInfo.NomCabinet,
-                NumeroEmployeur = cabinetInfo.NumeroEmployeur,
-                CodeCnam = cabinetInfo.CodeCnam,
-                Qualite = cabinetInfo.Qualite,
-                CodeEtablissement = cabinetInfo.CodeEtablissement,
-                MatriculeFiscal = cabinetInfo.MatriculeFiscal,
-                NomEtablissement = cabinetInfo.NomEtablissement,
-                AdresseCabinet = cabinetInfo.AdresseCabinet,
-                NomCabinetArabe = cabinetInfo.NomCabinetArabe,
-                NomKineArabe = cabinetInfo.NomKineArabe,
-                AdresseKineArabe = cabinetInfo.AdresseKineArabe
-            };
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-        }
-    }
-
-    private async Task SaveCabinetInfoAsync()
-    {
-        errorMessage = null;
-        cabinetMessage = null;
-        try
-        {
-            var response = await Http.PutAsJsonAsync("api/cabinetinfo", cabinetInfoForm);
-            if (response.IsSuccessStatusCode)
-            {
-                cabinetMessage = "Données du cabinet enregistrées.";
-                await LoadCabinetInfo();
-            }
-            else
-            {
-                errorMessage = "Impossible d'enregistrer les données du cabinet.";
-            }
         }
         catch (Exception ex)
         {
