@@ -27,6 +27,8 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/arabic-reshaper@1.1.0/index.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bidi-js@1.0.3/dist/bidi.min.js" crossorigin="anonymous"></script>
     <script>
         if (!window.jspdf && !window.jsPDF) {
             const fallback = document.createElement('script');
@@ -222,6 +224,39 @@
             });
         };
 
+        const reshapeArabicText = (text) => {
+            if (!text) {
+                return '';
+            }
+
+            try {
+                const reshaped = window.ArabicReshaper?.convertArabic(text) ?? text;
+                const bidi = window.bidi_js?.();
+                if (!bidi) {
+                    return reshaped;
+                }
+
+                const levels = bidi.getEmbeddingLevels(reshaped, 'auto');
+                const segments = bidi.getReorderSegments(reshaped, levels);
+                let result = reshaped.split('');
+                segments.forEach(([start, end]) => {
+                    const slice = result.slice(start, end + 1).reverse();
+                    result.splice(start, end + 1, ...slice);
+                });
+
+                const mirrored = bidi.getMirroredCharactersMap(reshaped, levels);
+                mirrored.forEach((char, index) => {
+                    result[index] = char;
+                });
+
+                return result.join('');
+            }
+            catch (error) {
+                console.warn('Impossible de transformer le texte arabe :', error);
+                return text;
+            }
+        };
+
         const renderPdfHeader = async (doc, data, title, imageDataUrl) => {
             const margin = 40;
             const headerHeight = 90;
@@ -255,12 +290,17 @@
                 `RIB/RIP : ${getString(cabinet, 'RIB', 'rib') || getString(cabinet, 'RIP', 'rip')}`
             ];
 
+            const buildArabicLine = (label, value) => {
+                const transformedValue = reshapeArabicText(value);
+                return `${label} : ${transformedValue}`;
+            };
+
             const rightLines = [
-                `Responsable : ${getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe')}`,
-                `Nom du cabinet : ${getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe')}`,
-                `Adresse : ${getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe')}`,
-                `N° Employeur : ${getString(cabinet, 'NumeroEmployeur', 'numeroEmployeur')}`,
-                `Code CNAM : ${getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement')}`
+                buildArabicLine('Responsable', getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe')),
+                buildArabicLine('Nom du cabinet', getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe')),
+                buildArabicLine('Adresse', getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe')),
+                buildArabicLine('N° Employeur', getString(cabinet, 'NumeroEmployeur', 'numeroEmployeur')),
+                buildArabicLine('Code CNAM', getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement'))
             ];
 
             let currentY = topY + 20;
@@ -273,7 +313,7 @@
             await loadArabicFont(doc);
             doc.setFont(arabicFont, 'normal');
             rightLines.forEach((line) => {
-                doc.text(line, rightX, currentY);
+                doc.text(line, rightX, currentY, { align: 'right' });
                 currentY += lineSpacing;
             });
             doc.setFont('helvetica', 'normal');
