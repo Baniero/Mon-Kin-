@@ -1,4 +1,4 @@
-@page "/administration"
+@page "/manage-cabinet"
 @attribute [AdminOrKine]
 @using MonKineBlazor.Shared.Models
 @using Microsoft.JSInterop
@@ -7,7 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject MonKineBlazor.Client.Services.AuthService AuthService
 
-<h1>ADMINISTRATION</h1>
+<h1>Gérer mon cabinet</h1>
 
 <div class="row mb-3">
     <div class="col-md-4">
@@ -336,30 +336,44 @@ else
                     AdresseCabinet = cabinetForm.AdresseCabinet,
                     NomCabinetArabe = cabinetForm.NomCabinetArabe,
                     NomKineArabe = cabinetForm.NomKineArabe,
-                        AdresseKineArabe = cabinetForm.AdresseKineArabe,
-                        Telephone = cabinetForm.Telephone,
-                        Rib = cabinetForm.Rib
-                    };
-                    response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
-                }
-                else
+                    AdresseKineArabe = cabinetForm.AdresseKineArabe,
+                    Telephone = cabinetForm.Telephone,
+                    Rib = cabinetForm.Rib
+                };
+                response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
+            }
+            else
+            {
+                var updateRequest = new CabinetUpdateRequestDto
                 {
-                    var updateRequest = new CabinetUpdateRequestDto
-                    {
-                        Id = selectedCabinet.Id,
-                        NomCabinet = cabinetForm.NomCabinet,
-                        NomEtablissement = cabinetForm.NomEtablissement,
-                        CodeEtablissement = cabinetForm.CodeEtablissement,
-                        MatriculeFiscal = cabinetForm.MatriculeFiscal,
-                        NumeroEmployeur = cabinetForm.NumeroEmployeur,
-                        CodeCnam = cabinetForm.CodeCnam,
-                        Qualite = cabinetForm.Qualite,
-                        AdresseCabinet = cabinetForm.AdresseCabinet,
-                        NomCabinetArabe = cabinetForm.NomCabinetArabe,
-                        NomKineArabe = cabinetForm.NomKineArabe,
-                        AdresseKineArabe = cabinetForm.AdresseKineArabe,
-                        Telephone = cabinetForm.Telephone,
-                        Rib = cabinetForm.Rib
+                    Id = selectedCabinet.Id,
+                    NomCabinet = cabinetForm.NomCabinet,
+                    NomEtablissement = cabinetForm.NomEtablissement,
+                    CodeEtablissement = cabinetForm.CodeEtablissement,
+                    MatriculeFiscal = cabinetForm.MatriculeFiscal,
+                    NumeroEmployeur = cabinetForm.NumeroEmployeur,
+                    CodeCnam = cabinetForm.CodeCnam,
+                    Qualite = cabinetForm.Qualite,
+                    AdresseCabinet = cabinetForm.AdresseCabinet,
+                    NomCabinetArabe = cabinetForm.NomCabinetArabe,
+                    NomKineArabe = cabinetForm.NomKineArabe,
+                    AdresseKineArabe = cabinetForm.AdresseKineArabe,
+                    Telephone = cabinetForm.Telephone,
+                    Rib = cabinetForm.Rib
+                };
+                response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadCabinets();
+                HideCabinetForm();
+            }
+            else
+            {
+                errorMessage = "Impossible d'enregistrer le cabinet.";
+            }
+        }
         catch (Exception ex)
         {
             errorMessage = ex.Message;
