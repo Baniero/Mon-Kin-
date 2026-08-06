@@ -240,30 +240,7 @@
             }
 
             try {
-                const reshaped = window.ArabicReshaper?.convertArabic(text) ?? text;
-                const bidi = window.bidi_js?.();
-                if (!bidi) {
-                    return reshaped;
-                }
-
-                const levels = bidi.getEmbeddingLevels(reshaped, 'auto');
-                if (typeof bidi.getReorderedString === 'function') {
-                    return bidi.getReorderedString(reshaped, levels);
-                }
-
-                const segments = bidi.getReorderSegments(reshaped, levels);
-                let result = reshaped.split('');
-                segments.forEach(([start, end]) => {
-                    const slice = result.slice(start, end + 1).reverse();
-                    result.splice(start, end + 1, ...slice);
-                });
-
-                const mirrored = bidi.getMirroredCharactersMap(reshaped, levels);
-                mirrored.forEach((char, index) => {
-                    result[index] = char;
-                });
-
-                return result.join('');
+                return window.ArabicReshaper?.convertArabic(text) ?? text;
             }
             catch (error) {
                 console.warn('Impossible de transformer le texte arabe :', error);
