@@ -247,6 +247,10 @@
                 }
 
                 const levels = bidi.getEmbeddingLevels(reshaped, 'auto');
+                if (typeof bidi.getReorderedString === 'function') {
+                    return bidi.getReorderedString(reshaped, levels);
+                }
+
                 const segments = bidi.getReorderSegments(reshaped, levels);
                 let result = reshaped.split('');
                 segments.forEach(([start, end]) => {
@@ -287,6 +291,7 @@
 
             const x = canvas.width - padding;
             let y = padding + lineHeight;
+            ctx.direction = 'rtl';
             lines.forEach((line) => {
                 if (line) {
                     ctx.fillText(line, x, y);
@@ -308,10 +313,6 @@
             const pageWidth = doc.internal.pageSize.getWidth();
             const cabinet = data?.cabinet ?? data?.Cabinet ?? {};
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(18);
-            doc.text(title, centerX, topY - 10, { align: 'center' });
-
             if (imageDataUrl) {
                 const imageSize = 48;
                 doc.addImage(imageDataUrl, 'PNG', centerX - imageSize / 2, topY + 10, imageSize, imageSize);
@@ -319,8 +320,6 @@
 
             const rightAreaWidth = 200;
             const rightAreaX = pageWidth - 40 - rightAreaWidth;
-
-            const arabicFont = 'NotoNaskhArabic';
 
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
@@ -356,7 +355,13 @@
 
             doc.setLineWidth(0.5);
             doc.line(margin, topY + headerHeight, 555, topY + headerHeight);
-            return topY + headerHeight + 20;
+
+            const titleY = topY + headerHeight + 15;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text(title, centerX, titleY, { align: 'center' });
+
+            return titleY + 20;
         };
 
         window.generateInvoicePdf = async (filename, data) => {
