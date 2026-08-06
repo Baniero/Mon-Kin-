@@ -41,6 +41,7 @@ try
 catch (Exception ex)
 {
     app.Logger.LogError(ex, "Database initialization failed.");
+    throw;
 }
 
 // Configure the HTTP request pipeline.

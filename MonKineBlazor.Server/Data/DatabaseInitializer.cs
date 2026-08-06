@@ -22,6 +22,7 @@ public static class DatabaseInitializer
         command.ExecuteNonQuery();
 
         EnsureCabinetsTable(connection);
+        EnsureUsersTable(connection);
         var adminCabinetId = EnsureCabinetExists(connection, "CabinetAdmin");
         EnsureAdminUser(connection, adminCabinetId);
         EnsureCabinetInfoTable(connection);
@@ -90,6 +91,27 @@ public static class DatabaseInitializer
         insertCmd.Parameters.AddWithValue("@nomCabinet", cabinetName);
 
         return Convert.ToInt32(insertCmd.ExecuteScalar());
+    }
+
+    private static void EnsureUsersTable(NpgsqlConnection connection)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                full_name TEXT,
+                role TEXT,
+                active BOOLEAN DEFAULT TRUE,
+                password_hash TEXT,
+                cabinet_id INTEGER REFERENCES cabinets(id),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ";
+        cmd.ExecuteNonQuery();
+
+        EnsureColumnExists(connection, "users", "password_hash", "TEXT");
+        EnsureColumnExists(connection, "users", "cabinet_id", "INTEGER REFERENCES cabinets(id)");
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection, int adminCabinetId)
