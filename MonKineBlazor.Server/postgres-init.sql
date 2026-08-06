@@ -152,6 +152,23 @@ CREATE TABLE IF NOT EXISTS advance_lots (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS appointments (
+    id SERIAL PRIMARY KEY,
+    patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    kine_id INTEGER,
+    start_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_datetime TIMESTAMP WITH TIME ZONE,
+    acte TEXT,
+    room TEXT,
+    status TEXT DEFAULT 'planifie',
+    payment_status TEXT DEFAULT 'non_paye',
+    amount NUMERIC DEFAULT 0,
+    paid_amount NUMERIC DEFAULT 0,
+    cnam_covered NUMERIC DEFAULT 0,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS advance_lot_usage (
     id SERIAL PRIMARY KEY,
     lot_id INTEGER NOT NULL REFERENCES advance_lots(id) ON DELETE CASCADE,
