@@ -241,22 +241,52 @@
 
             try {
                 const reshaped = window.ArabicReshaper?.convertArabic(text) ?? text;
-                const bidi = window.bidi_js?.();
-                if (!bidi) {
-                    return reshaped.split('').reverse().join('');
-                }
-
-                const levels = bidi.getEmbeddingLevels(reshaped, 'auto');
-                if (typeof bidi.getReorderedString === 'function') {
-                    return bidi.getReorderedString(reshaped, levels);
-                }
-
-                return reshaped.split('').reverse().join('');
+                return reshaped
+                    .split(' ')
+                    .map((word) => /[\u0600-\u06FF]/.test(word)
+                        ? word.split('').reverse().join('')
+                        : word)
+                    .join(' ');
             }
             catch (error) {
                 console.warn('Impossible de transformer le texte arabe :', error);
-                return text.split('').reverse().join('');
+                return text
+                    .split(' ')
+                    .map((word) => /[\u0600-\u06FF]/.test(word)
+                        ? word.split('').reverse().join('')
+                        : word)
+                    .join(' ');
             }
+        };
+
+        const renderRightHeaderImage = async (lines, width, lineHeight) => {
+            const padding = 10;
+            const height = Math.ceil(lines.length * lineHeight + padding * 2);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(width);
+            canvas.height = Math.max(height, 1);
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                return null;
+            }
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000000';
+            ctx.font = '12pt "Noto Naskh Arabic", Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.direction = 'rtl';
+
+            const x = canvas.width - padding;
+            let y = padding + lineHeight;
+            lines.forEach((line) => {
+                if (line) {
+                    ctx.fillText(line, x, y);
+                }
+                y += lineHeight;
+            });
+
+            return canvas.toDataURL('image/png');
         };
 
         const renderPdfHeader = async (doc, data, title, imageDataUrl) => {
@@ -305,17 +335,11 @@
             });
 
             currentY = topY + 20;
-            doc.setFont('NotoNaskhArabic', 'normal');
-            doc.setFontSize(10);
-            rightLines.forEach((line) => {
-                if (line) {
-                    doc.text(line, rightAreaRightX, currentY, {
-                        align: 'right',
-                        direction: 'rtl'
-                    });
-                }
-                currentY += lineSpacing;
-            });
+            const rightImageDataUrl = await renderRightHeaderImage(rightLines, rightAreaWidth, lineSpacing + 4);
+            if (rightImageDataUrl) {
+                const imageHeight = rightLines.length * (lineSpacing + 4) + 10;
+                doc.addImage(rightImageDataUrl, 'PNG', rightAreaX, topY + 10, rightAreaWidth, imageHeight);
+            }
 
             doc.setFont('helvetica', 'normal');
             doc.setLineWidth(0.5);
