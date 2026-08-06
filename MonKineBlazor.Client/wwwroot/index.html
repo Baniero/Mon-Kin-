@@ -188,6 +188,7 @@
             const rightX = 360;
             const topY = 40;
             const lineSpacing = 12;
+            const cabinet = data?.cabinet ?? data?.Cabinet ?? {};
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(18);
@@ -202,20 +203,20 @@
             doc.setFontSize(9);
 
             const leftLines = [
-                `Responsable : ${data.cabinet.NomEtablissement || ''}`,
-                `Cabinet / établissement : ${data.cabinet.NomCabinet || ''}`,
-                `Adresse : ${data.cabinet.AdresseCabinet || ''}`,
-                `Tél / GSM : ${data.cabinet.Telephone || ''}`,
-                `Matricule fiscal : ${data.cabinet.MatriculeFiscal || ''}`,
-                `RIB/RIP : ${data.cabinet.RIB || data.cabinet.RIP || ''}`
+                `Responsable : ${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
+                `Cabinet / établissement : ${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
+                `Adresse : ${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
+                `Tél / GSM : ${getString(cabinet, 'Telephone', 'telephone')}`,
+                `Matricule fiscal : ${getString(cabinet, 'MatriculeFiscal', 'matriculeFiscal')}`,
+                `RIB/RIP : ${getString(cabinet, 'RIB', 'rib') || getString(cabinet, 'RIP', 'rip')}`
             ];
 
             const rightLines = [
-                `Responsable : ${data.cabinet.NomEtablissementArabe || ''}`,
-                `Nom du cabinet : ${data.cabinet.NomCabinetArabe || ''}`,
-                `Adresse : ${data.cabinet.AdresseKineArabe || ''}`,
-                `N° Employeur : ${data.cabinet.NumeroEmployeur || ''}`,
-                `Code CNAM : ${data.cabinet.CodeCnam || data.cabinet.CodeEtablissement || ''}`
+                `Responsable : ${getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe')}`,
+                `Nom du cabinet : ${getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe')}`,
+                `Adresse : ${getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe')}`,
+                `N° Employeur : ${getString(cabinet, 'NumeroEmployeur', 'numeroEmployeur')}`,
+                `Code CNAM : ${getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement')}`
             ];
 
             let currentY = topY + 20;
