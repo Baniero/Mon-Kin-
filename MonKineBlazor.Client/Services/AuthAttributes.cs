@@ -11,3 +11,8 @@ public sealed class AllowAnonymousAttribute : Attribute
 public sealed class AdminOnlyAttribute : Attribute
 {
 }
+
+[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+public sealed class AdminOrKineAttribute : Attribute
+{
+}

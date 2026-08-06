@@ -24,9 +24,10 @@ public class UsersController : ControllerBase
     [HttpGet]
     public ActionResult<IEnumerable<UserDto>> GetAll()
     {
-        if (!IsAdmin())
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+        if (currentUser == null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var users = new List<UserDto>();
@@ -34,12 +35,30 @@ public class UsersController : ControllerBase
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
-            FROM users u
-            LEFT JOIN cabinets c ON c.id = u.cabinet_id
-            ORDER BY u.full_name, u.username
-        ";
+        if (currentUser.Role == "admin")
+        {
+            cmd.CommandText = @"
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
+                FROM users u
+                LEFT JOIN cabinets c ON c.id = u.cabinet_id
+                ORDER BY u.full_name, u.username
+            ";
+        }
+        else if (currentUser.CabinetId.HasValue)
+        {
+            cmd.CommandText = @"
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
+                FROM users u
+                LEFT JOIN cabinets c ON c.id = u.cabinet_id
+                WHERE u.cabinet_id = @cabinet_id
+                ORDER BY u.full_name, u.username
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+        }
+        else
+        {
+            return Forbid();
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -252,8 +271,34 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
+
+        using var checkCmd = conn.CreateCommand();
+        checkCmd.CommandText = @"
+            SELECT cabinet_id
+            FROM users
+            WHERE id = @id
+        ";
+        checkCmd.Parameters.AddWithValue("@id", id);
+
+        var result = checkCmd.ExecuteScalar();
+        if (result == null || result == DBNull.Value)
+        {
+            return NotFound();
+        }
+
+        var targetCabinetId = Convert.ToInt32(result);
+        if (currentUser.Role != "admin" && currentUser.CabinetId != targetCabinetId)
+        {
+            return Forbid();
+        }
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM users WHERE id = @id";

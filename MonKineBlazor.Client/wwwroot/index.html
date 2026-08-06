@@ -87,8 +87,47 @@
             };
         };
 
+        const getBaseUrl = () => {
+            const baseElement = document.querySelector('base');
+            return baseElement?.href ?? `${window.location.origin}/`;
+        };
+
+        const resolveAssetUrl = (path) => {
+            return new URL(path, getBaseUrl()).href;
+        };
+
         const getJsPDF = () => {
             return window.jsPDF ?? window.jspdf?.jsPDF ?? window.jspdf ?? null;
+        };
+
+        const ensureJsPdfAvailable = async () => {
+            const loaded = getJsPDF();
+            if (loaded) {
+                return loaded;
+            }
+
+            if (window._jspdfLoadingPromise) {
+                return window._jspdfLoadingPromise;
+            }
+
+            window._jspdfLoadingPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+                script.crossOrigin = 'anonymous';
+                script.referrerPolicy = 'no-referrer';
+                script.onload = () => {
+                    const loadedJsPDF = getJsPDF();
+                    if (loadedJsPDF) {
+                        resolve(loadedJsPDF);
+                        return;
+                    }
+                    reject(new Error('jsPDF chargé mais le constructeur n\'a pas été trouvé.'));
+                };
+                script.onerror = () => reject(new Error('Impossible de charger jsPDF depuis la source de secours.'));
+                document.head.appendChild(script);
+            });
+
+            return window._jspdfLoadingPromise;
         };
 
         const getNumber = (obj, pascal, camel) => {
@@ -198,7 +237,7 @@
 
         window.generateInvoicePdf = async (filename, data) => {
             console.log('generateInvoicePdf', filename, data);
-            const jsPDFClass = getJsPDF();
+            const jsPDFClass = await ensureJsPdfAvailable();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }
@@ -206,7 +245,7 @@
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
             const title = 'FACTURE CNAM';
-            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
+            const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
             let y = title === 'FACTURE CNAM' ? 60 : 50;
 
             doc.setFont('helvetica', 'bold');
@@ -280,7 +319,7 @@
         };
 
         window.generateSignatureSheetPdf = async (filename, data) => {
-            const jsPDFClass = getJsPDF();
+            const jsPDFClass = await ensureJsPdfAvailable();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }
@@ -345,7 +384,7 @@
         };
 
         window.generateBordereauPdf = async (filename, data) => {
-            const jsPDFClass = getJsPDF();
+            const jsPDFClass = await ensureJsPdfAvailable();
             if (!jsPDFClass) {
                 throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
             }

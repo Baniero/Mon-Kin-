@@ -30,6 +30,12 @@
     {
         NavigationManager.NavigateTo("/access-denied", true);
     }
+    else if (pageType.GetCustomAttribute<AdminOrKineAttribute>() is not null &&
+             AuthService.CurrentUser?.Role != "admin" &&
+             AuthService.CurrentUser?.Role != "kine")
+    {
+        NavigationManager.NavigateTo("/access-denied", true);
+    }
     else
     {
         <RouteView RouteData="RouteData" DefaultLayout="DefaultLayout" />

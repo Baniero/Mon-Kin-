@@ -11,13 +11,15 @@ namespace MonKineBlazor.Server.Controllers;
 public class CabinetsController : ControllerBase
 {
     private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
+    private UserDto? GetCurrentUser() => UserContextHelper.GetCurrentUser(HttpContext);
 
     [HttpGet]
     public ActionResult<IEnumerable<CabinetDto>> GetAll()
     {
-        if (!IsAdmin())
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var cabinets = new List<CabinetDto>();
@@ -25,12 +27,30 @@ public class CabinetsController : ControllerBase
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
-                   adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe
-            FROM cabinets
-            ORDER BY nom_cabinet
-        ";
+
+        if (IsAdmin())
+        {
+            cmd.CommandText = @"
+                SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
+                       adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe
+                FROM cabinets
+                ORDER BY nom_cabinet
+            ";
+        }
+        else if (currentUser.CabinetId.HasValue)
+        {
+            cmd.CommandText = @"
+                SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
+                       adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe
+                FROM cabinets
+                WHERE id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.Value);
+        }
+        else
+        {
+            return Forbid();
+        }
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
