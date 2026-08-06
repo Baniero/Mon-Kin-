@@ -22,8 +22,44 @@ public static class DatabaseInitializer
         command.ExecuteNonQuery();
 
         EnsureAdminUser(connection);
+        EnsureCabinetsTable(connection);
         EnsureCabinetInfoTable(connection);
         EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
+    }
+
+    private static void EnsureCabinetsTable(NpgsqlConnection connection)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            CREATE TABLE IF NOT EXISTS cabinets (
+                id SERIAL PRIMARY KEY,
+                nom_cabinet TEXT NOT NULL,
+                code_etablissement TEXT,
+                matricule_fiscal TEXT,
+                nom_etablissement TEXT,
+                racine TEXT,
+                cle TEXT,
+                qualite TEXT,
+                adresse_cabinet TEXT,
+                nom_cabinet_arabe TEXT,
+                nom_kine_arabe TEXT,
+                adresse_kine_arabe TEXT,
+                numero_assuree TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ";
+        cmd.ExecuteNonQuery();
+
+        EnsureColumnExists(connection, "cabinets", "code_etablissement", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "matricule_fiscal", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "nom_etablissement", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "racine", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "cle", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "qualite", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "adresse_cabinet", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "nom_cabinet_arabe", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "nom_kine_arabe", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "adresse_kine_arabe", "TEXT");
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection)
