@@ -1,4 +1,4 @@
-@page "/manage-cabinet"
+@page "/administration"
 @attribute [AdminOrKine]
 @using MonKineBlazor.Shared.Models
 @using Microsoft.JSInterop
@@ -7,7 +7,7 @@
 @inject IJSRuntime JSRuntime
 @inject MonKineBlazor.Client.Services.AuthService AuthService
 
-<h1>Gérer mon cabinet</h1>
+<h1>ADMINISTRATION</h1>
 
 <div class="row mb-3">
     <div class="col-md-4">
@@ -16,7 +16,11 @@
     </div>
     <div class="col-md-4 d-flex align-items-end">
         <button class="btn btn-primary me-2" @onclick="LoadUsers">Rechercher</button>
-        <button class="btn btn-success" @onclick="ShowCreateUser">Nouveau kiné</button>
+        <button class="btn btn-success me-2" @onclick="ShowCreateUser">Nouveau kiné</button>
+        @if (AuthService.CurrentUser?.Role == "admin")
+        {
+            <button class="btn btn-outline-secondary" @onclick="ShowCreateCabinet">Nouveau cabinet</button>
+        }
     </div>
 </div>
 
