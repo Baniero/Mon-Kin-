@@ -259,14 +259,16 @@
 
             const cabinet = data?.cabinet ?? {};
             const program = data?.program ?? {};
+            const invoiceNumber = data?.invoiceNumber ?? data?.invoice_number ?? 'N/A';
+            const invoiceDate = data?.invoiceDate ?? data?.invoice_date ?? 'N/A';
 
             const headerLines = [
-                `Responsable : ${cabinet.NomEtablissement || ''}`,
-                `Cabinet : ${cabinet.NomCabinet || ''}`,
-                `Adresse : ${cabinet.AdresseCabinet || ''}`,
-                `Tél / GSM : ${cabinet.Telephone || ''}`,
-                `Matricule fiscal : ${cabinet.MatriculeFiscal || ''}`,
-                `Code CNAM : ${cabinet.CodeCnam || cabinet.CodeEtablissement || ''}`
+                `Responsable : ${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
+                `Cabinet : ${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
+                `Adresse : ${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
+                `Tél / GSM : ${getString(cabinet, 'Telephone', 'telephone')}`,
+                `Matricule fiscal : ${getString(cabinet, 'MatriculeFiscal', 'matriculeFiscal')}`,
+                `Code CNAM : ${getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement')}`
             ];
 
             doc.setFont('helvetica', 'normal');
@@ -282,18 +284,18 @@
             y += 16;
 
             const invoiceFields = [
-                ['N° facture', data.invoiceNumber || 'N/A'],
-                ['Date facture', data.invoiceDate || 'N/A'],
-                ['Patient', program.PatientName || 'N/A'],
-                ['N° assurée', program.NumeroAssuree || 'N/A'],
-                ['Code patient', program.CodePatient || 'N/A'],
-                ['Couverture', program.Couverture || 'N/A']
+                ['N° facture', invoiceNumber],
+                ['Date facture', invoiceDate],
+                ['Patient', getString(program, 'PatientName', 'patientName')],
+                ['N° assurée', getString(program, 'NumeroAssuree', 'numeroAssuree')],
+                ['Code patient', getString(program, 'CodePatient', 'codePatient')],
+                ['Couverture', getString(program, 'Couverture', 'couverture')]
             ];
 
             doc.setFont('helvetica', 'normal');
             invoiceFields.forEach(([label, value]) => {
                 doc.text(`${label} :`, margin, y);
-                doc.text(String(value), margin + 130, y);
+                doc.text(String(value || 'N/A'), margin + 130, y);
                 y += 14;
             });
 
@@ -303,19 +305,24 @@
             y += 16;
             doc.setFont('helvetica', 'normal');
 
+            const nbSeances = getNumber(program, 'NbSeances', 'nbSeances');
+            const dureeSeance = getNumber(program, 'DureeSeanceMinutes', 'dureeSeanceMinutes');
+            const prixUnitaire = getNumber(program, 'PrixUnitaire', 'prixUnitaire');
+            const prixTTC = getNumber(program, 'PrixTTC', 'prixTTC');
+
             const details = [
-                ['Titre', program.Titre || 'N/A'],
-                ['Nature', program.NatureSeances || 'N/A'],
-                ['Date début', program.DateDebut || 'N/A'],
-                ['Date fin', program.DateFin || 'N/A'],
-                ['Nb séances', program.NbSeances ?? 0],
-                ['Durée séance', `${program.DureeSeanceMinutes ?? 0} min`],
-                ['Prix unitaire', `${(program.PrixUnitaire ?? 0).toFixed(2)} DT`],
-                ['Total TTC', `${(program.PrixTTC ?? 0).toFixed(2)} DT`],
-                ['Code bureau', program.CodeBureau || 'N/A'],
-                ['Année', program.Annee || 'N/A'],
-                ['N° décision', program.NumeroDecision || 'N/A'],
-                ['N° ordre', program.NumeroOrdre || 'N/A']
+                ['Titre', getString(program, 'Titre', 'titre')],
+                ['Nature', getString(program, 'NatureSeances', 'natureSeances')],
+                ['Date début', getString(program, 'DateDebut', 'dateDebut')],
+                ['Date fin', getString(program, 'DateFin', 'dateFin')],
+                ['Nb séances', nbSeances],
+                ['Durée séance', `${dureeSeance} min`],
+                ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`],
+                ['Total TTC', `${prixTTC.toFixed(2)} DT`],
+                ['Code bureau', getString(program, 'CodeBureau', 'codeBureau')],
+                ['Année', getString(program, 'Annee', 'annee')],
+                ['N° décision', getString(program, 'NumeroDecision', 'numeroDecision')],
+                ['N° ordre', getString(program, 'NumeroOrdre', 'numeroOrdre')]
             ];
 
             details.forEach(([label, value]) => {
