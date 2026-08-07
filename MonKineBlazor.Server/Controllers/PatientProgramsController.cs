@@ -72,6 +72,7 @@ public class PatientProgramsController : ControllerBase
                 COALESCE(numero_decision, ''),
                 COALESCE(numero_ordre, ''),
                 COALESCE(prix_unitaire, 0),
+                COALESCE(prix_espece, 0),
                 COALESCE(prix_ht, 0),
                 COALESCE(tva, 0),
                 COALESCE(montant_tva, 0),
@@ -104,13 +105,14 @@ public class PatientProgramsController : ControllerBase
                 NumeroDecision = reader.GetString(11),
                 NumeroOrdre = reader.GetString(12),
                 PrixUnitaire = reader.GetDecimal(13),
-                PrixHT = reader.GetDecimal(14),
-                TVA = reader.GetDecimal(15),
-                MontantTVA = reader.GetDecimal(16),
-                PrixTTC = reader.GetDecimal(17),
-                Statut = reader.GetString(18),
-                Objectifs = reader.GetString(19),
-                Remarques = reader.GetString(20),
+                PrixEspece = reader.GetDecimal(14),
+                PrixHT = reader.GetDecimal(15),
+                TVA = reader.GetDecimal(16),
+                MontantTVA = reader.GetDecimal(17),
+                PrixTTC = reader.GetDecimal(18),
+                Statut = reader.GetString(19),
+                Objectifs = reader.GetString(20),
+                Remarques = reader.GetString(21),
             });
         }
 
@@ -133,12 +135,12 @@ public class PatientProgramsController : ControllerBase
             INSERT INTO patient_programs (
                 patient_id, titre, nature_seances, nb_seances, nb_seances_par_semaine,
                 duree_seance_minutes, date_debut, date_fin, code_bureau, annee,
-                numero_decision, numero_ordre, prix_unitaire, prix_ht, tva,
+                numero_decision, numero_ordre, prix_unitaire, prix_espece, prix_ht, tva,
                 montant_tva, prix_ttc, statut, objectifs, remarques
             ) VALUES (
                 @patient_id, @titre, @nature_seances, @nb_seances, @nb_seances_par_semaine,
                 @duree_seance_minutes, @date_debut, @date_fin, @code_bureau, @annee,
-                @numero_decision, @numero_ordre, @prix_unitaire, @prix_ht, @tva,
+                @numero_decision, @numero_ordre, @prix_unitaire, @prix_espece, @prix_ht, @tva,
                 @montant_tva, @prix_ttc, @statut, @objectifs, @remarques
             )
             RETURNING id
@@ -156,6 +158,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@numero_decision", (object?)program.NumeroDecision ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_ordre", (object?)program.NumeroOrdre ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@prix_unitaire", program.PrixUnitaire);
+        cmd.Parameters.AddWithValue("@prix_espece", program.PrixEspece);
         cmd.Parameters.AddWithValue("@prix_ht", program.PrixHT);
         cmd.Parameters.AddWithValue("@tva", program.TVA);
         cmd.Parameters.AddWithValue("@montant_tva", program.MontantTVA);
@@ -205,6 +208,7 @@ public class PatientProgramsController : ControllerBase
                 numero_decision = @numero_decision,
                 numero_ordre = @numero_ordre,
                 prix_unitaire = @prix_unitaire,
+                prix_espece = @prix_espece,
                 prix_ht = @prix_ht,
                 tva = @tva,
                 montant_tva = @montant_tva,
@@ -227,6 +231,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@numero_decision", (object?)program.NumeroDecision ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_ordre", (object?)program.NumeroOrdre ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@prix_unitaire", program.PrixUnitaire);
+        cmd.Parameters.AddWithValue("@prix_espece", program.PrixEspece);
         cmd.Parameters.AddWithValue("@prix_ht", program.PrixHT);
         cmd.Parameters.AddWithValue("@tva", program.TVA);
         cmd.Parameters.AddWithValue("@montant_tva", program.MontantTVA);

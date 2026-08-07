@@ -302,8 +302,9 @@
     private CabinetInfoDto cabinetInfo = new();
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
     private DateTime cnamEnd = DateTime.Today;
-    private string invoiceNumber = string.Empty;
     private string invoiceDate => DateTime.Today.ToString("dd/MM/yyyy");
+
+    private string invoiceNumber => selectedProgram?.FactureNumber ?? string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -419,7 +420,6 @@
     private void SelectProgram(CnamProgramInvoiceDto program)
     {
         selectedProgram = program;
-        invoiceNumber = program.DateDebut.HasValue ? $"CNAM-{program.ProgramId}-{program.DateDebut:yyyyMMdd}" : $"CNAM-{program.ProgramId}";
     }
 
     private async Task ExportInvoicePdf()
@@ -459,16 +459,15 @@
                 selectedProgram.Annee,
                 selectedProgram.NumeroDecision,
                 selectedProgram.NumeroOrdre,
+                selectedProgram.FactureNumber,
                 MontantHT = montantHT,
                 MontantTVA = montantTVA
-            },
-            invoiceNumber,
-            invoiceDate
+            }
         };
 
         try
         {
-            await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{invoiceNumber}.pdf", pdfData);
+            await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{selectedProgram.ProgramId}_{DateTime.Today:yyyyMMdd}.pdf", pdfData);
             successMessage = "Facture PDF générée.";
         }
         catch (JSException jsEx)

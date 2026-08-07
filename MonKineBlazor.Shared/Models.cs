@@ -37,6 +37,7 @@ public class PatientProgramDto
     public string? NumeroDecision { get; set; }
     public string? NumeroOrdre { get; set; }
     public decimal PrixUnitaire { get; set; }
+    public decimal PrixEspece { get; set; }
     public decimal PrixHT { get; set; }
     public decimal TVA { get; set; }
     public decimal MontantTVA { get; set; }
@@ -210,6 +211,7 @@ public class CnamProgramInvoiceDto
     public string? Annee { get; set; }
     public string? NumeroDecision { get; set; }
     public string? NumeroOrdre { get; set; }
+    public string? FactureNumber { get; set; }
 }
 
 public class CnamBordereauEntryDto

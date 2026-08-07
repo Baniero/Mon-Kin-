@@ -428,7 +428,11 @@ else
                                 }
                                 <div class="col-md-3">
                                     <label class="form-label">Prix Unitaire</label>
-                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixUnitaire" @onchange="_ => RecalculateProgram()" />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixUnitaire" step="0.001" @onchange="_ => RecalculateProgram()" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Prix Espèce</label>
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixEspece" step="0.001" />
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Prix HT</label>
@@ -519,8 +523,9 @@ else
         NbSeances = 1,
         NbSeancesParSemaine = 1,
         DureeSeanceMinutes = 30,
-        TVA = 20,
+        TVA = 7,
         PrixUnitaire = 0,
+        PrixEspece = 0,
         PrixHT = 0,
         MontantTVA = 0,
         PrixTTC = 0,
@@ -679,6 +684,30 @@ else
     private void ClosePatientDetails()
     {
         showPatientDetails = false;
+    }
+
+    private void CopyPatientToForm(PatientDto patient)
+    {
+        patientForm = new PatientDto
+        {
+            Id = patient.Id,
+            CodePatient = patient.CodePatient,
+            DossierPatient = patient.DossierPatient,
+            Nom = patient.Nom,
+            Prenom = patient.Prenom,
+            Age = patient.Age,
+            DateNaissance = patient.DateNaissance,
+            Sexe = patient.Sexe,
+            Telephone1 = patient.Telephone1,
+            Telephone2 = patient.Telephone2,
+            Adresse = patient.Adresse,
+            Couverture = patient.Couverture,
+            Racine = patient.Racine,
+            Cle = patient.Cle,
+            Qualite = patient.Qualite,
+            NumeroAssuree = patient.NumeroAssuree,
+        };
+        isCnam = string.Equals(patient.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task PrintPatientDetails()
@@ -892,6 +921,7 @@ else
             NumeroDecision = program.NumeroDecision,
             NumeroOrdre = program.NumeroOrdre,
             PrixUnitaire = program.PrixUnitaire,
+            PrixEspece = program.PrixEspece,
             PrixHT = program.PrixHT,
             TVA = program.TVA,
             MontantTVA = program.MontantTVA,
@@ -941,33 +971,10 @@ else
             newProgram.DateFin = null;
         }
 
-        newProgram.PrixHT = newProgram.PrixUnitaire * newProgram.NbSeances;
+        newProgram.PrixUnitaire = Math.Round(newProgram.PrixUnitaire, 3);
+        newProgram.PrixHT = Math.Round(newProgram.PrixUnitaire * newProgram.NbSeances, 3);
         newProgram.MontantTVA = Math.Round(newProgram.PrixHT * (newProgram.TVA / 100m), 2);
         newProgram.PrixTTC = Math.Round(newProgram.PrixHT + newProgram.MontantTVA, 2);
-    }
-
-    private void CopyPatientToForm(PatientDto patient)
-    {
-        patientForm = new PatientDto
-        {
-            Id = patient.Id,
-            CodePatient = patient.CodePatient,
-            DossierPatient = patient.DossierPatient,
-            Nom = patient.Nom,
-            Prenom = patient.Prenom,
-            Age = patient.Age,
-            DateNaissance = patient.DateNaissance,
-            Sexe = patient.Sexe,
-            Telephone1 = patient.Telephone1,
-            Telephone2 = patient.Telephone2,
-            Adresse = patient.Adresse,
-            Couverture = patient.Couverture,
-            Racine = patient.Racine,
-            Cle = patient.Cle,
-            Qualite = patient.Qualite,
-            NumeroAssuree = patient.NumeroAssuree,
-        };
-        isCnam = string.Equals(patient.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ResetProgramForm()
@@ -979,8 +986,9 @@ else
             NbSeances = 1,
             NbSeancesParSemaine = 1,
             DureeSeanceMinutes = 30,
-            TVA = 20,
+            TVA = 7,
             PrixUnitaire = 0,
+            PrixEspece = 0,
             PrixHT = 0,
             MontantTVA = 0,
             PrixTTC = 0,

@@ -450,8 +450,70 @@ public class FinanceController : ControllerBase
                 CodeBureau = reader.GetString(14),
                 Annee = reader.GetString(15),
                 NumeroDecision = reader.GetString(16),
-                NumeroOrdre = reader.GetString(17)
+                NumeroOrdre = reader.GetString(17),
+                FactureNumber = null
             });
+        }
+
+        var executedNumbers = new Dictionary<(int? CabinetId, int Year), int>();
+        using var executedCmd = conn.CreateCommand();
+        executedCmd.CommandText = IsAdmin() ? @"
+            SELECT p.cabinet_id,
+                   EXTRACT(YEAR FROM e.executed_at)::int AS year,
+                   COALESCE(MAX((split_part(e.facture_number, '/', 1))::int), 0) AS max_sequence
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+            GROUP BY p.cabinet_id, EXTRACT(YEAR FROM e.executed_at)
+        " : @"
+            SELECT p.cabinet_id,
+                   EXTRACT(YEAR FROM e.executed_at)::int AS year,
+                   COALESCE(MAX((split_part(e.facture_number, '/', 1))::int), 0) AS max_sequence
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+              AND p.cabinet_id = @cabinet_id
+            GROUP BY p.cabinet_id, EXTRACT(YEAR FROM e.executed_at)
+        ";
+        if (!IsAdmin())
+        {
+            executedCmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+        }
+
+        using var executedReader = executedCmd.ExecuteReader();
+        while (executedReader.Read())
+        {
+            var key = executedReader.IsDBNull(0)
+                ? (int?)null
+                : executedReader.GetInt32(0);
+            var year = executedReader.GetInt32(1);
+            var maxSequence = executedReader.GetInt32(2);
+            executedNumbers[(key, year)] = maxSequence;
+        }
+
+        var pendingPrograms = programs
+            .OrderBy(p => p.DateDebut ?? DateTime.MaxValue)
+            .ToList();
+
+        foreach (var program in pendingPrograms)
+        {
+            var year = program.DateDebut?.Year ?? DateTime.Today.Year;
+            var cabinetQuery = conn.CreateCommand();
+            cabinetQuery.CommandText = @"
+                SELECT p.cabinet_id
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE pp.id = @programId
+            ";
+            cabinetQuery.Parameters.AddWithValue("@programId", program.ProgramId);
+            var cabinetIdObj = cabinetQuery.ExecuteScalar();
+            var programCabinetId = cabinetIdObj == DBNull.Value ? (int?)null : Convert.ToInt32(cabinetIdObj);
+            var sequenceKey = (programCabinetId, year);
+            var currentSequence = executedNumbers.ContainsKey(sequenceKey) ? executedNumbers[sequenceKey] + 1 : 1;
+            executedNumbers[sequenceKey] = currentSequence;
+            program.FactureNumber = $"{currentSequence:000}/{year}";
         }
 
         return Ok(programs);

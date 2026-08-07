@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS patient_programs (
     numero_decision TEXT,
     numero_ordre TEXT,
     prix_unitaire NUMERIC DEFAULT 0,
+    prix_espece NUMERIC DEFAULT 0,
     prix_ht NUMERIC DEFAULT 0,
     tva NUMERIC DEFAULT 0,
     montant_tva NUMERIC DEFAULT 0,
@@ -113,6 +114,7 @@ ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS annee TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS numero_decision TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS numero_ordre TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_unitaire NUMERIC DEFAULT 0;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_espece NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_ht NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS tva NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS montant_tva NUMERIC DEFAULT 0;
