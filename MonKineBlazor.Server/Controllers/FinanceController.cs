@@ -352,23 +352,28 @@ public class FinanceController : ControllerBase
     [HttpGet("cnam-programs")]
     public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(DateTime start, DateTime end)
     {
-        var currentUser = GetCurrentUser();
-        if (currentUser == null)
+        try
         {
-            return Unauthorized();
-        }
+            var xUserId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "<missing>";
+            _logger.LogInformation("GetCnamPrograms called. start={Start}, end={End}, X-User-Id={XUserId}, Path={Path}", start, end, xUserId, Request.Path);
 
-        int? cabinetId = currentUser.CabinetId;
-        if (!IsAdmin() && !cabinetId.HasValue)
-        {
-            return Forbid();
-        }
+            var currentUser = GetCurrentUser();
+            if (currentUser == null)
+            {
+                return Unauthorized();
+            }
 
-        var programs = new List<CnamProgramInvoiceDto>();
-        using var conn = DatabaseConnectionProvider.CreateConnection();
-        conn.Open();
+            int? cabinetId = currentUser.CabinetId;
+            if (!IsAdmin() && !cabinetId.HasValue)
+            {
+                return Forbid();
+            }
 
-        using var cmd = conn.CreateCommand();
+            var programs = new List<CnamProgramInvoiceDto>();
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
+
+            using var cmd = conn.CreateCommand();
         cmd.CommandText = IsAdmin() ? @"
             SELECT
                 pp.id,
