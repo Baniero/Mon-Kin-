@@ -1023,18 +1023,19 @@ public class FinanceController : ControllerBase
             }
         }
 
-        var rows = new List<(string FactureNumber, string CodeBureau, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, DateTime? DateFacture, decimal TotalTTC)>();
+        var rows = new List<(string FactureNumber, string CodeBureau, string Annee, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, DateTime? DateFacture, decimal TotalTTC)>();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
                 COALESCE(e.facture_number, ''),
                 COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.annee, ''),
                 COALESCE(pp.numero_decision, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(pp.nb_seances, 0),
                 pp.date_debut,
                 pp.date_fin,
-                pp.date_debut,
+                COALESCE(pp.date_facturation, pp.date_debut),
                 COALESCE(pp.prix_ttc, 0)
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
@@ -1057,13 +1058,14 @@ public class FinanceController : ControllerBase
                 (
                     FactureNumber: reader.GetString(0),
                     CodeBureau: reader.GetString(1),
-                    NumeroDecision: reader.GetString(2),
-                    NumeroAssuree: reader.GetString(3),
-                    NbSeances: reader.GetInt32(4),
-                    DateDebut: reader.IsDBNull(5) ? null : reader.GetDateTime(5),
-                    DateFin: reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    DateFacture: reader.IsDBNull(7) ? null : reader.GetDateTime(7),
-                    TotalTTC: reader.GetDecimal(8)
+                    Annee: reader.GetString(2),
+                    NumeroDecision: reader.GetString(3),
+                    NumeroAssuree: reader.GetString(4),
+                    NbSeances: reader.GetInt32(5),
+                    DateDebut: reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    DateFin: reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    DateFacture: reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                    TotalTTC: reader.GetDecimal(9)
                 )
             );
         }
@@ -1073,13 +1075,13 @@ public class FinanceController : ControllerBase
         var rawCabinetCode = new string((cabinet.CodeCnam ?? string.Empty).Where(char.IsDigit).ToArray());
         var cabinetCode = rawCabinetCode.Length > 10 ? rawCabinetCode[^10..] : rawCabinetCode.PadLeft(10, '0');
         var employerNumberRaw = new string((cabinet.NumeroEmployeur ?? string.Empty).Where(char.IsDigit).ToArray());
-        var employerNumber = employerNumberRaw.Length > 40 ? employerNumberRaw[^40..] : employerNumberRaw.PadLeft(40, '0');
-        var bordereauNumber = rows.Count.ToString("000");
+        var employerNumber = employerNumberRaw.Length > 10 ? employerNumberRaw[^10..] : employerNumberRaw.PadLeft(10, '0');
+        var bordereauNumber = rows.FirstOrDefault().CodeBureau?.PadLeft(3, '0') ?? "000";
         var totalFactures = rows.Count.ToString("00000");
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
-        var totalTtcText = totalTtcMillimes.ToString().PadLeft(26, '0');
+        var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
 
-        var header = new char[95];
+        var header = new char[119];
         for (int i = 0; i < header.Length; i++) header[i] = '0';
         header[0] = '1';
 
@@ -1096,110 +1098,138 @@ public class FinanceController : ControllerBase
             header[10 + i] = cabinetCode[i];
         }
 
-        for (int i = 0; i < 4 && 20 + i < header.Length; i++)
+        for (int i = 0; i < employerNumber.Length && 20 + i < header.Length; i++)
         {
-            header[20 + i] = yearText[i];
+            header[20 + i] = employerNumber[i];
         }
 
-        for (int i = 0; i < employerNumber.Length && 24 + i < header.Length; i++)
+        for (int i = 0; i < 5 && 30 + i < header.Length; i++)
         {
-            header[24 + i] = employerNumber[i];
+            header[30 + i] = totalFactures[i];
         }
 
-        for (int i = 0; i < 5 && 64 + i < header.Length; i++)
+        for (int i = 0; i < 12 && 35 + i < header.Length; i++)
         {
-            header[64 + i] = totalFactures[i];
-        }
-
-        for (int i = 0; i < totalTtcText.Length && 69 + i < header.Length; i++)
-        {
-            header[69 + i] = totalTtcText[i];
+            header[35 + i] = totalTtcText[i];
         }
 
         textBuilder.AppendLine(new string(header));
 
         foreach (var row in rows)
         {
-            var line = new char[95];
+            var line = new char[119];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
+            line[0] = '2';
+
+            for (int i = 0; i < 4 && 1 + i < line.Length; i++)
+            {
+                line[1 + i] = yearText[i];
+            }
+
+            for (int i = 0; i < 3 && 5 + i < line.Length; i++)
+            {
+                line[5 + i] = bordereauNumber[i];
+            }
+
+            line[8] = '0';
+            line[9] = '1';
+
+            for (int i = 0; i < cabinetCode.Length && 10 + i < line.Length; i++)
+            {
+                line[10 + i] = cabinetCode[i];
+            }
+
+            var exerciceYear = !string.IsNullOrWhiteSpace(row.Annee) && row.Annee.Length == 4 ? row.Annee : yearText;
+            for (int i = 0; i < 4 && 20 + i < line.Length; i++)
+            {
+                line[20 + i] = exerciceYear[i];
+            }
 
             var factureNumber = (row.FactureNumber ?? string.Empty).PadRight(8, ' ');
-            for (int i = 0; i < factureNumber.Length && 0 + i < line.Length; i++)
+            for (int i = 0; i < factureNumber.Length && 24 + i < line.Length; i++)
             {
-                line[0 + i] = factureNumber[i];
+                line[24 + i] = factureNumber[i];
             }
 
             var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length && 8 + i < line.Length; i++)
+            for (int i = 0; i < codeAct.Length && 32 + i < line.Length; i++)
             {
-                line[8 + i] = codeAct[i];
+                line[32 + i] = codeAct[i];
             }
 
             var decisionNumber = FormatDecisionNumber(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < decisionNumber.Length && 12 + i < line.Length; i++)
+            for (int i = 0; i < decisionNumber.Length && 36 + i < line.Length; i++)
             {
-                line[12 + i] = decisionNumber[i];
+                line[36 + i] = decisionNumber[i];
             }
 
             var numeroAssuree = new string((row.NumeroAssuree ?? string.Empty).Where(char.IsDigit).ToArray()).PadLeft(13, '0');
-            for (int i = 0; i < numeroAssuree.Length && 22 + i < line.Length; i++)
+            for (int i = 0; i < numeroAssuree.Length && 49 + i < line.Length; i++)
             {
-                line[22 + i] = numeroAssuree[i];
+                line[49 + i] = numeroAssuree[i];
             }
 
             var codeQualite = "003";
-            for (int i = 0; i < codeQualite.Length && 35 + i < line.Length; i++)
+            for (int i = 0; i < codeQualite.Length && 62 + i < line.Length; i++)
             {
-                line[35 + i] = codeQualite[i];
+                line[62 + i] = codeQualite[i];
             }
 
             var nbSeances = row.NbSeances.ToString("000");
-            for (int i = 0; i < nbSeances.Length && 38 + i < line.Length; i++)
+            for (int i = 0; i < nbSeances.Length && 65 + i < line.Length; i++)
             {
-                line[38 + i] = nbSeances[i];
+                line[65 + i] = nbSeances[i];
             }
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < debutText.Length && 41 + i < line.Length; i++)
+            for (int i = 0; i < debutText.Length && 68 + i < line.Length; i++)
             {
-                line[41 + i] = debutText[i];
+                line[68 + i] = debutText[i];
             }
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < finText.Length && 49 + i < line.Length; i++)
+            for (int i = 0; i < finText.Length && 76 + i < line.Length; i++)
             {
-                line[49 + i] = finText[i];
+                line[76 + i] = finText[i];
             }
 
             var ttcMillimes = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
             var ttcText = ttcMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < ttcText.Length && 57 + i < line.Length; i++)
+            for (int i = 0; i < ttcText.Length && 84 + i < line.Length; i++)
             {
-                line[57 + i] = ttcText[i];
+                line[84 + i] = ttcText[i];
             }
 
             var htMillimes = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
             var htText = htMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < htText.Length && 67 + i < line.Length; i++)
+            for (int i = 0; i < htText.Length && 94 + i < line.Length; i++)
             {
-                line[67 + i] = htText[i];
+                line[94 + i] = htText[i];
             }
 
             var tvaMillimes = ttcMillimes - htMillimes;
             var tvaText = tvaMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < tvaText.Length && 77 + i < line.Length; i++)
+            for (int i = 0; i < tvaText.Length && 104 + i < line.Length; i++)
             {
-                line[77 + i] = tvaText[i];
+                line[104 + i] = tvaText[i];
             }
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            for (int i = 0; i < factureDate.Length && 87 + i < line.Length; i++)
+            for (int i = 0; i < factureDate.Length && 114 + i < line.Length; i++)
             {
-                line[87 + i] = factureDate[i];
+                line[114 + i] = factureDate[i];
             }
 
             textBuilder.AppendLine(new string(line));
         }
+
+        var trailer = new char[119];
+        for (int i = 0; i < trailer.Length; i++) trailer[i] = '0';
+        trailer[0] = '3';
+        for (int i = 0; i < 4; i++) trailer[1 + i] = yearText[i];
+        for (int i = 0; i < 3; i++) trailer[5 + i] = bordereauNumber[i];
+        for (int i = 0; i < 12; i++) trailer[8 + i] = totalTtcText[i];
+        textBuilder.AppendLine(new string(trailer));
 
         return Ok(textBuilder.ToString());
 

@@ -325,9 +325,9 @@
             doc.setFontSize(9);
 
             const leftLines = [
-                `Responsable : ${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
-                `Cabinet / établissement : ${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
-                `Adresse : ${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
+                `${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
+                `${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
+                `${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
                 `Tél / GSM : ${getString(cabinet, 'Telephone', 'telephone')}`,
                 `Matricule fiscal : ${getString(cabinet, 'MatriculeFiscal', 'matriculeFiscal')}`,
                 `RIB/RIP : ${getString(cabinet, 'RIB', 'rib') || getString(cabinet, 'RIP', 'rip')}`
