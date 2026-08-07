@@ -1120,32 +1120,31 @@ public class FinanceController : ControllerBase
 
         foreach (var row in rows)
         {
-            var line = new char[92];
+            var line = new char[95];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
-            line[0] = '2';
 
             var factureNumber = (row.FactureNumber ?? string.Empty).PadRight(8, ' ');
-            for (int i = 0; i < factureNumber.Length && 1 + i < line.Length; i++)
+            for (int i = 0; i < factureNumber.Length && 0 + i < line.Length; i++)
             {
-                line[1 + i] = factureNumber[i];
+                line[0 + i] = factureNumber[i];
             }
 
             var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length && 9 + i < line.Length; i++)
+            for (int i = 0; i < codeAct.Length && 8 + i < line.Length; i++)
             {
-                line[9 + i] = codeAct[i];
+                line[8 + i] = codeAct[i];
             }
 
             var decisionNumber = FormatDecisionNumber(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < decisionNumber.Length && 13 + i < line.Length; i++)
+            for (int i = 0; i < decisionNumber.Length && 12 + i < line.Length; i++)
             {
-                line[13 + i] = decisionNumber[i];
+                line[12 + i] = decisionNumber[i];
             }
 
-            var numeroAssuree = new string((row.NumeroAssuree ?? string.Empty).Where(char.IsDigit).ToArray()).PadLeft(12, '0');
-            for (int i = 0; i < numeroAssuree.Length && 23 + i < line.Length; i++)
+            var numeroAssuree = new string((row.NumeroAssuree ?? string.Empty).Where(char.IsDigit).ToArray()).PadLeft(13, '0');
+            for (int i = 0; i < numeroAssuree.Length && 22 + i < line.Length; i++)
             {
-                line[23 + i] = numeroAssuree[i];
+                line[22 + i] = numeroAssuree[i];
             }
 
             var codeQualite = "003";
@@ -1187,16 +1186,16 @@ public class FinanceController : ControllerBase
             }
 
             var tvaMillimes = ttcMillimes - htMillimes;
-            var tvaText = tvaMillimes.ToString().PadLeft(7, '0');
+            var tvaText = tvaMillimes.ToString().PadLeft(10, '0');
             for (int i = 0; i < tvaText.Length && 77 + i < line.Length; i++)
             {
                 line[77 + i] = tvaText[i];
             }
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            for (int i = 0; i < factureDate.Length && 84 + i < line.Length; i++)
+            for (int i = 0; i < factureDate.Length && 87 + i < line.Length; i++)
             {
-                line[84 + i] = factureDate[i];
+                line[87 + i] = factureDate[i];
             }
 
             textBuilder.AppendLine(new string(line));
