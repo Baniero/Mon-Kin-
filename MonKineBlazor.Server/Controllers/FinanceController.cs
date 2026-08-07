@@ -1023,7 +1023,7 @@ public class FinanceController : ControllerBase
             }
         }
 
-        var rows = new List<(string FactureNumber, string CodeBureau, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, decimal TotalTTC)>();
+        var rows = new List<(string FactureNumber, string CodeBureau, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, DateTime? DateFacture, decimal TotalTTC)>();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
@@ -1034,6 +1034,7 @@ public class FinanceController : ControllerBase
                 COALESCE(pp.nb_seances, 0),
                 pp.date_debut,
                 pp.date_fin,
+                pp.date_debut,
                 COALESCE(pp.prix_ttc, 0)
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
@@ -1061,7 +1062,8 @@ public class FinanceController : ControllerBase
                     NbSeances: reader.GetInt32(4),
                     DateDebut: reader.IsDBNull(5) ? null : reader.GetDateTime(5),
                     DateFin: reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    TotalTTC: reader.GetDecimal(7)
+                    DateFacture: reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    TotalTTC: reader.GetDecimal(8)
                 )
             );
         }
