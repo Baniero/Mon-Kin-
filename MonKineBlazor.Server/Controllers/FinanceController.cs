@@ -428,31 +428,33 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
         }
 
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        using (var reader = cmd.ExecuteReader())
         {
-            programs.Add(new CnamProgramInvoiceDto
+            while (reader.Read())
             {
-                ProgramId = reader.GetInt32(0),
-                PatientId = reader.GetInt32(1),
-                PatientName = reader.GetString(2),
-                CodePatient = reader.GetString(3),
-                NumeroAssuree = reader.GetString(4),
-                Couverture = reader.GetString(5),
-                Titre = reader.GetString(6),
-                NatureSeances = reader.GetString(7),
-                NbSeances = reader.GetInt32(8),
-                DureeSeanceMinutes = reader.GetInt32(9),
-                DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
-                PrixUnitaire = reader.GetDecimal(12),
-                PrixTTC = reader.GetDecimal(13),
-                CodeBureau = reader.GetString(14),
-                Annee = reader.GetString(15),
-                NumeroDecision = reader.GetString(16),
-                NumeroOrdre = reader.GetString(17),
-                FactureNumber = null
-            });
+                programs.Add(new CnamProgramInvoiceDto
+                {
+                    ProgramId = reader.GetInt32(0),
+                    PatientId = reader.GetInt32(1),
+                    PatientName = reader.GetString(2),
+                    CodePatient = reader.GetString(3),
+                    NumeroAssuree = reader.GetString(4),
+                    Couverture = reader.GetString(5),
+                    Titre = reader.GetString(6),
+                    NatureSeances = reader.GetString(7),
+                    NbSeances = reader.GetInt32(8),
+                    DureeSeanceMinutes = reader.GetInt32(9),
+                    DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                    DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                    PrixUnitaire = reader.GetDecimal(12),
+                    PrixTTC = reader.GetDecimal(13),
+                    CodeBureau = reader.GetString(14),
+                    Annee = reader.GetString(15),
+                    NumeroDecision = reader.GetString(16),
+                    NumeroOrdre = reader.GetString(17),
+                    FactureNumber = null
+                });
+            }
         }
 
         var executedNumbers = new Dictionary<(int? CabinetId, int Year), int>();
@@ -762,6 +764,7 @@ public class FinanceController : ControllerBase
     }
 
     [HttpPost("cnam-bordereau/execute")]
+    [HttpPost("cnam-bordereau-execute")]
     [Consumes("application/json")]
     public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau([FromBody] CnamBordereauExecuteRequestDto request)
         {

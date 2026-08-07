@@ -580,7 +580,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau/execute", new CnamBordereauExecuteRequestDto
+            var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute", new CnamBordereauExecuteRequestDto
             {
                 ProgramId = entry.ProgramId,
                 ExecutedBy = "Web"
