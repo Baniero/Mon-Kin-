@@ -47,6 +47,18 @@
             document.body.removeChild(link);
         };
 
+        window.downloadTextFile = (filename, textContent, mimeType = 'text/plain') => {
+            const blob = new Blob([textContent], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        };
+
         window.printElement = (elementId) => {
             const element = document.getElementById(elementId);
             if (!element) {

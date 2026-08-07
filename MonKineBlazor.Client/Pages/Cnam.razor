@@ -197,7 +197,10 @@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Bordereau CNAM</span>
-            <button class="btn btn-outline-secondary" @onclick="ExportBordereauPdf" disabled="@(!cnamBordereau.Any())">Exporter Bordereau</button>
+            <div>
+                <button class="btn btn-outline-secondary me-2" @onclick="ExportBordereauPdf" disabled="@(!cnamBordereau.Any())">Exporter Bordereau</button>
+                <button class="btn btn-outline-secondary" @onclick="ExportBordereauTxt" disabled="@(!cnamBordereau.Any())">Exporter TXT</button>
+            </div>
         </div>
         <div class="card-body">
             <h5>Factures à exécuter</h5>
@@ -536,6 +539,37 @@
         catch (Exception ex)
         {
             errorMessage = $"Erreur lors de l'export PDF : {ex.Message}";
+        }
+    }
+
+    private async Task ExportBordereauTxt()
+    {
+        if (!cnamBordereau.Any())
+        {
+            errorMessage = "Aucun bordereau à exporter.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}");
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent);
+            successMessage = "Fichier texte bordereau généré.";
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = $"Erreur lors du téléchargement du fichier texte : {httpEx.Message}";
+        }
+        catch (JSException jsEx)
+        {
+            errorMessage = $"Erreur lors de la génération du fichier texte : {jsEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur inattendue : {ex.Message}";
         }
     }
 

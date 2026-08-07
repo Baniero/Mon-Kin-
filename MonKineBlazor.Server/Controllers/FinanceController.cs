@@ -918,6 +918,248 @@ public class FinanceController : ControllerBase
             return Ok(executedEntry);
         }
 
+    [HttpGet("cnam-bordereau-text")]
+    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        var cabinet = new CabinetInfoDto();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cabinetCmd = conn.CreateCommand();
+        cabinetCmd.CommandText = @"
+            SELECT code_cnam, numero_employeur
+            FROM cabinets
+            WHERE id = @cabinetId
+            LIMIT 1
+        ";
+        cabinetCmd.Parameters.AddWithValue("@cabinetId", currentCabinetId ?? 0);
+
+        using var cabinetReader = cabinetCmd.ExecuteReader();
+        if (cabinetReader.Read())
+        {
+            cabinet.CodeCnam = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
+            cabinet.NumeroEmployeur = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
+        }
+        else
+        {
+            cabinet.CodeCnam = string.Empty;
+            cabinet.NumeroEmployeur = string.Empty;
+        }
+
+        var rows = new List<(string FactureNumber, string CodeBureau, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, decimal TotalTTC)>();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                COALESCE(e.facture_number, ''),
+                COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.numero_decision, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(pp.nb_seances, 0),
+                pp.date_debut,
+                pp.date_fin,
+                COALESCE(pp.prix_ttc, 0)
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE DATE(e.executed_at) BETWEEN @start AND @end
+        ";
+        if (!IsAdmin())
+        {
+            cmd.CommandText += " AND p.cabinet_id = @cabinet_id";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+        cmd.CommandText += " ORDER BY e.executed_at, e.facture_number";
+        cmd.Parameters.AddWithValue("@start", start.Date);
+        cmd.Parameters.AddWithValue("@end", end.Date);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(
+                (
+                    FactureNumber: reader.GetString(0),
+                    CodeBureau: reader.GetString(1),
+                    NumeroDecision: reader.GetString(2),
+                    NumeroAssuree: reader.GetString(3),
+                    NbSeances: reader.GetInt32(4),
+                    DateDebut: reader.IsDBNull(5) ? null : reader.GetDateTime(5),
+                    DateFin: reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    TotalTTC: reader.GetDecimal(7)
+                )
+            );
+        }
+
+        var textBuilder = new System.Text.StringBuilder();
+        var currentYear = DateTime.Today.Year;
+        var rawCabinetCode = (cabinet.CodeCnam ?? string.Empty).Replace("/", string.Empty);
+        var cabinetCode = rawCabinetCode.Length > 10 ? rawCabinetCode.Substring(0, 10) : rawCabinetCode.PadRight(10, ' ');
+        var employerNumber = (cabinet.NumeroEmployeur ?? string.Empty).PadLeft(10, '0');
+        var bordereauNumber = rows.Count.ToString("000");
+
+        // Header line
+        var header = new char[135];
+        for (int i = 0; i < header.Length; i++) header[i] = '0';
+        header[0] = '1';
+        var yearText = currentYear.ToString("0000");
+        header[1] = yearText[0];
+        header[2] = yearText[1];
+        header[3] = yearText[2];
+        header[4] = yearText[3];
+        header[5] = bordereauNumber[0];
+        header[6] = bordereauNumber[1];
+        header[7] = bordereauNumber[2];
+        for (int i = 0; i < cabinetCode.Length && 8 + i < header.Length; i++)
+        {
+            header[8 + i] = cabinetCode[i];
+        }
+        for (int i = 0; i < employerNumber.Length && 64 + i < header.Length; i++)
+        {
+            header[64 + i] = employerNumber[i];
+        }
+        if (header.Length > 70)
+        {
+            header[69] = '1';
+            header[70] = '5';
+        }
+        if (header.Length > 93)
+        {
+            header[90] = '2';
+            header[91] = '2';
+            header[92] = '7';
+            header[93] = '7';
+        }
+        textBuilder.AppendLine(new string(header));
+
+        foreach (var row in rows)
+        {
+            var line = new char[135];
+            for (int i = 0; i < line.Length; i++) line[i] = '0';
+            line[0] = '2';
+            line[1] = yearText[0];
+            line[2] = yearText[1];
+            line[3] = yearText[2];
+            line[4] = yearText[3];
+            line[5] = bordereauNumber[0];
+            line[6] = bordereauNumber[1];
+            line[7] = bordereauNumber[2];
+
+            for (int i = 0; i < cabinetCode.Length && 8 + i < line.Length; i++)
+            {
+                line[8 + i] = cabinetCode[i];
+            }
+            // 8 spaces after code CNAM, nothing to assign because default is '0', we need spaces
+            for (int i = 0; i < 8 && 18 + i < line.Length; i++)
+            {
+                line[18 + i] = ' ';
+            }
+
+            var factureNumber = (row.FactureNumber ?? string.Empty).PadRight(7, ' ');
+            for (int i = 0; i < factureNumber.Length && 26 + i < line.Length; i++)
+            {
+                line[26 + i] = factureNumber[i];
+            }
+
+            var codeBordereau = (row.CodeBureau ?? string.Empty).PadLeft(2, '0');
+            for (int i = 0; i < 2 && 33 + i < line.Length; i++)
+            {
+                line[33 + i] = codeBordereau[i];
+            }
+
+            if (line.Length > 35)
+            {
+                line[35] = '7';
+                line[36] = '5';
+            }
+
+            var priseEnChargeYear = (row.DateDebut ?? DateTime.Today).Year.ToString("0000");
+            for (int i = 0; i < 4 && 37 + i < line.Length; i++)
+            {
+                line[37 + i] = priseEnChargeYear[i];
+            }
+
+            var numeroDecision = (row.NumeroDecision ?? string.Empty).PadLeft(6, '0');
+            for (int i = 0; i < 6 && 41 + i < line.Length; i++)
+            {
+                line[41 + i] = numeroDecision[i];
+            }
+
+            var numeroAssuree = (row.NumeroAssuree ?? string.Empty);
+            if (numeroAssuree.Length <= 12)
+            {
+                numeroAssuree = numeroAssuree.PadLeft(12, '0');
+            }
+            for (int i = 0; i < numeroAssuree.Length && 47 + i < line.Length; i++)
+            {
+                line[47 + i] = numeroAssuree[i];
+            }
+
+            if (line.Length > 59)
+            {
+                line[59] = '0';
+                line[60] = '0';
+                line[61] = '3';
+            }
+
+            var nbSeances = row.NbSeances.ToString("000");
+            for (int i = 0; i < 3 && 62 + i < line.Length; i++)
+            {
+                line[62 + i] = nbSeances[i];
+            }
+
+            var debut = (row.DateDebut ?? DateTime.MinValue);
+            var debutText = debut == DateTime.MinValue ? new string('0', 8) : debut.ToString("yyyyMMdd");
+            for (int i = 0; i < 8 && 65 + i < line.Length; i++)
+            {
+                line[65 + i] = debutText[i];
+            }
+
+            var fin = (row.DateFin ?? DateTime.MinValue);
+            var finText = fin == DateTime.MinValue ? new string('0', 8) : fin.ToString("yyyyMMdd");
+            for (int i = 0; i < 8 && 73 + i < line.Length; i++)
+            {
+                line[73 + i] = finText[i];
+            }
+
+            var prixTtcCents = (long)Math.Round(row.TotalTTC * 100m, MidpointRounding.AwayFromZero);
+            var prixTtcText = prixTtcCents.ToString().PadLeft(10, '0');
+            for (int i = 0; i < prixTtcText.Length && 81 + i < line.Length; i++)
+            {
+                line[81 + i] = prixTtcText[i];
+            }
+
+            var prixHt = Math.Round(row.TotalTTC / 1.07m, 2);
+            var prixHtCents = (long)Math.Round(prixHt * 100m, MidpointRounding.AwayFromZero);
+            var prixHtText = prixHtCents.ToString().PadLeft(10, '0');
+            for (int i = 0; i < prixHtText.Length && 91 + i < line.Length; i++)
+            {
+                line[91 + i] = prixHtText[i];
+            }
+
+            var tvaCents = (long)Math.Round((row.TotalTTC - prixHt) * 100m, MidpointRounding.AwayFromZero);
+            var tvaText = tvaCents.ToString().PadLeft(7, '0');
+            for (int i = 0; i < tvaText.Length && 101 + i < line.Length; i++)
+            {
+                line[101 + i] = tvaText[i];
+            }
+
+            textBuilder.AppendLine(new string(line));
+        }
+
+        return Ok(textBuilder.ToString());
+    }
+
     [HttpGet("advance-lots/patient/{patientId}")]
     public ActionResult<IEnumerable<AdvanceLotDto>> GetAdvanceLots(int patientId)
     {
