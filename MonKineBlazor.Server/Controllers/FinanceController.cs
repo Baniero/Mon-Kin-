@@ -1035,7 +1035,7 @@ public class FinanceController : ControllerBase
                 COALESCE(pp.nb_seances, 0),
                 pp.date_debut,
                 pp.date_fin,
-                COALESCE(pp.date_facturation, pp.date_debut),
+                e.executed_at,
                 COALESCE(pp.prix_ttc, 0)
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
