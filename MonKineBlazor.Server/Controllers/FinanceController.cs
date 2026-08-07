@@ -924,6 +924,7 @@ public class FinanceController : ControllerBase
         }
 
     [HttpOptions("cnam-bordereau/execute")]
+    [HttpOptions("cnam-bordereau-execute")]
     public IActionResult OptionsCnamBordereauExecute()
     {
         return Ok();
