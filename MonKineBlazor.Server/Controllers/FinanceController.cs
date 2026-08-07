@@ -762,8 +762,13 @@ public class FinanceController : ControllerBase
     }
 
     [HttpPost("cnam-bordereau/execute")]
-    public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau(CnamBordereauExecuteRequestDto request)
+    [Consumes("application/json")]
+    public ActionResult<CnamBordereauEntryDto> ExecuteCnamBordereau([FromBody] CnamBordereauExecuteRequestDto request)
         {
+            if (request == null)
+            {
+                return BadRequest("Le corps de la requête est requis.");
+            }
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
             using var transaction = conn.BeginTransaction();
@@ -1006,7 +1011,7 @@ public class FinanceController : ControllerBase
         var textBuilder = new System.Text.StringBuilder();
         var currentYear = DateTime.Today.Year;
         var rawCabinetCode = (cabinet.CodeCnam ?? string.Empty).Replace("/", string.Empty);
-        var cabinetCode = rawCabinetCode.Length > 10 ? rawCabinetCode.Substring(0, 10) : rawCabinetCode.PadRight(10, ' ');
+        var cabinetCode = rawCabinetCode.Length > 10 ? rawCabinetCode.Substring(0, 10) : rawCabinetCode.PadLeft(10, '0');
         var employerNumber = (cabinet.NumeroEmployeur ?? string.Empty).PadLeft(10, '0');
         var bordereauNumber = rows.Count.ToString("000");
 
