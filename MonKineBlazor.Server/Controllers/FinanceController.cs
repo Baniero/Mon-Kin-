@@ -946,16 +946,18 @@ public class FinanceController : ControllerBase
         ";
         cabinetCmd.Parameters.AddWithValue("@cabinetId", currentCabinetId ?? 0);
 
-        using var cabinetReader = cabinetCmd.ExecuteReader();
-        if (cabinetReader.Read())
+        using (var cabinetReader = cabinetCmd.ExecuteReader())
         {
-            cabinet.CodeCnam = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
-            cabinet.NumeroEmployeur = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
-        }
-        else
-        {
-            cabinet.CodeCnam = string.Empty;
-            cabinet.NumeroEmployeur = string.Empty;
+            if (cabinetReader.Read())
+            {
+                cabinet.CodeCnam = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
+                cabinet.NumeroEmployeur = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
+            }
+            else
+            {
+                cabinet.CodeCnam = string.Empty;
+                cabinet.NumeroEmployeur = string.Empty;
+            }
         }
 
         var rows = new List<(string FactureNumber, string CodeBureau, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, decimal TotalTTC)>();
