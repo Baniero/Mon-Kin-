@@ -285,7 +285,7 @@
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#000000';
-            ctx.font = '12pt "Noto Naskh Arabic", Arial, sans-serif';
+            ctx.font = '10pt "Noto Naskh Arabic", Arial, sans-serif';
             ctx.textAlign = 'right';
             ctx.direction = 'rtl';
 
@@ -334,6 +334,7 @@
             ];
 
             const rightLines = [
+                reshapeArabicText(getString(cabinet, 'NomKineArabe', 'nomKineArabe')),
                 reshapeArabicText(getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe')),
                 reshapeArabicText(getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe')),
                 reshapeArabicText(getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe')),
