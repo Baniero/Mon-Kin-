@@ -923,6 +923,12 @@ public class FinanceController : ControllerBase
             return Ok(executedEntry);
         }
 
+    [HttpOptions("cnam-bordereau/execute")]
+    public IActionResult OptionsCnamBordereauExecute()
+    {
+        return Ok();
+    }
+
     [HttpGet("cnam-bordereau-text")]
     public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end)
     {
