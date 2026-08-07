@@ -943,29 +943,32 @@ public class FinanceController : ControllerBase
                 fetchCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
             }
 
-            using var reader = fetchCmd.ExecuteReader();
-            if (!reader.Read())
+            CnamBordereauEntryDto executedEntry;
+            using (var reader = fetchCmd.ExecuteReader())
             {
-                _logger.LogWarning("ExecuteCnamBordereau fetch returned no row. ProgramId={ProgramId}, UserId={UserId}, CabinetId={CabinetId}",
-                    request.ProgramId,
-                    currentUser.Id,
-                    currentUser.CabinetId);
-                return NotFound();
-            }
+                if (!reader.Read())
+                {
+                    _logger.LogWarning("ExecuteCnamBordereau fetch returned no row. ProgramId={ProgramId}, UserId={UserId}, CabinetId={CabinetId}",
+                        request.ProgramId,
+                        currentUser.Id,
+                        currentUser.CabinetId);
+                    return NotFound();
+                }
 
-            var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
-            var executedEntry = new CnamBordereauEntryDto
-            {
-                ProgramId = reader.GetInt32(0),
-                FactureNumber = reader.GetString(8),
-                DateFacture = dateDebut,
-                CodePatient = reader.GetString(2),
-                NumeroAssuree = reader.GetString(3),
-                PatientName = reader.GetString(4),
-                TotalTTC = reader.GetDecimal(5),
-                ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                ExecutedBy = reader.GetString(7)
-            };
+                var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+                executedEntry = new CnamBordereauEntryDto
+                {
+                    ProgramId = reader.GetInt32(0),
+                    FactureNumber = reader.GetString(8),
+                    DateFacture = dateDebut,
+                    CodePatient = reader.GetString(2),
+                    NumeroAssuree = reader.GetString(3),
+                    PatientName = reader.GetString(4),
+                    TotalTTC = reader.GetDecimal(5),
+                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    ExecutedBy = reader.GetString(7)
+                };
+            }
 
             transaction.Commit();
             return Ok(executedEntry);
