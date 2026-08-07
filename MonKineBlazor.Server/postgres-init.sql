@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS cabinets (
     id SERIAL PRIMARY KEY,
     nom_cabinet TEXT NOT NULL,
     code_etablissement TEXT,
+    numero_employeur TEXT,
     matricule_fiscal TEXT,
     nom_etablissement TEXT,
     racine TEXT,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS cabinets (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS numero_employeur TEXT;
 ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS telephone TEXT;
 ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS rib TEXT;
 
