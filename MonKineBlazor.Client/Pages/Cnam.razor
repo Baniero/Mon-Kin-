@@ -580,16 +580,16 @@
 
     private async Task ExportExecutedBordereauPdf(CnamBordereauEntryDto row)
     {
-        if (!cnamBordereauExecuted.Any())
-        {
-            errorMessage = "Aucun bordereau exécuté à exporter.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
-        var totalTTC = cnamBordereauExecuted.Sum(r => r.TotalTTC);
+        if (row == null)
+        {
+            errorMessage = "Aucune ligne de bordereau exécuté sélectionnée.";
+            return;
+        }
+
+        var totalTTC = row.TotalTTC;
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
         var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{cnamBordereauExecuted.Count:000}";
@@ -602,29 +602,33 @@
             {
                 Date = DateTime.Today.ToString("dd/MM/yyyy"),
                 Centre = cabinetInfo.NomEtablissement ?? string.Empty,
-                NbreSeances = cnamBordereauExecuted.Count,
+                NbreSeances = 1,
                 MontantHT = totalHT,
                 Annee = cnamStart.Year.ToString(),
-                NbFactures = cnamBordereauExecuted.Count,
+                NbFactures = 1,
                 MontantTotalTTC = totalTTC,
                 MontantTVA = totalTVA
             },
-            rows = cnamBordereauExecuted.Select(r => new
+            rows = new[]
             {
-                r.FactureNumber,
-                DateFacture = r.DateFacture?.ToString("dd/MM/yyyy"),
-                PriseEnCharge = r.CodePatient ?? string.Empty,
-                r.NumeroAssuree,
-                r.PatientName,
-                MontantHT = r.TotalTTC / 1.07m,
-                MontantTVA = r.TotalTTC - (r.TotalTTC / 1.07m),
-                MontantTTC = r.TotalTTC
-            }).ToList()
+                new
+                {
+                    row.FactureNumber,
+                    DateFacture = row.DateFacture?.ToString("dd/MM/yyyy"),
+                    PriseEnCharge = row.CodePatient ?? string.Empty,
+                    row.NumeroAssuree,
+                    row.PatientName,
+                    MontantHT = row.TotalTTC / 1.07m,
+                    MontantTVA = row.TotalTTC - (row.TotalTTC / 1.07m),
+                    MontantTTC = row.TotalTTC
+                }
+            }
         };
 
         try
         {
-            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
+            var safeFactureNumber = SanitizeFileName(row.FactureNumber ?? "facture");
+            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{safeFactureNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
             successMessage = "Bordereau PDF exécuté généré.";
         }
         catch (JSException jsEx)
@@ -639,24 +643,20 @@
 
     private async Task ExportExecutedBordereauTxt(CnamBordereauEntryDto row)
     {
-        if (!cnamBordereauExecuted.Any())
-        {
-            errorMessage = "Aucun bordereau exécuté à exporter.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
+        if (row == null)
+        {
+            errorMessage = "Aucune ligne de bordereau exécuté sélectionnée.";
+            return;
+        }
+
         try
         {
-            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}");
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent);
+            var textContent = BuildExecutedBordereauText(row);
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{row.FactureNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau exécuté généré.";
-        }
-        catch (HttpRequestException httpEx)
-        {
-            errorMessage = $"Erreur lors du téléchargement du fichier texte : {httpEx.Message}";
         }
         catch (JSException jsEx)
         {
@@ -666,6 +666,26 @@
         {
             errorMessage = $"Erreur inattendue : {ex.Message}";
         }
+    }
+
+    private string BuildExecutedBordereauText(CnamBordereauEntryDto row)
+    {
+        var lines = new List<string>();
+        lines.Add($"Facture : {row.FactureNumber}");
+        lines.Add($"Date facture : {row.DateFacture?.ToString("dd/MM/yyyy")}");
+        lines.Add($"N° assuré : {row.NumeroAssuree}");
+        lines.Add($"Patient : {row.PatientName}");
+        lines.Add($"Montant HT : {(row.TotalTTC / 1.07m):F3}");
+        lines.Add($"Montant TVA : {(row.TotalTTC - (row.TotalTTC / 1.07m)):F3}");
+        lines.Add($"Montant TTC : {row.TotalTTC:F3}");
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private static string SanitizeFileName(string filename)
+    {
+        var invalidChars = System.IO.Path.GetInvalidFileNameChars();
+        var sanitized = string.Concat(filename.Select(ch => invalidChars.Contains(ch) ? '_' : ch));
+        return string.IsNullOrWhiteSpace(sanitized) ? "export" : sanitized;
     }
 
     private async Task ExecuteBordereau(CnamBordereauEntryDto entry)
