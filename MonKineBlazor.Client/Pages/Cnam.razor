@@ -269,6 +269,7 @@
                                 <th>Total TTC</th>
                                 <th>Date exécution</th>
                                 <th>Exécuté par</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -283,6 +284,10 @@
                                     <td>@($"{row.TotalTTC:F2} DT")</td>
                                     <td>@row.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td>@row.ExecutedBy</td>
+                                    <td class="text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="ExportBordereauPdf">Exporter Bordereau</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ExportBordereauTxt">Exporter TXT</button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
