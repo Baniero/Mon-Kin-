@@ -770,17 +770,25 @@ public class FinanceController : ControllerBase
         {
             if (request == null)
             {
+                _logger.LogWarning("ExecuteCnamBordereau called with null request.");
                 return BadRequest("Le corps de la requête est requis.");
             }
-            using var conn = DatabaseConnectionProvider.CreateConnection();
-            conn.Open();
-            using var transaction = conn.BeginTransaction();
 
             var currentUser = GetCurrentUser();
+            _logger.LogInformation("ExecuteCnamBordereau called. ProgramId={ProgramId}, ExecutedBy={ExecutedBy}, UserId={UserId}, CabinetId={CabinetId}",
+                request.ProgramId,
+                request.ExecutedBy,
+                currentUser?.Id ?? -1,
+                currentUser?.CabinetId);
+
             if (currentUser == null)
             {
                 return Unauthorized();
             }
+
+            using var conn = DatabaseConnectionProvider.CreateConnection();
+            conn.Open();
+            using var transaction = conn.BeginTransaction();
 
             int? currentCabinetId = currentUser.CabinetId;
             if (!IsAdmin() && !currentCabinetId.HasValue)
@@ -824,6 +832,10 @@ public class FinanceController : ControllerBase
             var cabinetIdObj = checkCmd.ExecuteScalar();
             if (cabinetIdObj == null || cabinetIdObj == DBNull.Value)
             {
+                _logger.LogWarning("ExecuteCnamBordereau failed: programme introuvable ou déjà exécuté. ProgramId={ProgramId}, UserId={UserId}, CabinetId={CabinetId}",
+                    request.ProgramId,
+                    currentUser.Id,
+                    currentUser.CabinetId);
                 return BadRequest("Programme introuvable ou déjà exécuté.");
             }
 
@@ -856,7 +868,11 @@ public class FinanceController : ControllerBase
             insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
             insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
-            insertCmd.ExecuteNonQuery();
+            var rowsAffected = insertCmd.ExecuteNonQuery();
+            _logger.LogInformation("ExecuteCnamBordereau insert executed. ProgramId={ProgramId}, FactureNumber={FactureNumber}, RowsAffected={RowsAffected}",
+                request.ProgramId,
+                factureNumber,
+                rowsAffected);
 
             using var fetchCmd = conn.CreateCommand();
             fetchCmd.Transaction = transaction;
@@ -905,6 +921,10 @@ public class FinanceController : ControllerBase
             using var reader = fetchCmd.ExecuteReader();
             if (!reader.Read())
             {
+                _logger.LogWarning("ExecuteCnamBordereau fetch returned no row. ProgramId={ProgramId}, UserId={UserId}, CabinetId={CabinetId}",
+                    request.ProgramId,
+                    currentUser.Id,
+                    currentUser.CabinetId);
                 return NotFound();
             }
 
