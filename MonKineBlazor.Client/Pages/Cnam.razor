@@ -643,20 +643,24 @@
 
     private async Task ExportExecutedBordereauTxt(CnamBordereauEntryDto row)
     {
-        errorMessage = null;
-        successMessage = null;
-
-        if (row == null)
+        if (!cnamBordereauExecuted.Any())
         {
-            errorMessage = "Aucune ligne de bordereau exécuté sélectionnée.";
+            errorMessage = "Aucun bordereau exécuté à exporter.";
             return;
         }
 
+        errorMessage = null;
+        successMessage = null;
+
         try
         {
-            var textContent = BuildExecutedBordereauText(row);
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{row.FactureNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
+            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}");
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau exécuté généré.";
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = $"Erreur lors du téléchargement du fichier texte : {httpEx.Message}";
         }
         catch (JSException jsEx)
         {
@@ -666,19 +670,6 @@
         {
             errorMessage = $"Erreur inattendue : {ex.Message}";
         }
-    }
-
-    private string BuildExecutedBordereauText(CnamBordereauEntryDto row)
-    {
-        var lines = new List<string>();
-        lines.Add($"Facture : {row.FactureNumber}");
-        lines.Add($"Date facture : {row.DateFacture?.ToString("dd/MM/yyyy")}");
-        lines.Add($"N° assuré : {row.NumeroAssuree}");
-        lines.Add($"Patient : {row.PatientName}");
-        lines.Add($"Montant HT : {(row.TotalTTC / 1.07m):F3}");
-        lines.Add($"Montant TVA : {(row.TotalTTC - (row.TotalTTC / 1.07m)):F3}");
-        lines.Add($"Montant TTC : {row.TotalTTC:F3}");
-        return string.Join(Environment.NewLine, lines);
     }
 
     private static string SanitizeFileName(string filename)
