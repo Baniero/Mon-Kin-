@@ -939,7 +939,7 @@ public class FinanceController : ControllerBase
 
         using var cabinetCmd = conn.CreateCommand();
         cabinetCmd.CommandText = @"
-            SELECT code_cnam, numero_employeur
+            SELECT code_etablissement, numero_employeur
             FROM cabinets
             WHERE id = @cabinetId
             LIMIT 1
