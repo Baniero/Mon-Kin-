@@ -1,5 +1,7 @@
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MonKineBlazor.Server.Data;
 using MonKineBlazor.Shared.Models;
 using Npgsql;
@@ -17,13 +19,18 @@ public static class UserContextHelper
             return null;
         }
 
+        var logger = httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("UserContextHelper");
+
         if (!httpContext.Request.Headers.TryGetValue(UserIdHeader, out var headerValues))
         {
+            logger?.LogWarning("GetCurrentUser failed: missing X-User-Id header for request {Method} {Path}.", httpContext.Request.Method, httpContext.Request.Path);
             return null;
         }
 
-        if (!int.TryParse(headerValues.FirstOrDefault(), out var userId))
+        var headerValue = headerValues.FirstOrDefault();
+        if (!int.TryParse(headerValue, out var userId))
         {
+            logger?.LogWarning("GetCurrentUser failed: invalid X-User-Id header value '{HeaderValue}' for request {Method} {Path}.", headerValue, httpContext.Request.Method, httpContext.Request.Path);
             return null;
         }
 
@@ -41,6 +48,7 @@ public static class UserContextHelper
         using var reader = cmd.ExecuteReader();
         if (!reader.Read())
         {
+            logger?.LogWarning("GetCurrentUser failed: no user found for X-User-Id={UserId} on request {Method} {Path}.", userId, httpContext.Request.Method, httpContext.Request.Path);
             return null;
         }
 

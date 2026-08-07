@@ -783,6 +783,9 @@ public class FinanceController : ControllerBase
 
             if (currentUser == null)
             {
+                var hasHeader = Request.Headers.ContainsKey("X-User-Id");
+                var headerValue = hasHeader ? Request.Headers["X-User-Id"].FirstOrDefault() : string.Empty;
+                _logger.LogWarning("ExecuteCnamBordereau unauthorized: current user is null. X-User-Id present={HasHeader}, value={HeaderValue}", hasHeader, headerValue);
                 return Unauthorized();
             }
 
