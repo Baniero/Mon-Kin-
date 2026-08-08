@@ -428,14 +428,10 @@ else
                                         <label class="form-label">N° décision</label>
                                         <InputText class="form-control" @bind-Value="newProgram.NumeroDecision" />
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">N° ordre</label>
-                                        <InputText class="form-control" @bind-Value="newProgram.NumeroOrdre" />
-                                    </div>
                                 }
                                 <div class="col-md-3">
                                     <label class="form-label">Prix Unitaire</label>
-                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixUnitaire" step="0.001" @onchange="_ => RecalculateProgram()" />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixUnitaire" disabled />
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Prix Espèce</label>
@@ -455,7 +451,7 @@ else
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Prix TTC</label>
-                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixTTC" disabled />
+                                    <InputNumber class="form-control" @bind-Value="newProgram.PrixTTC" step="0.001" @onchange="_ => RecalculateProgram()" />
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label">Objectifs</label>
@@ -994,10 +990,31 @@ else
             newProgram.DateFin = null;
         }
 
-        newProgram.PrixUnitaire = Math.Round(newProgram.PrixUnitaire, 3);
-        newProgram.PrixHT = Math.Round(newProgram.PrixUnitaire * newProgram.NbSeances, 3);
-        newProgram.MontantTVA = Math.Round(newProgram.PrixHT * (newProgram.TVA / 100m), 2);
-        newProgram.PrixTTC = Math.Round(newProgram.PrixHT + newProgram.MontantTVA, 2);
+        if (newProgram.PrixTTC < 0)
+        {
+            newProgram.PrixTTC = 0;
+        }
+
+        if (newProgram.TVA < 0)
+        {
+            newProgram.TVA = 0;
+        }
+
+        if (newProgram.TVA == 0)
+        {
+            newProgram.PrixHT = Math.Round(newProgram.PrixTTC, 3);
+            newProgram.MontantTVA = 0;
+        }
+        else
+        {
+            var rate = 1 + (newProgram.TVA / 100m);
+            newProgram.PrixHT = Math.Round(newProgram.PrixTTC / rate, 3);
+            newProgram.MontantTVA = Math.Round(newProgram.PrixTTC - newProgram.PrixHT, 2);
+        }
+
+        newProgram.PrixUnitaire = newProgram.NbSeances > 0
+            ? Math.Round(newProgram.PrixHT / newProgram.NbSeances, 3)
+            : 0;
     }
 
     private void ResetProgramForm()
