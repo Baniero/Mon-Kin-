@@ -14,6 +14,19 @@ public class PatientsController : ControllerBase
     private bool IsAdmin() => UserContextHelper.IsAdmin(HttpContext);
     private bool IsPatientAccessible(int patientId) => UserContextHelper.IsPatientAccessible(HttpContext, patientId);
 
+    private static string ComputeNumeroAssuree(string? racine, string? cle, string? numeroAssuree)
+    {
+        var cleanRacine = string.IsNullOrWhiteSpace(racine) ? string.Empty : racine.Trim();
+        var cleanCle = string.IsNullOrWhiteSpace(cle) ? string.Empty : cle.Trim();
+
+        if (!string.IsNullOrEmpty(cleanRacine) && !string.IsNullOrEmpty(cleanCle))
+        {
+            return $"{cleanRacine}/{cleanCle}";
+        }
+
+        return string.IsNullOrWhiteSpace(numeroAssuree) ? string.Empty : numeroAssuree.Trim();
+    }
+
     [HttpGet]
     public ActionResult<IEnumerable<PatientDto>> GetAll()
     {
@@ -110,7 +123,7 @@ public class PatientsController : ControllerBase
                 Racine = reader.GetString(13),
                 Cle = reader.GetString(14),
                 Qualite = reader.GetString(15),
-                NumeroAssuree = reader.GetString(16),
+                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
             });
         }
 
@@ -188,7 +201,7 @@ public class PatientsController : ControllerBase
             Racine = reader.GetString(13),
             Cle = reader.GetString(14),
             Qualite = reader.GetString(15),
-            NumeroAssuree = reader.GetString(16),
+            NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
         };
 
         return Ok(patient);
@@ -242,10 +255,11 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@telephone2", (object?)patient.Telephone2 ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@adresse", (object?)patient.Adresse ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@couverture", (object?)patient.Couverture ?? DBNull.Value);
+        var nAssureeValue = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
         cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@n_assuree", (object?)patient.NumeroAssuree ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n_assuree", (object?)nAssureeValue ?? DBNull.Value);
 
         var createdId = Convert.ToInt32(cmd.ExecuteScalar());
         patient.Id = createdId;
@@ -325,7 +339,8 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@n_assuree", (object?)patient.NumeroAssuree ?? DBNull.Value);
+        var nAssureeValue = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
+        cmd.Parameters.AddWithValue("@n_assuree", (object?)nAssureeValue ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         var rowsUpdated = cmd.ExecuteNonQuery();

@@ -151,7 +151,14 @@ else
                                             </div>
                                             <div class="col-md-3">
                                                 <label class="form-label">N° assurée</label>
-                                                <InputText class="form-control" @bind-Value="patientForm.NumeroAssuree" />
+                                                @if (isCnam)
+                                                {
+                                                    <input class="form-control" value="@ComputedNumeroAssuree" readonly />
+                                                }
+                                                else
+                                                {
+                                                    <InputText class="form-control" @bind-Value="patientForm.NumeroAssuree" />
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -705,7 +712,7 @@ else
             Racine = patient.Racine,
             Cle = patient.Cle,
             Qualite = patient.Qualite,
-            NumeroAssuree = patient.NumeroAssuree,
+            NumeroAssuree = FormatNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree),
         };
         isCnam = string.Equals(patient.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase);
     }
@@ -786,6 +793,21 @@ else
         return Math.Max(0, patientAdvanceTransactions.Sum(a => a.Amount) - patientFinanceDetails.AdvanceBalance);
     }
 
+    private string ComputedNumeroAssuree => FormatNumeroAssuree(patientForm.Racine, patientForm.Cle, patientForm.NumeroAssuree);
+
+    private static string FormatNumeroAssuree(string? racine, string? cle, string? fallback = null)
+    {
+        var cleanRacine = string.IsNullOrWhiteSpace(racine) ? string.Empty : racine.Trim();
+        var cleanCle = string.IsNullOrWhiteSpace(cle) ? string.Empty : cle.Trim();
+
+        if (!string.IsNullOrEmpty(cleanRacine) && !string.IsNullOrEmpty(cleanCle))
+        {
+            return $"{cleanRacine}/{cleanCle}";
+        }
+
+        return fallback ?? string.Empty;
+    }
+
     private async Task SavePatientAsync()
     {
         if (patientForm is null)
@@ -796,6 +818,7 @@ else
         if (patientForm is not null)
         {
             patientForm.Couverture = isCnam ? "CNAM" : "Civil payant";
+            patientForm.NumeroAssuree = FormatNumeroAssuree(patientForm.Racine, patientForm.Cle, patientForm.NumeroAssuree);
         }
 
         if (patientForm.Id == 0)
