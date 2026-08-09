@@ -191,7 +191,13 @@ public class CabinetsController : ControllerBase
     [HttpPut("{id}")]
     public IActionResult Update(int id, CabinetUpdateRequestDto request)
     {
-        if (!IsAdmin())
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && currentUser.CabinetId != id)
         {
             return Forbid();
         }

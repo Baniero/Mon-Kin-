@@ -1386,7 +1386,7 @@ public class FinanceController : ControllerBase
             for (int i = 0; i < 8; i++) line[10 + i] = codeCnam2[i];
             for (int i = 0; i < 2; i++) line[18 + i] = codeCnam3[i];
 
-            var exerciceYear = !string.IsNullOrWhiteSpace(row.Annee) && row.Annee.Length == 4 ? row.Annee : yearText;
+            var exerciceYear = DateTime.Today.Year.ToString("0000");
             for (int i = 0; i < 4; i++) line[20 + i] = exerciceYear[i];
 
             for (int i = 24; i <= 31; i++) line[i] = ' ';
