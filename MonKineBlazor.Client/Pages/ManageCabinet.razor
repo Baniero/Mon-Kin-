@@ -312,7 +312,9 @@ else
             NomKineArabe = cabinet.NomKineArabe,
             AdresseKineArabe = cabinet.AdresseKineArabe,
             Telephone = cabinet.Telephone,
-            Rib = cabinet.Rib
+            Rib = cabinet.Rib,
+            ProgrammeTypeOptions = cabinet.ProgrammeTypeOptions,
+            NatureSeancesOptions = cabinet.NatureSeancesOptions
         };
         showCabinetForm = true;
     }
@@ -346,7 +348,9 @@ else
                     NomKineArabe = cabinetForm.NomKineArabe,
                     AdresseKineArabe = cabinetForm.AdresseKineArabe,
                     Telephone = cabinetForm.Telephone,
-                    Rib = cabinetForm.Rib
+                    Rib = cabinetForm.Rib,
+                    ProgrammeTypeOptions = cabinetForm.ProgrammeTypeOptions,
+                    NatureSeancesOptions = cabinetForm.NatureSeancesOptions
                 };
                 response = await Http.PostAsJsonAsync("api/cabinets", createRequest);
             }
@@ -367,7 +371,9 @@ else
                     NomKineArabe = cabinetForm.NomKineArabe,
                     AdresseKineArabe = cabinetForm.AdresseKineArabe,
                     Telephone = cabinetForm.Telephone,
-                    Rib = cabinetForm.Rib
+                    Rib = cabinetForm.Rib,
+                    ProgrammeTypeOptions = cabinetForm.ProgrammeTypeOptions,
+                    NatureSeancesOptions = cabinetForm.NatureSeancesOptions
                 };
                 response = await Http.PutAsJsonAsync($"api/cabinets/{selectedCabinet.Id}", updateRequest);
             }

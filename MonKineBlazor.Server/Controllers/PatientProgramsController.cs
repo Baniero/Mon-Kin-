@@ -71,6 +71,7 @@ public class PatientProgramsController : ControllerBase
                 COALESCE(annee, ''),
                 COALESCE(numero_decision, ''),
                 COALESCE(numero_ordre, ''),
+                COALESCE(type_programme, ''),
                 COALESCE(prix_unitaire, 0),
                 COALESCE(prix_espece, 0),
                 COALESCE(prix_ht, 0),
@@ -106,14 +107,14 @@ public class PatientProgramsController : ControllerBase
                 NumeroOrdre = reader.GetString(12),
                 TypeProgramme = reader.GetString(13),
                 PrixUnitaire = reader.GetDecimal(14),
-                PrixEspece = reader.GetDecimal(14),
-                PrixHT = reader.GetDecimal(15),
-                TVA = reader.GetDecimal(16),
-                MontantTVA = reader.GetDecimal(17),
-                PrixTTC = reader.GetDecimal(18),
-                Statut = reader.GetString(19),
-                Objectifs = reader.GetString(20),
-                Remarques = reader.GetString(21),
+                PrixEspece = reader.GetDecimal(15),
+                PrixHT = reader.GetDecimal(16),
+                TVA = reader.GetDecimal(17),
+                MontantTVA = reader.GetDecimal(18),
+                PrixTTC = reader.GetDecimal(19),
+                Statut = reader.GetString(20),
+                Objectifs = reader.GetString(21),
+                Remarques = reader.GetString(22),
             });
         }
 
@@ -158,6 +159,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@annee", (object?)program.Annee ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_decision", (object?)program.NumeroDecision ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_ordre", (object?)program.NumeroOrdre ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@type_programme", (object?)program.TypeProgramme ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@prix_unitaire", program.PrixUnitaire);
         cmd.Parameters.AddWithValue("@prix_espece", program.PrixEspece);
         cmd.Parameters.AddWithValue("@prix_ht", program.PrixHT);
@@ -208,6 +210,7 @@ public class PatientProgramsController : ControllerBase
                 annee = @annee,
                 numero_decision = @numero_decision,
                 numero_ordre = @numero_ordre,
+                type_programme = @type_programme,
                 prix_unitaire = @prix_unitaire,
                 prix_espece = @prix_espece,
                 prix_ht = @prix_ht,
