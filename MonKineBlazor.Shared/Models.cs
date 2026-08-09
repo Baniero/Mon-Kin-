@@ -76,6 +76,7 @@ public class UserDto
     public bool Active { get; set; } = true;
     public int? CabinetId { get; set; }
     public string? CabinetName { get; set; }
+    public string? Telephone { get; set; }
 }
 
 public class UserCreateRequestDto
@@ -86,6 +87,7 @@ public class UserCreateRequestDto
     public bool Active { get; set; } = true;
     public int? CabinetId { get; set; }
     public string Password { get; set; } = string.Empty;
+    public string? Telephone { get; set; }
 }
 
 public class UserUpdateRequestDto
@@ -97,6 +99,7 @@ public class UserUpdateRequestDto
     public bool Active { get; set; } = true;
     public int? CabinetId { get; set; }
     public string? Password { get; set; }
+    public string? Telephone { get; set; }
 }
 
 public class LoginRequestDto

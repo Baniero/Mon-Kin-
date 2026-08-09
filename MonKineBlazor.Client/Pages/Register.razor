@@ -42,31 +42,39 @@
                         }
 
                         <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
-                            <div class="mb-3">
-                                <label class="form-label">Nom complet</label>
-                                <InputText class="form-control" @bind-Value="registrationModel.FullName" />
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Nom complet</label>
+                                    <InputText class="form-control" @bind-Value="registrationModel.FullName" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Nom du cabinet</label>
+                                    <InputText class="form-control" @bind-Value="cabinetName" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Email / Nom d'utilisateur</label>
+                                    <InputText class="form-control" @bind-Value="registrationModel.Username" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Téléphone / WhatsApp</label>
+                                    <InputText type="tel" class="form-control" @bind-Value="registrationModel.Telephone" placeholder="+216 21 234 567" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">Mot de passe</label>
+                                    <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label">N° employeur (optionnel)</label>
+                                    <InputText class="form-control" @bind-Value="numeroEmployeur" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Message pour l'administrateur</label>
+                                    <InputTextArea class="form-control" rows="4" @bind-Value="requestMessage" placeholder="Parlez-nous de votre cabinet, votre projet, ou toute information utile." />
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-primary w-100 py-3" type="submit">Envoyer la demande</button>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Nom du cabinet</label>
-                                <InputText class="form-control" @bind-Value="cabinetName" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email / Nom d'utilisateur</label>
-                                <InputText class="form-control" @bind-Value="registrationModel.Username" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Mot de passe</label>
-                                <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">N° employeur (optionnel)</label>
-                                <InputText class="form-control" @bind-Value="numeroEmployeur" />
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label">Message pour l'administrateur</label>
-                                <InputTextArea class="form-control" rows="3" @bind-Value="requestMessage" />
-                            </div>
-                            <button class="btn btn-primary w-100" type="submit">Envoyer la demande</button>
                         </EditForm>
 
                         <div class="text-center mt-4">
@@ -108,7 +116,8 @@
                 FullName = registrationModel.FullName,
                 Role = "kine",
                 Active = false,
-                CabinetId = null
+                CabinetId = null,
+                Telephone = registrationModel.Telephone
             };
 
             var response = await Http.PostAsJsonAsync("api/users", createRequest);

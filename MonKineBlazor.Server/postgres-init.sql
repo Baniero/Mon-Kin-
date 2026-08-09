@@ -80,10 +80,12 @@ CREATE TABLE IF NOT EXISTS users (
     active BOOLEAN DEFAULT TRUE,
     password_hash TEXT,
     cabinet_id INTEGER REFERENCES cabinets(id),
+    telephone TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cabinet_id INTEGER REFERENCES cabinets(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telephone TEXT;
 
 CREATE TABLE IF NOT EXISTS patient_programs (
     id SERIAL PRIMARY KEY,

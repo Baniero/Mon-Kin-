@@ -235,6 +235,125 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text);
 }
 
+#blazor-error-ui {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+#blazor-error-ui .error-card {
+    max-width: 420px;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+}
+
+#blazor-error-ui .error-title {
+    margin: 0 0 0.75rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+#blazor-error-ui .error-message {
+    margin: 0 1rem 1.5rem;
+    color: rgba(226, 232, 240, 0.92);
+    line-height: 1.6;
+}
+
+#blazor-error-ui .error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+#blazor-error-ui a.reload,
+#blazor-error-ui a.dismiss {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    padding: 0.9rem 1.2rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+#blazor-error-ui a.reload {
+    background: linear-gradient(135deg, #475cff, #2b76f7);
+    color: #ffffff;
+}
+
+#blazor-error-ui a.reload:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #324cca, #1f5cd0);
+}
+
+#blazor-error-ui a.dismiss {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+}
+
+#blazor-error-ui a.dismiss:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+
+.loading-progress {
+    width: 120px;
+    height: 120px;
+    display: block;
+    margin: 12vh auto 0;
+}
+
+.loading-progress circle {
+    transform: rotate(-90deg);
+    transform-origin: center;
+}
+
+.loading-progress .progress-track {
+    stroke: rgba(71, 92, 255, 0.18);
+}
+
+.loading-progress .progress-ring {
+    stroke: #475cff;
+    stroke-linecap: round;
+    stroke-dasharray: 251.2;
+    stroke-dashoffset: 188.4;
+    animation: loading-rotate 1.5s linear infinite;
+}
+
+.loading-progress-text {
+    margin-top: 1rem;
+    text-align: center;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+@keyframes loading-rotate {
+    0% {
+        stroke-dashoffset: 188.4;
+    }
+    50% {
+        stroke-dashoffset: 62.8;
+    }
+    100% {
+        stroke-dashoffset: 188.4;
+    }
+}
+
 a, .btn-link {
     color: var(--primary);
     transition: color 0.25s ease;

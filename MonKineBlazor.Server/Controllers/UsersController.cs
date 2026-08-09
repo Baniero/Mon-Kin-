@@ -38,7 +38,7 @@ public class UsersController : ControllerBase
         if (currentUser.Role == "admin")
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 ORDER BY u.full_name, u.username
@@ -47,7 +47,7 @@ public class UsersController : ControllerBase
         else if (currentUser.CabinetId.HasValue)
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, '')
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 WHERE u.cabinet_id = @cabinet_id
@@ -71,7 +71,8 @@ public class UsersController : ControllerBase
                 Role = reader.GetString(3),
                 Active = reader.GetBoolean(4),
                 CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
-                CabinetName = reader.GetString(6)
+                CabinetName = reader.GetString(6),
+                Telephone = reader.IsDBNull(7) ? null : reader.GetString(7)
             });
         }
 
@@ -90,7 +91,7 @@ public class UsersController : ControllerBase
         if (currentUser?.Role == "admin")
         {
             cmd.CommandText = @"
-                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone
                 FROM users
                 WHERE role IN ('kine', 'admin') AND COALESCE(active, TRUE) = TRUE
                 ORDER BY full_name, username
@@ -99,7 +100,7 @@ public class UsersController : ControllerBase
         else
         {
             cmd.CommandText = @"
-                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+                SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone
                 FROM users
                 WHERE role IN ('kine', 'admin') AND COALESCE(active, TRUE) = TRUE
                   AND cabinet_id = @cabinet_id
@@ -118,7 +119,8 @@ public class UsersController : ControllerBase
                 FullName = reader.IsDBNull(2) ? null : reader.GetString(2),
                 Role = reader.GetString(3),
                 Active = reader.GetBoolean(4),
-                CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5)
+                CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
+                Telephone = reader.IsDBNull(6) ? null : reader.GetString(6)
             });
         }
 
@@ -139,7 +141,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone
             FROM users
             WHERE id = @id
         ";
@@ -164,7 +166,8 @@ public class UsersController : ControllerBase
             FullName = reader.IsDBNull(2) ? null : reader.GetString(2),
             Role = reader.GetString(3),
             Active = reader.GetBoolean(4),
-            CabinetId = targetCabinetId
+            CabinetId = targetCabinetId,
+            Telephone = reader.IsDBNull(6) ? null : reader.GetString(6)
         });
     }
 
@@ -198,8 +201,8 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id)
-            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id)
+            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id, telephone)
+            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id, @telephone)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@username", request.Username);
@@ -208,6 +211,7 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@active", request.Active);
         cmd.Parameters.AddWithValue("@password_hash", passwordHash);
         cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@telephone", (object?)request.Telephone ?? DBNull.Value);
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetById), new { id }, new UserDto
@@ -216,7 +220,8 @@ public class UsersController : ControllerBase
             Username = request.Username,
             FullName = request.FullName,
             Role = request.Role ?? "kine",
-            Active = request.Active
+            Active = request.Active,
+            Telephone = request.Telephone
         });
     }
 
@@ -246,7 +251,8 @@ public class UsersController : ControllerBase
                 full_name = @full_name,
                 role = @role,
                 active = @active,
-                cabinet_id = @cabinet_id";
+                cabinet_id = @cabinet_id,
+                telephone = @telephone";
 
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
@@ -262,6 +268,7 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@role", request.Role ?? "kine");
         cmd.Parameters.AddWithValue("@active", request.Active);
         cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@telephone", (object?)request.Telephone ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         if (!string.IsNullOrWhiteSpace(request.Password))
@@ -327,7 +334,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash, cabinet_id
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash, cabinet_id, telephone
             FROM users
             WHERE username = @username
         ";
@@ -346,6 +353,7 @@ public class UsersController : ControllerBase
         var active = reader.GetBoolean(4);
         var passwordHash = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
         int? cabinetId = reader.IsDBNull(6) ? null : reader.GetInt32(6);
+        var telephone = reader.IsDBNull(7) ? null : reader.GetString(7);
 
         if (!active || string.IsNullOrWhiteSpace(passwordHash) || !PasswordHasher.Verify(passwordHash, request.Password))
         {
@@ -359,7 +367,8 @@ public class UsersController : ControllerBase
             FullName = fullName,
             Role = role,
             Active = active,
-            CabinetId = cabinetId
+            CabinetId = cabinetId,
+            Telephone = telephone
         });
     }
 }

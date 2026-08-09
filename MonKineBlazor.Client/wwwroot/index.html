@@ -14,17 +14,22 @@
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
+        <svg class="loading-progress" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="progress-track" r="40" cx="50" cy="50" fill="none" stroke-width="10" />
+            <circle class="progress-ring" r="40" cx="50" cy="50" fill="none" stroke-width="10" />
         </svg>
-        <div class="loading-progress-text"></div>
+        <div class="loading-progress-text">Chargement en cours...</div>
     </div>
 
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+    <div id="blazor-error-ui" role="alert" aria-live="assertive">
+        <div class="error-card">
+            <p class="error-title">Une erreur est survenue</p>
+            <p class="error-message">La page n'a pas pu se charger. Vous pouvez réessayer ou revenir à l'accueil.</p>
+            <div class="error-actions">
+                <a href="" class="reload">Recharger</a>
+                <a class="dismiss" title="Fermer">Fermer</a>
+            </div>
+        </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/arabic-reshaper@1.1.0/index.js" crossorigin="anonymous"></script>
@@ -154,6 +159,43 @@
         const getString = (obj, pascal, camel) => {
             if (!obj) return '';
             return obj[pascal] ?? obj[camel] ?? '';
+        };
+
+        const getWrappedLines = (text, maxChars) => {
+            if (!text) return [];
+            const normalized = String(text).replace(/\s+/g, ' ').trim();
+            const words = normalized.split(' ');
+            const lines = [];
+            let current = '';
+            for (const word of words) {
+                if (!current) {
+                    current = word;
+                }
+                else if ((current + ' ' + word).length <= maxChars) {
+                    current += ' ' + word;
+                }
+                else {
+                    lines.push(current);
+                    current = word;
+                }
+            }
+            if (current) {
+                lines.push(current);
+            }
+            return lines.flatMap((line) => line.length <= maxChars ? [line] : (line.match(new RegExp(`.{1,${maxChars}}`, 'g')) || [line]));
+        };
+
+        const drawKeyValue = (doc, label, value, xLabel, xValue, y, valueWidth, lineHeight = 14) => {
+            const rawText = String(value ?? '');
+            const textLines = doc.splitTextToSize(rawText, valueWidth);
+            doc.text(`${label} :`, xLabel, y);
+            doc.text(textLines, xValue, y);
+            return Math.max(1, Array.isArray(textLines) ? textLines.length : 1) * lineHeight;
+        };
+
+        const splitCellLines = (doc, value, width) => {
+            const rawText = String(value ?? '');
+            return doc.splitTextToSize(rawText, Math.max(10, width - 4));
         };
 
         const arrayBufferToBase64 = (buffer) => {
@@ -325,25 +367,31 @@
             doc.setFontSize(9);
 
             const leftLines = [
-                `${getString(cabinet, 'NomEtablissement', 'nomEtablissement')}`,
-                `${getString(cabinet, 'NomCabinet', 'nomCabinet')}`,
-                `${getString(cabinet, 'AdresseCabinet', 'adresseCabinet')}`,
+                ...getWrappedLines(getString(cabinet, 'NomEtablissement', 'nomEtablissement'), 24),
+                ...getWrappedLines(getString(cabinet, 'NomCabinet', 'nomCabinet'), 22),
+                ...getWrappedLines(getString(cabinet, 'AdresseCabinet', 'adresseCabinet'), 20),
                 `Tél / GSM : ${getString(cabinet, 'Telephone', 'telephone')}`,
                 `Matricule fiscal : ${getString(cabinet, 'MatriculeFiscal', 'matriculeFiscal')}`,
                 `RIB/RIP : ${getString(cabinet, 'RIB', 'rib') || getString(cabinet, 'RIP', 'rip')}`
             ];
 
-            const rightLines = [
-                reshapeArabicText(getString(cabinet, 'NomKineArabe', 'nomKineArabe')),
-                reshapeArabicText(getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe')),
-                reshapeArabicText(getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe')),
-                reshapeArabicText(getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe')),
-                reshapeArabicText(getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement'))
+            const rightRawLines = [
+                getString(cabinet, 'NomKineArabe', 'nomKineArabe'),
+                getString(cabinet, 'NomEtablissementArabe', 'nomEtablissementArabe'),
+                getString(cabinet, 'NomCabinetArabe', 'nomCabinetArabe'),
+                getString(cabinet, 'AdresseKineArabe', 'adresseKineArabe'),
+                getString(cabinet, 'CodeCnam', 'codeCnam') || getString(cabinet, 'CodeEtablissement', 'codeEtablissement')
             ];
+
+            const rightLines = rightRawLines.flatMap((line) =>
+                getWrappedLines(line, 20).map((wrapped) => reshapeArabicText(wrapped))
+            );
 
             let currentY = topY + 20;
             leftLines.forEach((line) => {
-                doc.text(line, leftX, currentY);
+                if (line) {
+                    doc.text(line, leftX, currentY);
+                }
                 currentY += lineSpacing;
             });
 
@@ -400,12 +448,10 @@
 
             doc.setFont('helvetica', 'normal');
             invoiceFields.forEach(([label, value]) => {
-                doc.text(`${label} :`, margin, y);
-                doc.text(String(value || 'N/A'), margin + 130, y);
-                y += 14;
+                y += drawKeyValue(doc, label, value ?? 'N/A', margin, margin + 130, y, 340);
             });
 
-            y += 16;
+            y += 8;
             doc.setFont('helvetica', 'bold');
             doc.text('Détails du programme', margin, y);
             y += 16;
@@ -436,9 +482,7 @@
                     doc.addPage();
                     y = margin;
                 }
-                doc.text(`${label} :`, margin, y);
-                doc.text(String(value), margin + 130, y);
-                y += 14;
+                y += drawKeyValue(doc, label, value ?? '', margin, margin + 130, y, 360);
             });
 
             y += 24;
@@ -511,20 +555,25 @@
 
             const rows = data.rows ?? data.Rows ?? [];
             rows.forEach((row) => {
-                if (y > 760) {
+                const values = [
+                    row.Sequence ?? row.sequence ?? '',
+                    row.Date ?? row.date ?? '',
+                    '',
+                    ''
+                ];
+                const cellLines = values.map((value, index) => splitCellLines(doc, value, widths[index]));
+                const rowHeight = Math.max(...cellLines.map((lines) => Array.isArray(lines) ? lines.length : 1)) * 14 + 8;
+                if (y + rowHeight > 760) {
                     doc.addPage();
                     y = margin;
                 }
 
                 x = margin;
-                const sequence = row.Sequence ?? row.sequence ?? '';
-                const date = row.Date ?? row.date ?? '';
-                const values = [String(sequence), String(date), '', ''];
-                values.forEach((value, index) => {
-                    doc.text(String(value), x, y);
+                cellLines.forEach((lines, index) => {
+                    doc.text(lines, x + 2, y);
                     x += widths[index];
                 });
-                y += 18;
+                y += rowHeight;
             });
 
             y += 18;
@@ -578,11 +627,6 @@
             doc.setFont('helvetica', 'normal');
 
             (rows || []).forEach((row) => {
-                if (y > 760) {
-                    doc.addPage();
-                    y = margin;
-                }
-                x = margin;
                 const values = [
                     row.FactureNumber ?? row.factureNumber ?? '',
                     row.DateFacture ?? row.dateFacture ?? '',
@@ -593,11 +637,19 @@
                     formatNumber(row.MontantTVA ?? row.montantTVA),
                     formatNumber(row.MontantTTC ?? row.montantTTC)
                 ];
-                values.forEach((value, index) => {
-                    doc.text(String(value), x, y);
+                const cellLines = values.map((value, index) => splitCellLines(doc, value, widths[index]));
+                const rowHeight = Math.max(...cellLines.map((lines) => Array.isArray(lines) ? lines.length : 1)) * 14 + 8;
+                if (y + rowHeight > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                x = margin;
+                cellLines.forEach((lines, index) => {
+                    doc.text(lines, x + 2, y);
                     x += widths[index];
                 });
-                y += 16;
+                y += rowHeight;
             });
 
             y += 18;
