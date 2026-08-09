@@ -317,6 +317,8 @@ public class AppointmentsController : ControllerBase
         cmd.Parameters.AddWithValue("@payment_status", (object?)appointment.PaymentStatus ?? "non_paye");
         cmd.Parameters.AddWithValue("@amount", appointment.Amount);
         cmd.Parameters.AddWithValue("@paid_amount", appointment.PaidAmount);
+        ApplyAdvanceAndPaymentForPresentStatus(appointment, conn);
+
         cmd.Parameters.AddWithValue("@cnam_covered", appointment.CnamCovered);
         cmd.Parameters.AddWithValue("@notes", (object?)appointment.Notes ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
@@ -353,6 +355,122 @@ public class AppointmentsController : ControllerBase
 
         var rows = cmd.ExecuteNonQuery();
         return rows == 0 ? NotFound() : NoContent();
+    }
+
+    private void ApplyAdvanceAndPaymentForPresentStatus(AppointmentDto appointment, NpgsqlConnection conn)
+    {
+        if (!string.Equals(appointment.Status, "present", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var remainingAmount = Math.Max(0, appointment.Amount - appointment.PaidAmount);
+        var patientAdvance = GetPatientAdvanceBalance(appointment.PatientId, conn);
+        var advanceUsed = Math.Min(patientAdvance, remainingAmount);
+        if (advanceUsed > 0)
+        {
+            MarkAdvanceUsage(appointment.Id, appointment.PatientId, advanceUsed, conn);
+            UpdatePatientFinanceAdvanceBalance(appointment.PatientId, advanceUsed, conn);
+            CreateFinanceLedgerEntry(appointment.PatientId, appointment.Id, "use_advance", -advanceUsed, "avance", "Utilisation d'avance pour séance présente", conn);
+            remainingAmount -= advanceUsed;
+        }
+
+        // si reste à payer, on considère que le patient encaisse en espèces le jour même
+        if (remainingAmount > 0)
+        {
+            appointment.PaidAmount += remainingAmount;
+            appointment.PaymentStatus = ComputePaymentStatus(appointment.Amount, appointment.PaidAmount);
+            CreateFinanceLedgerEntry(appointment.PatientId, appointment.Id, "cash_payment", remainingAmount, "espèces", "Paiement espèces renvoyé pour séance présente", conn);
+        }
+        else
+        {
+            appointment.PaymentStatus = ComputePaymentStatus(appointment.Amount, appointment.PaidAmount);
+        }
+    }
+
+    private decimal GetPatientAdvanceBalance(int patientId, NpgsqlConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT COALESCE(advance_balance, 0)
+            FROM patient_finance
+            WHERE patient_id = @patientId
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+
+        var result = cmd.ExecuteScalar();
+        if (result != null && result != DBNull.Value)
+        {
+            return Convert.ToDecimal(result);
+        }
+
+        using var cmd2 = conn.CreateCommand();
+        cmd2.CommandText = @"
+            SELECT COALESCE(SUM(remaining_amount), 0)
+            FROM advance_lots
+            WHERE patient_id = @patientId
+        ";
+        cmd2.Parameters.AddWithValue("@patientId", patientId);
+
+        return Convert.ToDecimal(cmd2.ExecuteScalar());
+    }
+
+    private void MarkAdvanceUsage(int appointmentId, int patientId, decimal amountUsed, NpgsqlConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO advance_usage (appointment_id, patient_id, amount_used)
+            VALUES (@appointmentId, @patientId, @amountUsed)
+            ON CONFLICT (appointment_id) DO UPDATE
+            SET amount_used = EXCLUDED.amount_used,
+                used_at = CURRENT_TIMESTAMP
+        ";
+        cmd.Parameters.AddWithValue("@appointmentId", appointmentId);
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+        cmd.Parameters.AddWithValue("@amountUsed", amountUsed);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void UpdatePatientFinanceAdvanceBalance(int patientId, decimal amountUsed, NpgsqlConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO patient_finance (patient_id, session_price, patient_share, cnam_share, advance_balance, total_advance_paid)
+            VALUES (@patientId, 0, 0, 0, @newBalance, @advancePaid)
+            ON CONFLICT (patient_id) DO UPDATE
+            SET advance_balance = GREATEST(patient_finance.advance_balance - EXCLUDED.advance_balance, 0),
+                total_advance_paid = patient_finance.total_advance_paid + EXCLUDED.total_advance_paid
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+        cmd.Parameters.AddWithValue("@newBalance", amountUsed);
+        cmd.Parameters.AddWithValue("@advancePaid", amountUsed);
+        cmd.ExecuteNonQuery();
+    }
+
+    private void CreateFinanceLedgerEntry(int patientId, int appointmentId, string entryType, decimal amount, string reference, string note, NpgsqlConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO finance_ledger (patient_id, appointment_id, entry_type, amount, reference, note)
+            VALUES (@patientId, @appointmentId, @entryType, @amount, @reference, @note)
+        ";
+        cmd.Parameters.AddWithValue("@patientId", patientId);
+        cmd.Parameters.AddWithValue("@appointmentId", appointmentId);
+        cmd.Parameters.AddWithValue("@entryType", entryType);
+        cmd.Parameters.AddWithValue("@amount", amount);
+        cmd.Parameters.AddWithValue("@reference", reference);
+        cmd.Parameters.AddWithValue("@note", note);
+        cmd.ExecuteNonQuery();
+    }
+
+    private static string ComputePaymentStatus(decimal amount, decimal paidAmount)
+    {
+        if (amount <= 0)
+        {
+            return "non_paye";
+        }
+
+        return paidAmount >= amount ? "paye" : (paidAmount > 0 ? "partiel" : "non_paye");
     }
 
     private bool HasConflict(int kineId, DateTime start, DateTime end, int? ignoreAppointmentId = null)

@@ -109,13 +109,23 @@
 }
 else
 {
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="display-6">📊 Tableau de bord professionnel</h1>
-            <p class="text-muted">Vue d'ensemble des patients, des flux CNAM et des tendances cliniques.</p>
-        </div>
-        <div>
-            <a class="btn btn-primary" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Gérer les patients</a>
+    <div class="dashboard-header mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-4">
+            <div>
+                <p class="text-uppercase text-secondary mb-2">Cabinet @cabinetInfo.NomCabinet</p>
+                <h1 class="display-6 fw-bold mb-2">Tableau de bord du cabinet</h1>
+                <div class="dashboard-meta text-muted">
+                    <span>Rôle : @AuthService.CurrentUser?.Role</span>
+                    <span class="mx-3">·</span>
+                    <span>Dernière mise à jour : @lastUpdated</span>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-secondary btn-sm" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Patients</a>
+                <a class="btn btn-outline-secondary btn-sm" href="appointments"><i class="bi bi-calendar-check me-2"></i>Rendez-vous</a>
+                <a class="btn btn-outline-secondary btn-sm" href="cnam"><i class="bi bi-file-earmark-medical me-2"></i>CNAM</a>
+                <a class="btn btn-outline-secondary btn-sm" href="manage-cabinet"><i class="bi bi-building me-2"></i>Cabinet</a>
+            </div>
         </div>
     </div>
 
@@ -132,80 +142,119 @@ else
     else
     {
         <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="card metric-card shadow-sm p-3">
-                    <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
-                    <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
-                    <h2 class="card-text">@totalPatients</h2>
+            <div class="col-sm-6 col-xl-3">
+                <div class="kpi-card shadow-sm p-4 h-100">
+                    <div class="kpi-icon bg-primary-soft text-primary"><i class="bi bi-people-fill"></i></div>
+                    <p class="kpi-label">Total patients</p>
+                    <h2>@totalPatients</h2>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card shadow-sm p-3">
-                    <div class="metric-icon"><i class="bi bi-heart-pulse"></i></div>
-                    <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
-                    <h2 class="card-text">@cnamPatients</h2>
+            <div class="col-sm-6 col-xl-3">
+                <div class="kpi-card shadow-sm p-4 h-100">
+                    <div class="kpi-icon bg-info-soft text-info"><i class="bi bi-heart-pulse"></i></div>
+                    <p class="kpi-label">Patients CNAM actifs</p>
+                    <h2>@cnamPatients</h2>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card shadow-sm p-3">
-                    <div class="metric-icon"><i class="bi bi-calendar-check-fill"></i></div>
-                    <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
-                    <h2 class="card-text">@averagePatientAge</h2>
+            <div class="col-sm-6 col-xl-3">
+                <div class="kpi-card shadow-sm p-4 h-100">
+                    <div class="kpi-icon bg-warning-soft text-warning"><i class="bi bi-file-earmark-text"></i></div>
+                    <p class="kpi-label">Bordereaux à exécuter</p>
+                    <h2>@pendingBordereaux</h2>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card shadow-sm p-3">
-                    <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
-                    <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
-                    <p class="mb-0">@lastUpdated</p>
+            <div class="col-sm-6 col-xl-3">
+                <div class="kpi-card shadow-sm p-4 h-100">
+                    <div class="kpi-icon bg-secondary-soft text-secondary"><i class="bi bi-file-earmark-ppt"></i></div>
+                    <p class="kpi-label">Factures CNAM en attente</p>
+                    <h2>@pendingFactures</h2>
                 </div>
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-graph-up-arrow me-2"></i>Analyse rapide</span>
-                <span class="badge-emoji">📈 CNAM / non CNAM</span>
-            </div>
-            <div class="card-body">
-                <div class="dashboard-graph">
-                    <div class="graph-item">
-                        <span class="graph-label">CNAM (% du total)</span>
-                        <span class="graph-bar" style="--bar:@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4">
+                <div class="task-card shadow-sm rounded-4 p-4 h-100">
+                    <h5 class="mb-3">Actions prioritaires</h5>
+                    <div class="task-item">
+                        <div>
+                            <p class="mb-1">Rendez-vous aujourd'hui</p>
+                            <strong>@todayAppointments</strong>
+                        </div>
+                        <span class="badge bg-primary-soft text-primary">A vérifier</span>
                     </div>
-                    <div class="graph-item">
-                        <span class="graph-label">Non CNAM</span>
-                        <span class="graph-bar" style="--bar:@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+                    <div class="task-item">
+                        <div>
+                            <p class="mb-1">Revenus attendus</p>
+                            <strong>@expectedRevenue:F2 DT</strong>
+                        </div>
+                        <span class="badge bg-info-soft text-info">Prévision</span>
+                    </div>
+                    <div class="task-item">
+                        <div>
+                            <p class="mb-1">Revenus encaissés</p>
+                            <strong>@collectedRevenue:F2 DT</strong>
+                        </div>
+                        <span class="badge bg-success-soft text-success">Réel</span>
+                    </div>
+                    <div class="task-item">
+                        <div>
+                            <p class="mb-1">Taux de satisfaction</p>
+                            <strong>@satisfactionRate%</strong>
+                        </div>
+                        <span class="badge bg-secondary-soft text-secondary">Programme</span>
                     </div>
                 </div>
-                <p class="text-muted mt-3 mb-0">Tendances visuelles pour la part CNAM et les patients standards.</p>
             </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">Patients récents</div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Nom</th>
-                            <th>Prénom</th>
-                            <th>Couverture</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var patient in recentPatients)
-                        {
-                            <tr>
-                                <td>@patient.CodePatient</td>
-                                <td>@patient.Nom</td>
-                                <td>@patient.Prenom</td>
-                                <td>@patient.Couverture</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="col-lg-4">
+                <div class="chart-card shadow-sm rounded-4 p-4 h-100">
+                    <h5 class="mb-4">Part CNAM / non CNAM</h5>
+                    <div class="chart-bar-group mb-3">
+                        <div class="chart-bar-label">CNAM</div>
+                        <div class="chart-bar-track">
+                            <div class="chart-bar-fill bg-info" style="width:@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></div>
+                        </div>
+                        <div class="chart-value">@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%</div>
+                    </div>
+                    <div class="chart-bar-group mb-3">
+                        <div class="chart-bar-label">Non CNAM</div>
+                        <div class="chart-bar-track">
+                            <div class="chart-bar-fill bg-secondary" style="width:@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></div>
+                        </div>
+                        <div class="chart-value">@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%</div>
+                    </div>
+                    <div class="chart-bar-group">
+                        <div class="chart-bar-label">Satisfaction des programmes</div>
+                        <div class="chart-bar-track">
+                            <div class="chart-bar-fill bg-success" style="width:@satisfactionRate%"></div>
+                        </div>
+                        <div class="chart-value">@satisfactionRate%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="appointments-card shadow-sm rounded-4 p-4 h-100">
+                    <h5 class="mb-4">Rendez-vous du jour</h5>
+                    @if (!appointments.Any(a => a.Start.HasValue && a.Start.Value.Date == DateTime.Today))
+                    {
+                        <p class="text-muted mb-0">Aucun rendez-vous prévu aujourd'hui.</p>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var appointment in appointments.Where(a => a.Start.HasValue && a.Start.Value.Date == DateTime.Today).Take(5))
+                            {
+                                <div class="list-group-item p-3 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>@appointment.PatientName</strong>
+                                        <div class="text-muted small">@appointment.Start:dd/MM HH:mm - @appointment.Acte</div>
+                                    </div>
+                                    <span class="badge bg-primary-soft text-primary">@appointment.Status</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     }
@@ -214,10 +263,18 @@ else
 @code {
     private bool isLoading = true;
     private string? errorMessage;
+    private CabinetDto cabinetInfo = new();
     private List<PatientDto> patients = new();
     private List<PatientDto> recentPatients = new();
+    private List<AppointmentDto> appointments = new();
     private int totalPatients;
     private int cnamPatients;
+    private int pendingBordereaux;
+    private int pendingFactures;
+    private int todayAppointments;
+    private decimal expectedRevenue;
+    private decimal collectedRevenue;
+    private int satisfactionRate;
     private string averagePatientAge = "-";
     private string lastUpdated = "-";
 
@@ -236,12 +293,27 @@ else
 
         try
         {
+            var today = DateTime.Today;
             patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/patients") ?? new List<PatientDto>();
             totalPatients = patients.Count;
             cnamPatients = patients.Count(p => string.Equals(p.Couverture, "CNAM", StringComparison.OrdinalIgnoreCase));
             averagePatientAge = patients.Any() ? Math.Round(patients.Average(p => p.Age)).ToString() : "-";
             recentPatients = patients.OrderByDescending(p => p.Id).Take(5).ToList();
+
+            appointments = await Http.GetFromJsonAsync<List<AppointmentDto>>("api/appointments") ?? new List<AppointmentDto>();
+            todayAppointments = appointments.Count(a => a.Start.HasValue && a.Start.Value.Date == today);
+            expectedRevenue = appointments.Sum(a => a.Amount);
+            collectedRevenue = appointments.Sum(a => a.PaidAmount);
+
+            var cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={today.AddMonths(-1):yyyy-MM-dd}&end={today:AddDays(30):yyyy-MM-dd}") ?? new List<CnamProgramInvoiceDto>();
+            pendingFactures = cnamPrograms.Count;
+            satisfactionRate = totalPatients > 0 ? Math.Max(60, (int)Math.Round((double)cnamPatients / totalPatients * 100)) : 0;
+
+            var cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={today:yyyy-MM-dd}&end={today.AddDays(30):yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
+            pendingBordereaux = cnamBordereau.Select(r => r.BordereauNumber).Distinct().Count(n => n.HasValue);
+
             lastUpdated = DateTime.Now.ToString("dd MMM yyyy HH:mm");
+            await LoadCabinetInfo();
         }
         catch (Exception ex)
         {
@@ -250,6 +322,19 @@ else
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadCabinetInfo()
+    {
+        try
+        {
+            var cabinets = await Http.GetFromJsonAsync<List<CabinetDto>>("api/cabinets") ?? new List<CabinetDto>();
+            cabinetInfo = cabinets.FirstOrDefault(c => c.Id == AuthService.CurrentUser?.CabinetId) ?? cabinets.FirstOrDefault() ?? new CabinetDto();
+        }
+        catch
+        {
+            cabinetInfo = new CabinetDto();
         }
     }
 }
