@@ -1232,7 +1232,7 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-bordereau-text")]
-    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, int? requestedBordereauNumber = null)
+    public ActionResult GetCnamBordereauText(DateTime start, DateTime end, int? bordereauNumber = null)
     {
         var currentUser = GetCurrentUser();
         if (currentUser == null)
@@ -1298,10 +1298,10 @@ public class FinanceController : ControllerBase
             cmd.CommandText += " AND p.cabinet_id = @cabinet_id";
             cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
-        if (requestedBordereauNumber.HasValue)
+        if (bordereauNumber.HasValue)
         {
             cmd.CommandText += " AND e.bordereau_number = @bordereauNumber";
-            cmd.Parameters.AddWithValue("@bordereauNumber", requestedBordereauNumber.Value);
+            cmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber.Value);
         }
         cmd.CommandText += " ORDER BY e.executed_at, e.facture_number";
         cmd.Parameters.AddWithValue("@start", start.Date);
