@@ -2,8 +2,26 @@
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <AuthGuardRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <ErrorBoundary>
+            <ChildContent>
+                <AuthGuardRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent>
+                <div class="app-error text-center py-5">
+                    <div class="card shadow-sm mx-auto" style="max-width: 520px;">
+                        <div class="card-body">
+                            <h1 class="h4 mb-3">Oups, une erreur est survenue</h1>
+                            <p class="text-muted mb-4">La page n'a pas pu se charger correctement. Essayez de recharger ou revenez à l'accueil.</p>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <button class="btn btn-primary" @onclick="ReloadPage">Recharger</button>
+                                <a class="btn btn-outline-secondary" href="/">Retour à l'accueil</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
@@ -18,4 +36,12 @@
     {
         await AuthService.InitializeAsync();
     }
+
+    private void ReloadPage()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = null!;
 }
