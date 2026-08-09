@@ -1339,7 +1339,7 @@ public class FinanceController : ControllerBase
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
 
-        var header = new char[139];
+        var header = new char[134];
         for (int i = 0; i < header.Length; i++) header[i] = '0';
         header[0] = '1';
 
@@ -1363,13 +1363,13 @@ public class FinanceController : ControllerBase
 
         for (int i = 0; i < 12; i++) header[85 + i] = totalTtcText[i];
 
-        for (int i = 97; i < 135; i++) header[i] = '0';
+        for (int i = 97; i < 134; i++) header[i] = '0';
 
         textBuilder.AppendLine(new string(header));
 
         foreach (var row in rows)
         {
-            var line = new char[139];
+            var line = new char[134];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
             line[0] = '2';
 
@@ -1428,10 +1428,10 @@ public class FinanceController : ControllerBase
             for (int i = 0; i < 7; i++) line[107 + i] = tvaGeneral[i];
 
             var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
-            for (int i = 0; i < 13; i++) line[114 + i] = tvaMillimesRow[i];
+            for (int i = 0; i < 13; i++) line[113 + i] = tvaMillimesRow[i];
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            for (int i = 0; i < 8; i++) line[127 + i] = factureDate[i];
+            for (int i = 0; i < 8; i++) line[126 + i] = factureDate[i];
 
             textBuilder.AppendLine(new string(line));
         }
