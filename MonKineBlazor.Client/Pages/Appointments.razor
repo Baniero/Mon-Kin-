@@ -392,8 +392,8 @@
                                 <td>
                                     @foreach (var appt in FilteredAppointments().Where(a => a.Start.HasValue && a.Start.Value.Date == day.Date).OrderBy(a => a.Start))
                                     {
-                                        <div class="mb-2 p-2 border rounded">
-                                            <strong>@appt.Start:HH:mm</strong><br />
+                                        <div class="mb-2 p-2 border rounded" style="cursor: pointer;" @ondblclick="() => EditAppointment(appt)">
+                                            <strong>@appt.Start?.ToString("HH:mm")</strong><br />
                                             <span>@appt.PatientName</span><br />
                                             <span>@appt.KineName</span><br />
                                             <span>@appt.Status</span>
