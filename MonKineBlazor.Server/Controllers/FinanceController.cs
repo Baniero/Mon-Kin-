@@ -1251,7 +1251,7 @@ public class FinanceController : ControllerBase
 
         using var cabinetCmd = conn.CreateCommand();
         cabinetCmd.CommandText = @"
-            SELECT code_etablissement, matricule_fiscal
+            SELECT racine, cle
             FROM cabinets
             WHERE id = @cabinetId
             LIMIT 1
@@ -1262,8 +1262,8 @@ public class FinanceController : ControllerBase
         {
             if (cabinetReader.Read())
             {
-                cabinet.CodeCnam = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
-                cabinet.NumeroEmployeur = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
+                cabinet.NumeroEmployeur = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
+                cabinet.CodeCnam = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
             }
             else
             {
