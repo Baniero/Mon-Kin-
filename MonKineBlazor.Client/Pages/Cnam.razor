@@ -298,7 +298,9 @@
                                     <td>@row.ExecutedBy</td>
                                     <td class="text-end">
                                         <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauPdf(row)">Exporter Bordereau</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ExportExecutedBordereauTxt(row)">Exporter TXT</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauTxt(row)">Exporter TXT</button>
+                                        <button type="button" class="btn btn-sm btn-warning me-1" @onclick="() => CancelExecutedBordereau(row)">Annuler exécution</button>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteExecutedBordereau(row)">Supprimer définitivement</button>
                                     </td>
                                 </tr>
                             }
@@ -685,6 +687,64 @@
         catch (Exception ex)
         {
             errorMessage = $"Erreur inattendue : {ex.Message}";
+        }
+    }
+
+    private async Task CancelExecutedBordereau(CnamBordereauEntryDto row)
+    {
+        if (row == null)
+        {
+            errorMessage = "Aucune bordereau sélectionné pour annulation.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/{row.ProgramId}?mode=cancel");
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Impossible d'annuler l'exécution : {response.ReasonPhrase}";
+                return;
+            }
+
+            successMessage = "Exécution annulée, la facture réapparaîtra dans les factures à exécuter.";
+            await LoadCnamBordereau();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'annulation : {ex.Message}";
+        }
+    }
+
+    private async Task DeleteExecutedBordereau(CnamBordereauEntryDto row)
+    {
+        if (row == null)
+        {
+            errorMessage = "Aucune bordereau sélectionné pour suppression.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/{row.ProgramId}?mode=hard");
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Impossible de supprimer définitivement : {response.ReasonPhrase}";
+                return;
+            }
+
+            successMessage = "Bordereau supprimé définitivement de la base.";
+            await LoadCnamBordereau();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de la suppression : {ex.Message}";
         }
     }
 

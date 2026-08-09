@@ -788,6 +788,75 @@ public class FinanceController : ControllerBase
         return Ok(rows);
     }
 
+    [HttpDelete("cnam-bordereau-executed/{programId}")]
+    public IActionResult DeleteExecutedCnamBordereau(int programId, string? mode = null)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+        using var transaction = conn.BeginTransaction();
+
+        using var checkCmd = conn.CreateCommand();
+        checkCmd.Transaction = transaction;
+        checkCmd.CommandText = IsAdmin() ? @"
+            SELECT 1
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.program_id = @programId
+        " : @"
+            SELECT 1
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.program_id = @programId
+              AND p.cabinet_id = @cabinet_id
+        ";
+        checkCmd.Parameters.AddWithValue("@programId", programId);
+        if (!IsAdmin())
+        {
+            checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+
+        var exists = checkCmd.ExecuteScalar();
+        if (exists == null || exists == DBNull.Value)
+        {
+            return NotFound("Aucune exécution CNAM trouvée pour ce programme.");
+        }
+
+        using var deleteCmd = conn.CreateCommand();
+        deleteCmd.Transaction = transaction;
+        deleteCmd.CommandText = @"
+            DELETE FROM cnam_bordereau_executed
+            WHERE program_id = @programId
+        ";
+        deleteCmd.Parameters.AddWithValue("@programId", programId);
+        var rowsAffected = deleteCmd.ExecuteNonQuery();
+
+        transaction.Commit();
+
+        if (rowsAffected == 0)
+        {
+            return NotFound("Aucune exécution CNAM trouvée à supprimer.");
+        }
+
+        var action = string.Equals(mode, "hard", StringComparison.OrdinalIgnoreCase)
+            ? "supprimé définitivement"
+            : "annulé";
+        return Ok(new { message = $"Exécution CNAM {action}." });
+    }
+
     [HttpPost("cnam-bordereau/execute")]
     [HttpPost("cnam-bordereau-execute")]
     [Consumes("application/json")]
