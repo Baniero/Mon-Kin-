@@ -642,7 +642,7 @@
 
         try
         {
-            var safeBordereauNumber = SanitizeFileName(bordereauNumber);
+            var safeBordereauNumber = SanitizeFileName(bordereauNumber.ToString());
             await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{safeBordereauNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
             successMessage = "Bordereau PDF exécuté généré.";
         }

@@ -153,37 +153,6 @@
                             <InputTextArea class="form-control" rows="6" @bind-Value="cabinetForm.NatureSeancesOptions" />
                         </div>
                     }
-                    else
-                    {
-                        <div class="col-md-4">
-                            <label class="form-label">Adresse du cabinet</label>
-                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Nom cabinet en arabe</label>
-                            <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Nom du kiné en arabe</label>
-                            <InputText class="form-control" @bind-Value="cabinetForm.NomKineArabe" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Adresse du kiné en arabe</label>
-                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseKineArabe" />
-                        </div>
-                    }
-                    <div class="col-md-4">
-                        <label class="form-label">Nom cabinet en arabe</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nom du kiné en arabe</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.NomKineArabe" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Adresse du kiné en arabe</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.AdresseKineArabe" />
-                    </div>
                     <div class="col-md-12 d-flex justify-content-end">
                         <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
                         <button class="btn btn-outline-secondary ms-2" type="button" @onclick="HideCabinetForm">Annuler</button>
@@ -345,6 +314,7 @@ else
     {
         selectedCabinet = null;
         cabinetForm = new CabinetDto();
+        activeCabinetSection = CabinetSection.Info;
         showCabinetForm = true;
     }
 
@@ -370,7 +340,13 @@ else
             ProgrammeTypeOptions = cabinet.ProgrammeTypeOptions,
             NatureSeancesOptions = cabinet.NatureSeancesOptions
         };
+        activeCabinetSection = CabinetSection.Info;
         showCabinetForm = true;
+    }
+
+    private void SetCabinetSection(CabinetSection section)
+    {
+        activeCabinetSection = section;
     }
 
     private void HideCabinetForm()
