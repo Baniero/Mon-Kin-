@@ -135,12 +135,13 @@ else
             <span class="visually-hidden">Chargement...</span>
         </div>
     }
-    else if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger">@errorMessage</div>
-    }
     else
     {
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-warning">@errorMessage</div>
+        }
+
         <div class="row g-4 mb-4">
             <div class="col-sm-6 col-xl-3">
                 <div class="kpi-card shadow-sm p-4 h-100">
@@ -308,15 +309,15 @@ else
             var startDate = today.AddMonths(-1).ToString("yyyy-MM-dd");
             var endDate = today.AddDays(30).ToString("yyyy-MM-dd");
 
-            var cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}") ?? new List<CnamProgramInvoiceDto>();
-            pendingFactures = cnamPrograms.Count;
-            satisfactionRate = totalPatients > 0 ? Math.Max(60, (int)Math.Round((double)cnamPatients / totalPatients * 100)) : 0;
-
-            var cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}") ?? new List<CnamBordereauEntryDto>();
-            pendingBordereaux = cnamBordereau.Select(r => r.BordereauNumber).Distinct().Count(n => n.HasValue);
+            await LoadCnamPrograms(startDate, endDate);
+            await LoadCnamBordereau(startDate, endDate);
 
             lastUpdated = DateTime.Now.ToString("dd MMM yyyy HH:mm");
             await LoadCabinetInfo();
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = "Impossible de charger le tableau de bord : " + httpEx.Message;
         }
         catch (Exception ex)
         {
@@ -325,6 +326,34 @@ else
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadCnamPrograms(string startDate, string endDate)
+    {
+        try
+        {
+            var cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}");
+            pendingFactures = cnamPrograms?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _ = ex;
+            pendingFactures = 0;
+        }
+    }
+
+    private async Task LoadCnamBordereau(string startDate, string endDate)
+    {
+        try
+        {
+            var cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}");
+            pendingBordereaux = cnamBordereau?.Select(r => r.BordereauNumber).Distinct().Count(n => n.HasValue) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _ = ex;
+            pendingBordereaux = 0;
         }
     }
 
