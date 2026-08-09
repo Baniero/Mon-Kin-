@@ -1072,16 +1072,14 @@ public class FinanceController : ControllerBase
 
         var textBuilder = new System.Text.StringBuilder();
         var bordereauYear = start.Year;
-        var rawCabinetCode = new string((cabinet.CodeCnam ?? string.Empty).Where(char.IsDigit).ToArray());
-        var cabinetCode = rawCabinetCode.Length > 10 ? rawCabinetCode[^10..] : rawCabinetCode.PadLeft(10, '0');
-        var employerNumberRaw = new string((cabinet.NumeroEmployeur ?? string.Empty).Where(char.IsDigit).ToArray());
-        var employerNumber = employerNumberRaw.Length > 10 ? employerNumberRaw[^10..] : employerNumberRaw.PadLeft(10, '0');
+        var (codeCnam1, codeCnam2, codeCnam3) = SplitCabinetCode(cabinet.CodeCnam);
+        var (employerNumber1, employerNumber2) = SplitEmployerNumber(cabinet.NumeroEmployeur);
         var bordereauNumber = rows.FirstOrDefault().CodeBureau?.PadLeft(3, '0') ?? "000";
-        var totalFactures = rows.Count.ToString("00000");
+        var totalFactures = rows.Count.ToString("000000");
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
 
-        var header = new char[119];
+        var header = new char[135];
         for (int i = 0; i < header.Length; i++) header[i] = '0';
         header[0] = '1';
 
@@ -1090,174 +1088,179 @@ public class FinanceController : ControllerBase
 
         for (int i = 0; i < 3; i++) header[5 + i] = bordereauNumber[i];
 
-        header[8] = '0';
-        header[9] = '1';
+        for (int i = 0; i < 2; i++) header[8 + i] = codeCnam1[i];
+        for (int i = 0; i < 8; i++) header[10 + i] = codeCnam2[i];
+        for (int i = 0; i < 2; i++) header[18 + i] = codeCnam3[i];
 
-        for (int i = 0; i < cabinetCode.Length && 10 + i < header.Length; i++)
-        {
-            header[10 + i] = cabinetCode[i];
-        }
+        for (int i = 0; i < 32; i++) header[20 + i] = '0';
 
-        for (int i = 0; i < employerNumber.Length && 20 + i < header.Length; i++)
-        {
-            header[20 + i] = employerNumber[i];
-        }
+        for (int i = 0; i < 11; i++) header[52 + i] = employerNumber1[i];
+        for (int i = 0; i < 2; i++) header[63 + i] = employerNumber2[i];
 
-        for (int i = 0; i < 5 && 30 + i < header.Length; i++)
-        {
-            header[30 + i] = totalFactures[i];
-        }
+        for (int i = 0; i < 6; i++) header[65 + i] = totalFactures[i];
 
-        for (int i = 0; i < 12 && 35 + i < header.Length; i++)
-        {
-            header[35 + i] = totalTtcText[i];
-        }
+        for (int i = 0; i < 14; i++) header[71 + i] = '0';
+
+        for (int i = 0; i < 12; i++) header[85 + i] = totalTtcText[i];
+
+        for (int i = 97; i < 135; i++) header[i] = '0';
 
         textBuilder.AppendLine(new string(header));
 
         foreach (var row in rows)
         {
-            var line = new char[119];
+            var line = new char[135];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
             line[0] = '2';
 
-            for (int i = 0; i < 4 && 1 + i < line.Length; i++)
-            {
-                line[1 + i] = yearText[i];
-            }
-
-            for (int i = 0; i < 3 && 5 + i < line.Length; i++)
-            {
-                line[5 + i] = bordereauNumber[i];
-            }
-
-            line[8] = '0';
-            line[9] = '1';
-
-            for (int i = 0; i < cabinetCode.Length && 10 + i < line.Length; i++)
-            {
-                line[10 + i] = cabinetCode[i];
-            }
+            for (int i = 0; i < 4; i++) line[1 + i] = yearText[i];
+            for (int i = 0; i < 3; i++) line[5 + i] = bordereauNumber[i];
+            for (int i = 0; i < 2; i++) line[8 + i] = codeCnam1[i];
+            for (int i = 0; i < 8; i++) line[10 + i] = codeCnam2[i];
+            for (int i = 0; i < 2; i++) line[18 + i] = codeCnam3[i];
 
             var exerciceYear = !string.IsNullOrWhiteSpace(row.Annee) && row.Annee.Length == 4 ? row.Annee : yearText;
-            for (int i = 0; i < 4 && 20 + i < line.Length; i++)
-            {
-                line[20 + i] = exerciceYear[i];
-            }
+            for (int i = 0; i < 4; i++) line[20 + i] = exerciceYear[i];
 
-            var factureNumber = (row.FactureNumber ?? string.Empty).PadRight(8, ' ');
-            for (int i = 0; i < factureNumber.Length && 24 + i < line.Length; i++)
-            {
-                line[24 + i] = factureNumber[i];
-            }
+            for (int i = 24; i <= 31; i++) line[i] = ' ';
+
+            var factureNumber = FormatFactureNumber(row.FactureNumber);
+            for (int i = 0; i < factureNumber.Length; i++) line[32 + i] = factureNumber[i];
 
             var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length && 32 + i < line.Length; i++)
-            {
-                line[32 + i] = codeAct[i];
-            }
+            for (int i = 0; i < codeAct.Length; i++) line[39 + i] = codeAct[i];
 
-            var decisionNumber = FormatDecisionNumber(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < decisionNumber.Length && 36 + i < line.Length; i++)
-            {
-                line[36 + i] = decisionNumber[i];
-            }
+            var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
+            for (int i = 0; i < 4; i++) line[43 + i] = decisionYear[i];
+            for (int i = 0; i < 6; i++) line[47 + i] = decisionKey[i];
 
-            var numeroAssuree = new string((row.NumeroAssuree ?? string.Empty).Where(char.IsDigit).ToArray()).PadLeft(13, '0');
-            for (int i = 0; i < numeroAssuree.Length && 49 + i < line.Length; i++)
-            {
-                line[49 + i] = numeroAssuree[i];
-            }
+            var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
+            for (int i = 0; i < 12; i++) line[53 + i] = numeroAssuree[i];
 
             var codeQualite = "003";
-            for (int i = 0; i < codeQualite.Length && 62 + i < line.Length; i++)
-            {
-                line[62 + i] = codeQualite[i];
-            }
+            for (int i = 0; i < 3; i++) line[65 + i] = codeQualite[i];
 
             var nbSeances = row.NbSeances.ToString("000");
-            for (int i = 0; i < nbSeances.Length && 65 + i < line.Length; i++)
-            {
-                line[65 + i] = nbSeances[i];
-            }
+            for (int i = 0; i < 3; i++) line[68 + i] = nbSeances[i];
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < debutText.Length && 68 + i < line.Length; i++)
-            {
-                line[68 + i] = debutText[i];
-            }
+            for (int i = 0; i < 4; i++) line[71 + i] = debutText[i];
+            for (int i = 0; i < 2; i++) line[75 + i] = debutText[4 + i];
+            for (int i = 0; i < 2; i++) line[77 + i] = debutText[6 + i];
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < finText.Length && 76 + i < line.Length; i++)
-            {
-                line[76 + i] = finText[i];
-            }
+            for (int i = 0; i < 4; i++) line[79 + i] = finText[i];
+            for (int i = 0; i < 2; i++) line[83 + i] = finText[4 + i];
+            for (int i = 0; i < 2; i++) line[85 + i] = finText[6 + i];
 
-            var ttcMillimes = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
-            var ttcText = ttcMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < ttcText.Length && 84 + i < line.Length; i++)
-            {
-                line[84 + i] = ttcText[i];
-            }
+            var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
+            var ttcTextRow = ttcMillimesRow.ToString().PadLeft(10, '0');
+            for (int i = 0; i < 10; i++) line[87 + i] = ttcTextRow[i];
 
-            var htMillimes = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
-            var htText = htMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < htText.Length && 94 + i < line.Length; i++)
-            {
-                line[94 + i] = htText[i];
-            }
+            var htMillimesRow = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
+            var htTextRow = htMillimesRow.ToString().PadLeft(10, '0');
+            for (int i = 0; i < 10; i++) line[97 + i] = htTextRow[i];
 
-            var tvaMillimes = ttcMillimes - htMillimes;
-            var tvaText = tvaMillimes.ToString().PadLeft(10, '0');
-            for (int i = 0; i < tvaText.Length && 104 + i < line.Length; i++)
-            {
-                line[104 + i] = tvaText[i];
-            }
+            var tvaGeneral = "0000007";
+            for (int i = 0; i < 7; i++) line[107 + i] = tvaGeneral[i];
+
+            var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
+            for (int i = 0; i < 13; i++) line[114 + i] = tvaMillimesRow[i];
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            for (int i = 0; i < factureDate.Length && 114 + i < line.Length; i++)
-            {
-                line[114 + i] = factureDate[i];
-            }
+            for (int i = 0; i < 8; i++) line[127 + i] = factureDate[i];
 
             textBuilder.AppendLine(new string(line));
         }
 
-        var trailer = new char[119];
+        var trailer = new char[135];
         for (int i = 0; i < trailer.Length; i++) trailer[i] = '0';
         trailer[0] = '3';
         for (int i = 0; i < 4; i++) trailer[1 + i] = yearText[i];
         for (int i = 0; i < 3; i++) trailer[5 + i] = bordereauNumber[i];
-        for (int i = 0; i < 12; i++) trailer[8 + i] = totalTtcText[i];
+        for (int i = 0; i < 12; i++) trailer[85 + i] = totalTtcText[i];
         textBuilder.AppendLine(new string(trailer));
 
         return Ok(textBuilder.ToString());
 
-        static string FormatDecisionNumber(string? numeroDecision, int defaultYear)
+        static (string, string, string) SplitCabinetCode(string? codeCnam)
+        {
+            var parts = (codeCnam ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var first = NormalizeDigits(parts.ElementAtOrDefault(0), 2);
+            var second = NormalizeDigits(parts.ElementAtOrDefault(1), 8);
+            var third = NormalizeDigits(parts.ElementAtOrDefault(2), 2);
+            return (first, second, third);
+        }
+
+        static (string, string) SplitEmployerNumber(string? employerNumber)
+        {
+            var parts = (employerNumber ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var first = NormalizeDigits(parts.ElementAtOrDefault(0), 11);
+            var second = NormalizeDigits(parts.ElementAtOrDefault(1), 2);
+            return (first, second);
+        }
+
+        static string NormalizeDigits(string? raw, int width)
+        {
+            var digits = new string((raw ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (digits.Length > width)
+            {
+                digits = digits[^width..];
+            }
+            return digits.PadLeft(width, '0');
+        }
+
+        static string FormatFactureNumber(string? factureNumber)
+        {
+            if (string.IsNullOrWhiteSpace(factureNumber))
+            {
+                return new string(' ', 7);
+            }
+
+            var normalized = factureNumber.Trim();
+            return normalized.Length <= 7 ? normalized.PadRight(7, ' ') : normalized[..7];
+        }
+
+        static (string, string) SplitDecisionParts(string? numeroDecision, int defaultYear)
         {
             if (string.IsNullOrWhiteSpace(numeroDecision))
             {
-                return defaultYear.ToString("0000") + new string('0', 6);
+                return (defaultYear.ToString("0000"), new string('0', 6));
             }
 
             var parts = numeroDecision.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length >= 3 && int.TryParse(parts[1], out var year))
+            string yearPart = defaultYear.ToString("0000");
+            string keyPart = new string('0', 6);
+
+            if (parts.Length >= 1 && int.TryParse(parts[0].Trim(), out var yearValue))
             {
-                var orderPart = new string(parts[^1].Where(char.IsDigit).ToArray());
-                if (orderPart.Length > 6)
+                yearPart = yearValue.ToString("0000");
+            }
+
+            if (parts.Length >= 2)
+            {
+                var keyDigits = new string(parts[1].Where(char.IsDigit).ToArray());
+                if (keyDigits.Length > 6)
                 {
-                    orderPart = orderPart[^6..];
+                    keyDigits = keyDigits[^6..];
                 }
-                return year.ToString("0000") + orderPart.PadLeft(6, '0');
+                keyPart = keyDigits.PadLeft(6, '0');
             }
-
-            var digits = new string(numeroDecision.Where(char.IsDigit).ToArray());
-            if (digits.Length >= 10)
+            else
             {
-                return digits[^10..];
+                var digits = new string(numeroDecision.Where(char.IsDigit).ToArray());
+                if (digits.Length >= 10)
+                {
+                    yearPart = digits[..4];
+                    keyPart = digits[4..10];
+                }
+                else if (digits.Length > 4)
+                {
+                    keyPart = digits[4..].PadLeft(6, '0');
+                }
             }
 
-            return defaultYear.ToString("0000") + digits.PadLeft(6, '0');
+            return (yearPart, keyPart);
         }
     }
 
