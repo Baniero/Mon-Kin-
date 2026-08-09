@@ -312,6 +312,12 @@ else
 
     private void ShowCreateCabinet()
     {
+        if (AuthService.CurrentUser?.Role != "admin")
+        {
+            errorMessage = "Vous n'avez pas le droit de créer un cabinet.";
+            return;
+        }
+
         selectedCabinet = null;
         cabinetForm = new CabinetDto();
         activeCabinetSection = CabinetSection.Info;
@@ -364,6 +370,12 @@ else
             HttpResponseMessage response;
             if (selectedCabinet == null || selectedCabinet.Id == 0)
             {
+                if (AuthService.CurrentUser?.Role != "admin")
+                {
+                    errorMessage = "Vous n'avez pas le droit de créer un cabinet.";
+                    return;
+                }
+
                 var createRequest = new CabinetCreateRequestDto
                 {
                     NomCabinet = cabinetForm.NomCabinet,

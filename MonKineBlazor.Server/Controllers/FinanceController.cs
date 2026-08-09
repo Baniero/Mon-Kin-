@@ -1255,7 +1255,7 @@ public class FinanceController : ControllerBase
 
         using var cabinetCmd = conn.CreateCommand();
         cabinetCmd.CommandText = @"
-            SELECT racine, cle
+            SELECT racine, cle, adresse_cabinet
             FROM cabinets
             WHERE id = @cabinetId
             LIMIT 1
@@ -1268,11 +1268,13 @@ public class FinanceController : ControllerBase
             {
                 cabinet.NumeroEmployeur = cabinetReader.IsDBNull(0) ? string.Empty : cabinetReader.GetString(0);
                 cabinet.CodeCnam = cabinetReader.IsDBNull(1) ? string.Empty : cabinetReader.GetString(1);
+                cabinet.AdresseCabinet = cabinetReader.IsDBNull(2) ? string.Empty : cabinetReader.GetString(2);
             }
             else
             {
                 cabinet.CodeCnam = string.Empty;
                 cabinet.NumeroEmployeur = string.Empty;
+                cabinet.AdresseCabinet = string.Empty;
             }
         }
 
@@ -1352,7 +1354,12 @@ public class FinanceController : ControllerBase
         for (int i = 0; i < 8; i++) header[10 + i] = codeCnam2[i];
         for (int i = 0; i < 2; i++) header[18 + i] = codeCnam3[i];
 
-        for (int i = 0; i < 32; i++) header[20 + i] = '0';
+        var addressLines = WrapText(cabinet.AdresseCabinet ?? string.Empty, 32).ToList();
+        var firstAddressLine = addressLines.Count > 0 ? addressLines[0] : string.Empty;
+        for (int i = 0; i < 32; i++)
+        {
+            header[20 + i] = i < firstAddressLine.Length ? firstAddressLine[i] : ' ';
+        }
 
         for (int i = 0; i < 11; i++) header[52 + i] = employerNumber1[i];
         for (int i = 0; i < 2; i++) header[63 + i] = employerNumber2[i];
@@ -1481,6 +1488,38 @@ public class FinanceController : ControllerBase
             }
 
             return normalized.Length <= 8 ? normalized.PadRight(8, ' ') : normalized[..8];
+        }
+
+        static IEnumerable<string> WrapText(string text, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                yield break;
+            }
+
+            var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var currentLine = string.Empty;
+
+            foreach (var word in words)
+            {
+                if (currentLine.Length + word.Length + (currentLine.Length > 0 ? 1 : 0) <= maxLength)
+                {
+                    currentLine += (currentLine.Length > 0 ? " " : string.Empty) + word;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(currentLine))
+                    {
+                        yield return currentLine;
+                    }
+                    currentLine = word.Length <= maxLength ? word : word[..maxLength];
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentLine))
+            {
+                yield return currentLine;
+            }
         }
 
         static (string, string) SplitDecisionParts(string? numeroDecision, int defaultYear)
