@@ -1,0 +1,121 @@
+@page "/register"
+@attribute [AllowAnonymous]
+@using MonKineBlazor.Shared.Models
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<PageTitle>Inscription Mon kiné</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm rounded-4 border-0 overflow-hidden">
+                <div class="row g-0">
+                    <div class="col-lg-6 bg-primary text-white p-5 d-flex flex-column justify-content-center">
+                        <div>
+                            <h2 class="fw-bold">Ouvrez un compte pour votre cabinet</h2>
+                            <p class="text-white-75">Envoyez votre demande d'inscription et le responsable pourra la valider depuis l'administration.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 p-5">
+                        <h3 class="mb-4">Demande d'inscription</h3>
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">@successMessage</div>
+                        }
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">@errorMessage</div>
+                        }
+
+                        <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
+                            <div class="mb-3">
+                                <label class="form-label">Nom complet</label>
+                                <InputText class="form-control" @bind-Value="registrationModel.FullName" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Nom du cabinet</label>
+                                <InputText class="form-control" @bind-Value="cabinetName" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email / Nom d'utilisateur</label>
+                                <InputText class="form-control" @bind-Value="registrationModel.Username" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Mot de passe</label>
+                                <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">N° employeur (optionnel)</label>
+                                <InputText class="form-control" @bind-Value="numeroEmployeur" />
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Message pour l'administrateur</label>
+                                <InputTextArea class="form-control" rows="3" @bind-Value="requestMessage" />
+                            </div>
+                            <button class="btn btn-primary w-100" type="submit">Envoyer la demande</button>
+                        </EditForm>
+
+                        <div class="text-center mt-4">
+                            <span>Déjà enregistré ?</span>
+                            <a class="link-primary" href="login">Se connecter</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserCreateRequestDto registrationModel = new() { Role = "kine", Active = false };
+    private string? cabinetName;
+    private string? numeroEmployeur;
+    private string? requestMessage;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task SubmitRegistration()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(registrationModel.FullName) || string.IsNullOrWhiteSpace(registrationModel.Username) || string.IsNullOrWhiteSpace(registrationModel.Password))
+        {
+            errorMessage = "Tous les champs obligatoires doivent être remplis.";
+            return;
+        }
+
+        try
+        {
+            var createRequest = new UserCreateRequestDto
+            {
+                Username = registrationModel.Username,
+                Password = registrationModel.Password,
+                FullName = registrationModel.FullName,
+                Role = "kine",
+                Active = false,
+                CabinetId = null
+            };
+
+            var response = await Http.PostAsJsonAsync("api/users", createRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Votre demande a été envoyée. Un administrateur la validera bientôt.";
+                registrationModel = new UserCreateRequestDto { Role = "kine", Active = false };
+                cabinetName = null;
+                numeroEmployeur = null;
+                requestMessage = null;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(error) ? "Impossible d'envoyer la demande." : error;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

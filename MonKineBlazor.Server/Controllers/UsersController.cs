@@ -171,10 +171,16 @@ public class UsersController : ControllerBase
     [HttpPost]
     public ActionResult<UserDto> Create(UserCreateRequestDto request)
     {
+        var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
         if (!IsAdmin())
         {
-            var currentUser = UserContextHelper.GetCurrentUser(HttpContext);
-            if (currentUser == null || currentUser.CabinetId == null || request.CabinetId != currentUser.CabinetId)
+            if (currentUser == null)
+            {
+                request.Role = "kine";
+                request.Active = false;
+                request.CabinetId = null;
+            }
+            else if (currentUser.CabinetId == null || request.CabinetId != currentUser.CabinetId)
             {
                 return Forbid();
             }

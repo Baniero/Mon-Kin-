@@ -1,109 +1,205 @@
 ﻿@page "/"
+@attribute [AllowAnonymous]
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
+@inject MonKineBlazor.Client.Services.AuthService AuthService
+@inject NavigationManager NavigationManager
 
-<PageTitle>Tableau de bord</PageTitle>
+<PageTitle>Mon kiné</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="display-6">📊 Tableau de bord professionnel</h1>
-        <p class="text-muted">Vue d'ensemble des patients, des flux CNAM et des tendances cliniques.</p>
-    </div>
-    <div>
-        <a class="btn btn-primary" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Gérer les patients</a>
-    </div>
-</div>
-
-@if (isLoading)
+@if (!AuthService.IsAuthenticated)
 {
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Chargement...</span>
+    <div class="landing-hero py-5 bg-primary text-white">
+        <div class="container">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <span class="badge bg-white text-primary mb-3">Solution complète pour kinés</span>
+                    <h1 class="display-5 fw-bold">Gérez votre cabinet kiné avec fluidité et succès</h1>
+                    <p class="lead text-white-75">Mon kiné facilite le suivi des patients, la facturation CNAM, les rendez-vous et la gestion quotidienne, depuis un tableau de bord centralisé.</p>
+
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <a class="btn btn-light btn-lg" href="register">S'inscrire</a>
+                        <a class="btn btn-outline-light btn-lg" href="login">Se connecter</a>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="card bg-white bg-opacity-15 border-0 shadow-sm rounded-4 p-3 h-100 text-white">
+                                <div class="fw-bold">Gestion patients</div>
+                                <div class="small text-white-75">Dossiers, couverture, historique et notes centralisés.</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card bg-white bg-opacity-15 border-0 shadow-sm rounded-4 p-3 h-100 text-white">
+                                <div class="fw-bold">Facturation CNAM</div>
+                                <div class="small text-white-75">Génération des bordereaux, export TXT/PDF et suivi des exécutions.</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card bg-white bg-opacity-15 border-0 shadow-sm rounded-4 p-3 h-100 text-white">
+                                <div class="fw-bold">Agenda intégré</div>
+                                <div class="small text-white-75">Rendez-vous et suivi clinique au même endroit.</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card bg-white bg-opacity-15 border-0 shadow-sm rounded-4 p-3 h-100 text-white">
+                                <div class="fw-bold">Administration simple</div>
+                                <div class="small text-white-75">Inscription soumise à l'administrateur.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="affiche.png" alt="Affiche Mon kiné" class="img-fluid rounded-4 shadow-lg border border-white border-2" />
+                </div>
+            </div>
+        </div>
     </div>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
+
+    <div class="container py-5">
+        <div class="row align-items-center gy-4 mb-5">
+            <div class="col-lg-7">
+                <h2 class="fw-bold">Une plateforme professionnelle pensée pour le cabinet kiné</h2>
+                <p class="text-muted">Mon kiné combine un tableau de bord intelligent, la gestion des patients, la facturation CNAM, et un module de cabinet configurable pour vous faire gagner du temps.</p>
+            </div>
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 p-4">
+                    <h5>Fonctionnalités clés</h5>
+                    <ul class="list-unstyled mt-3 mb-0">
+                        <li class="mb-2"><strong>Patients</strong> : fiches, couverture, historique et suivi.</li>
+                        <li class="mb-2"><strong>CNAM</strong> : bordereaux, factures et export TXT/PDF.</li>
+                        <li class="mb-2"><strong>Rendez-vous</strong> : agenda et statut de séance.</li>
+                        <li class="mb-2"><strong>Paramètres</strong> : options cabinet et nature de séances.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <h5>Inscription simple</h5>
+                    <p class="text-muted mb-0">Demandez un compte pour votre cabinet et l'administrateur validera votre accès.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <h5>Interface claire</h5>
+                    <p class="text-muted mb-0">Navigation moderne et accès rapide aux fonctionnalités essentielles.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                    <h5>Sécurité et contrôle</h5>
+                    <p class="text-muted mb-0">Accès géré par l'administrateur du cabinet pour une gestion maîtrisée.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 else
 {
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card metric-card shadow-sm p-3">
-                <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
-                <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
-                <h2 class="card-text">@totalPatients</h2>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="display-6">📊 Tableau de bord professionnel</h1>
+            <p class="text-muted">Vue d'ensemble des patients, des flux CNAM et des tendances cliniques.</p>
         </div>
-        <div class="col-md-3">
-            <div class="card metric-card shadow-sm p-3">
-                <div class="metric-icon"><i class="bi bi-heart-pulse"></i></div>
-                <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
-                <h2 class="card-text">@cnamPatients</h2>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card metric-card shadow-sm p-3">
-                <div class="metric-icon"><i class="bi bi-calendar-check-fill"></i></div>
-                <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
-                <h2 class="card-text">@averagePatientAge</h2>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card metric-card shadow-sm p-3">
-                <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
-                <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
-                <p class="mb-0">@lastUpdated</p>
-            </div>
+        <div>
+            <a class="btn btn-primary" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Gérer les patients</a>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-graph-up-arrow me-2"></i>Analyse rapide</span>
-            <span class="badge-emoji">📈 CNAM / non CNAM</span>
+    @if (isLoading)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Chargement...</span>
         </div>
-        <div class="card-body">
-            <div class="dashboard-graph">
-                <div class="graph-item">
-                    <span class="graph-label">CNAM (% du total)</span>
-                    <span class="graph-bar" style="--bar:@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
-                </div>
-                <div class="graph-item">
-                    <span class="graph-label">Non CNAM</span>
-                    <span class="graph-bar" style="--bar:@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+    else
+    {
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card shadow-sm p-3">
+                    <div class="metric-icon"><i class="bi bi-people-fill"></i></div>
+                    <h6 class="card-title text-uppercase text-muted">Patients enregistrés</h6>
+                    <h2 class="card-text">@totalPatients</h2>
                 </div>
             </div>
-            <p class="text-muted mt-3 mb-0">Tendances visuelles pour la part CNAM et les patients standards.</p>
+            <div class="col-md-3">
+                <div class="card metric-card shadow-sm p-3">
+                    <div class="metric-icon"><i class="bi bi-heart-pulse"></i></div>
+                    <h6 class="card-title text-uppercase text-muted">Patients CNAM</h6>
+                    <h2 class="card-text">@cnamPatients</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card shadow-sm p-3">
+                    <div class="metric-icon"><i class="bi bi-calendar-check-fill"></i></div>
+                    <h6 class="card-title text-uppercase text-muted">Patient moyen</h6>
+                    <h2 class="card-text">@averagePatientAge</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card shadow-sm p-3">
+                    <div class="metric-icon"><i class="bi bi-clock-history"></i></div>
+                    <h6 class="card-title text-uppercase text-muted">Dernière mise à jour</h6>
+                    <p class="mb-0">@lastUpdated</p>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="card mb-4">
-        <div class="card-header">Patients récents</div>
-        <div class="card-body p-0">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Nom</th>
-                        <th>Prénom</th>
-                        <th>Couverture</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var patient in recentPatients)
-                    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-graph-up-arrow me-2"></i>Analyse rapide</span>
+                <span class="badge-emoji">📈 CNAM / non CNAM</span>
+            </div>
+            <div class="card-body">
+                <div class="dashboard-graph">
+                    <div class="graph-item">
+                        <span class="graph-label">CNAM (% du total)</span>
+                        <span class="graph-bar" style="--bar:@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+                    </div>
+                    <div class="graph-item">
+                        <span class="graph-label">Non CNAM</span>
+                        <span class="graph-bar" style="--bar:@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%" data-value="@(totalPatients > 0 ? 100 - (int)Math.Round((double)cnamPatients / totalPatients * 100) : 0)%"></span>
+                    </div>
+                </div>
+                <p class="text-muted mt-3 mb-0">Tendances visuelles pour la part CNAM et les patients standards.</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">Patients récents</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
                         <tr>
-                            <td>@patient.CodePatient</td>
-                            <td>@patient.Nom</td>
-                            <td>@patient.Prenom</td>
-                            <td>@patient.Couverture</td>
+                            <th>Code</th>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Couverture</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var patient in recentPatients)
+                        {
+                            <tr>
+                                <td>@patient.CodePatient</td>
+                                <td>@patient.Nom</td>
+                                <td>@patient.Prenom</td>
+                                <td>@patient.Couverture</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    }
 }
 
 @code {
@@ -118,7 +214,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadDashboardAsync();
+        if (AuthService.IsAuthenticated)
+        {
+            await LoadDashboardAsync();
+        }
     }
 
     private async Task LoadDashboardAsync()
