@@ -295,8 +295,8 @@
                                     <td>@row.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td>@row.ExecutedBy</td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="ExportExecutedBordereauPdf">Exporter Bordereau</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ExportExecutedBordereauTxt">Exporter TXT</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauPdf(row)">Exporter Bordereau</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ExportExecutedBordereauTxt(row)">Exporter TXT</button>
                                     </td>
                                 </tr>
                             }
@@ -591,21 +591,23 @@
         }
     }
 
-    private async Task ExportExecutedBordereauPdf()
+    private async Task ExportExecutedBordereauPdf(CnamBordereauEntryDto row)
     {
-        if (!cnamBordereauExecuted.Any())
-        {
-            errorMessage = "Aucun bordereau exécuté à exporter.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
-        var totalTTC = cnamBordereauExecuted.Sum(r => r.TotalTTC);
+        var bordereauNumber = row.FactureNumber ?? string.Empty;
+        var groupedRows = cnamBordereauExecuted.Where(r => string.Equals(r.FactureNumber, bordereauNumber, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (!groupedRows.Any())
+        {
+            errorMessage = "Aucune ligne de ce bordereau n'a été trouvée.";
+            return;
+        }
+
+        var totalTTC = groupedRows.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{cnamBordereauExecuted.Count:000}";
+        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber.PadLeft(3, '0')}";
 
         var pdfData = new
         {
@@ -615,29 +617,30 @@
             {
                 Date = DateTime.Today.ToString("dd/MM/yyyy"),
                 Centre = cabinetInfo.NomEtablissement ?? string.Empty,
-                NbreSeances = cnamBordereauExecuted.Count,
+                NbreSeances = groupedRows.Count,
                 MontantHT = totalHT,
                 Annee = cnamStart.Year.ToString(),
-                NbFactures = cnamBordereauExecuted.Count,
+                NbFactures = groupedRows.Count,
                 MontantTotalTTC = totalTTC,
                 MontantTVA = totalTVA
             },
-            rows = cnamBordereauExecuted.Select(row => new
+            rows = groupedRows.Select(r => new
             {
-                row.FactureNumber,
-                DateFacture = row.DateFacture?.ToString("dd/MM/yyyy"),
-                PriseEnCharge = row.CodePatient ?? string.Empty,
-                row.NumeroAssuree,
-                row.PatientName,
-                MontantHT = row.TotalTTC / 1.07m,
-                MontantTVA = row.TotalTTC - (row.TotalTTC / 1.07m),
-                MontantTTC = row.TotalTTC
+                r.FactureNumber,
+                DateFacture = r.DateFacture?.ToString("dd/MM/yyyy"),
+                PriseEnCharge = r.CodePatient ?? string.Empty,
+                r.NumeroAssuree,
+                r.PatientName,
+                MontantHT = r.TotalTTC / 1.07m,
+                MontantTVA = r.TotalTTC - (r.TotalTTC / 1.07m),
+                MontantTTC = r.TotalTTC
             }).ToList()
         };
 
         try
         {
-            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
+            var safeFactureNumber = SanitizeFileName(bordereauNumber);
+            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{safeFactureNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
             successMessage = "Bordereau PDF exécuté généré.";
         }
         catch (JSException jsEx)
@@ -650,11 +653,11 @@
         }
     }
 
-    private async Task ExportExecutedBordereauTxt()
+    private async Task ExportExecutedBordereauTxt(CnamBordereauEntryDto row)
     {
-        if (!cnamBordereauExecuted.Any())
+        if (row == null)
         {
-            errorMessage = "Aucun bordereau exécuté à exporter.";
+            errorMessage = "Aucun bordereau sélectionné pour l'export.";
             return;
         }
 
@@ -663,8 +666,9 @@
 
         try
         {
-            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}");
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
+            var bordereauNumber = row.FactureNumber ?? string.Empty;
+            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}&bordereauNumber={Uri.EscapeDataString(bordereauNumber)}");
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{SanitizeFileName(bordereauNumber)}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau exécuté généré.";
         }
         catch (HttpRequestException httpEx)
@@ -729,19 +733,16 @@
 
         try
         {
-            foreach (var programId in selectedBordereauProgramIds.ToList())
+            var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute-bulk", new
             {
-                var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute", new CnamBordereauExecuteRequestDto
-                {
-                    ProgramId = programId,
-                    ExecutedBy = "Web"
-                });
+                ProgramIds = selectedBordereauProgramIds.ToList(),
+                ExecutedBy = "Web"
+            });
 
-                if (!response.IsSuccessStatusCode)
-                {
-                    errorMessage = $"Impossible d'exécuter la facture {programId} : {response.ReasonPhrase}";
-                    return;
-                }
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Impossible d'exécuter la sélection : {response.ReasonPhrase}";
+                return;
             }
 
             successMessage = "Factures sélectionnées exécutées et enregistrées dans le bordereau exécuté.";

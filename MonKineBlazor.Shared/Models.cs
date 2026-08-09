@@ -217,6 +217,7 @@ public class CnamProgramInvoiceDto
 public class CnamBordereauEntryDto
 {
     public int ProgramId { get; set; }
+    public int? BordereauNumber { get; set; }
     public string? FactureNumber { get; set; }
     public DateTime? DateFacture { get; set; }
     public string? CodePatient { get; set; }
@@ -230,6 +231,12 @@ public class CnamBordereauEntryDto
 public class CnamBordereauExecuteRequestDto
 {
     public int ProgramId { get; set; }
+    public string? ExecutedBy { get; set; }
+}
+
+public class CnamBordereauExecuteBulkRequestDto
+{
+    public List<int> ProgramIds { get; set; } = new List<int>();
     public string? ExecutedBy { get; set; }
 }
 

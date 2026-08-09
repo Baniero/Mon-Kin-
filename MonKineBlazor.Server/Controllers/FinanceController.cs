@@ -974,6 +974,143 @@ public class FinanceController : ControllerBase
             return Ok(executedEntry);
         }
 
+    [HttpPost("cnam-bordereau-execute-bulk")]
+    [Consumes("application/json")]
+    public ActionResult<IEnumerable<CnamBordereauEntryDto>> ExecuteCnamBordereauBulk([FromBody] CnamBordereauExecuteBulkRequestDto request)
+    {
+        if (request == null || request.ProgramIds == null || !request.ProgramIds.Any())
+        {
+            return BadRequest("La liste des programmes est requise.");
+        }
+
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+        using var transaction = conn.BeginTransaction();
+
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        using var checkCmd = conn.CreateCommand();
+        checkCmd.Transaction = transaction;
+        checkCmd.CommandText = @"
+            SELECT pp.id
+            FROM patient_programs pp
+            JOIN patients p ON p.id = pp.patient_id
+            LEFT JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+            WHERE pp.id = ANY(@programIds)
+              AND COALESCE(p.couverture, '') <> ''
+              AND COALESCE(p.n_assuree, '') <> ''
+        ";
+        if (!IsAdmin())
+        {
+            checkCmd.CommandText += " AND p.cabinet_id = @cabinet_id";
+            checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+        checkCmd.Parameters.AddWithValue("@programIds", request.ProgramIds.ToArray());
+
+        var validPrograms = new HashSet<int>();
+        using (var reader = checkCmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                validPrograms.Add(reader.GetInt32(0));
+            }
+        }
+
+        if (!validPrograms.SetEquals(request.ProgramIds))
+        {
+            return BadRequest("Certains programmes sont invalides ou déjà exécutés.");
+        }
+
+        var invoiceYear = DateTime.UtcNow.Year;
+        using var sequenceCmd = conn.CreateCommand();
+        sequenceCmd.Transaction = transaction;
+        sequenceCmd.CommandText = @"
+            SELECT COALESCE(MAX((split_part(facture_number, '/', 1))::int), 0)
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE p.cabinet_id = @cabinet_id
+              AND EXTRACT(YEAR FROM e.executed_at) = @year
+              AND e.facture_number ~ '^[0-9]+/[0-9]{4}$'
+        ";
+        sequenceCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        sequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
+        var currentNumberObj = sequenceCmd.ExecuteScalar();
+        var nextSequence = Convert.ToInt32(currentNumberObj ?? 0) + 1;
+        var factureNumber = $"{nextSequence}/{invoiceYear}";
+
+        using var insertCmd = conn.CreateCommand();
+        insertCmd.Transaction = transaction;
+        insertCmd.CommandText = @"
+            INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, facture_number)
+            VALUES (@programId, NOW(), @executedBy, @factureNumber)
+        ";
+        insertCmd.Parameters.Add(new NpgsqlParameter("@programId", NpgsqlTypes.NpgsqlDbType.Integer));
+        insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+        insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
+
+        foreach (var programId in request.ProgramIds)
+        {
+            insertCmd.Parameters["@programId"].Value = programId;
+            insertCmd.ExecuteNonQuery();
+        }
+
+        var results = new List<CnamBordereauEntryDto>();
+        using var fetchCmd = conn.CreateCommand();
+        fetchCmd.Transaction = transaction;
+        fetchCmd.CommandText = @"
+            SELECT
+                pp.id,
+                pp.date_debut,
+                COALESCE(p.code_patient, ''),
+                COALESCE(p.n_assuree, ''),
+                COALESCE(p.nom || ' ' || p.prenom, ''),
+                COALESCE(pp.prix_ttc, 0),
+                e.executed_at,
+                COALESCE(e.executed_by, ''),
+                COALESCE(e.facture_number, '')
+            FROM patient_programs pp
+            JOIN patients p ON p.id = pp.patient_id
+            JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+            WHERE e.facture_number = @factureNumber
+              AND EXTRACT(YEAR FROM e.executed_at) = @year
+        ";
+        fetchCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
+        fetchCmd.Parameters.AddWithValue("@year", invoiceYear);
+
+        using (var reader = fetchCmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                results.Add(new CnamBordereauEntryDto
+                {
+                    ProgramId = reader.GetInt32(0),
+                    FactureNumber = reader.GetString(8),
+                    DateFacture = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
+                    CodePatient = reader.GetString(2),
+                    NumeroAssuree = reader.GetString(3),
+                    PatientName = reader.GetString(4),
+                    TotalTTC = reader.GetDecimal(5),
+                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                    ExecutedBy = reader.GetString(7)
+                });
+            }
+        }
+
+        transaction.Commit();
+        return Ok(results);
+    }
+
     [HttpOptions("cnam-bordereau/execute")]
     [HttpOptions("cnam-bordereau-execute")]
     public IActionResult OptionsCnamBordereauExecute()
@@ -982,7 +1119,7 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-bordereau-text")]
-    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end)
+    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, string? bordereauNumber = null)
     {
         var currentUser = GetCurrentUser();
         if (currentUser == null)
@@ -1047,6 +1184,11 @@ public class FinanceController : ControllerBase
             cmd.CommandText += " AND p.cabinet_id = @cabinet_id";
             cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
+        if (!string.IsNullOrWhiteSpace(bordereauNumber))
+        {
+            cmd.CommandText += " AND e.facture_number = @bordereauNumber";
+            cmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
+        }
         cmd.CommandText += " ORDER BY e.executed_at, e.facture_number";
         cmd.Parameters.AddWithValue("@start", start.Date);
         cmd.Parameters.AddWithValue("@end", end.Date);
@@ -1074,7 +1216,7 @@ public class FinanceController : ControllerBase
         var bordereauYear = start.Year;
         var (codeCnam1, codeCnam2, codeCnam3) = SplitCabinetCode(cabinet.CodeCnam);
         var (employerNumber1, employerNumber2) = SplitEmployerNumber(cabinet.NumeroEmployeur);
-        var bordereauNumber = rows.FirstOrDefault().CodeBureau?.PadLeft(3, '0') ?? "000";
+        var bordereauNumber = rows.FirstOrDefault().FactureNumber?.Split('/').FirstOrDefault()?.PadLeft(3, '0') ?? "000";
         var totalFactures = rows.Count.ToString("000000");
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
