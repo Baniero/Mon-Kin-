@@ -1086,8 +1086,6 @@ public class FinanceController : ControllerBase
         var currentBordereauNumberObj = bordereauSequenceCmd.ExecuteScalar();
         var nextBordereauNumber = Convert.ToInt32(currentBordereauNumberObj ?? 0) + 1;
 
-        var factureNumber = $"{nextInvoiceSequence:000}/{invoiceYear}";
-
         using var insertCmd = conn.CreateCommand();
         insertCmd.Transaction = transaction;
         insertCmd.CommandText = @"
@@ -1097,11 +1095,15 @@ public class FinanceController : ControllerBase
         insertCmd.Parameters.Add(new NpgsqlParameter("@programId", NpgsqlTypes.NpgsqlDbType.Integer));
         insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
         insertCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
-        insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
+        insertCmd.Parameters.AddWithValue("@factureNumber", string.Empty);
 
+        var invoiceSequence = nextInvoiceSequence;
         foreach (var programId in request.ProgramIds)
         {
+            invoiceSequence++;
+            var factureNumber = $"{invoiceSequence:000}/{invoiceYear}";
             insertCmd.Parameters["@programId"].Value = programId;
+            insertCmd.Parameters["@factureNumber"].Value = factureNumber;
             insertCmd.ExecuteNonQuery();
         }
 
@@ -1161,7 +1163,7 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-bordereau-text")]
-    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, int? bordereauNumber = null)
+    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, int? requestedBordereauNumber = null)
     {
         var currentUser = GetCurrentUser();
         if (currentUser == null)
@@ -1227,10 +1229,10 @@ public class FinanceController : ControllerBase
             cmd.CommandText += " AND p.cabinet_id = @cabinet_id";
             cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
-        if (bordereauNumber.HasValue)
+        if (requestedBordereauNumber.HasValue)
         {
             cmd.CommandText += " AND e.bordereau_number = @bordereauNumber";
-            cmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber.Value);
+            cmd.Parameters.AddWithValue("@bordereauNumber", requestedBordereauNumber.Value);
         }
         cmd.CommandText += " ORDER BY e.executed_at, e.facture_number";
         cmd.Parameters.AddWithValue("@start", start.Date);
@@ -1260,7 +1262,7 @@ public class FinanceController : ControllerBase
         var bordereauYear = start.Year;
         var (codeCnam1, codeCnam2, codeCnam3) = SplitCabinetCode(cabinet.CodeCnam);
         var (employerNumber1, employerNumber2) = SplitEmployerNumber(cabinet.NumeroEmployeur);
-        var bordereauNumber = rows.FirstOrDefault().BordereauNumber?.ToString("000") ?? "000";
+        var selectedBordereauNumberText = rows.Any() ? rows.First().BordereauNumber.ToString("000") : "000";
         var totalFactures = rows.Count.ToString("000000");
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
@@ -1272,7 +1274,7 @@ public class FinanceController : ControllerBase
         var yearText = bordereauYear.ToString("0000");
         for (int i = 0; i < 4; i++) header[1 + i] = yearText[i];
 
-        for (int i = 0; i < 3; i++) header[5 + i] = bordereauNumber[i];
+        for (int i = 0; i < 3; i++) header[5 + i] = selectedBordereauNumberText[i];
 
         for (int i = 0; i < 2; i++) header[8 + i] = codeCnam1[i];
         for (int i = 0; i < 8; i++) header[10 + i] = codeCnam2[i];
@@ -1300,7 +1302,7 @@ public class FinanceController : ControllerBase
             line[0] = '2';
 
             for (int i = 0; i < 4; i++) line[1 + i] = yearText[i];
-            for (int i = 0; i < 3; i++) line[5 + i] = bordereauNumber[i];
+            for (int i = 0; i < 3; i++) line[5 + i] = selectedBordereauNumberText[i];
             for (int i = 0; i < 2; i++) line[8 + i] = codeCnam1[i];
             for (int i = 0; i < 8; i++) line[10 + i] = codeCnam2[i];
             for (int i = 0; i < 2; i++) line[18 + i] = codeCnam3[i];
@@ -1363,7 +1365,7 @@ public class FinanceController : ControllerBase
         for (int i = 0; i < trailer.Length; i++) trailer[i] = '0';
         trailer[0] = '3';
         for (int i = 0; i < 4; i++) trailer[1 + i] = yearText[i];
-        for (int i = 0; i < 3; i++) trailer[5 + i] = bordereauNumber[i];
+        for (int i = 0; i < 3; i++) trailer[5 + i] = selectedBordereauNumberText[i];
         for (int i = 0; i < 12; i++) trailer[85 + i] = totalTtcText[i];
         textBuilder.AppendLine(new string(trailer));
 
