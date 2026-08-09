@@ -231,12 +231,19 @@ public class CnamBordereauEntryDto
 public class CnamBordereauExecuteRequestDto
 {
     public int ProgramId { get; set; }
+    public string? FactureNumber { get; set; }
     public string? ExecutedBy { get; set; }
+}
+
+public class CnamBordereauExecuteLineRequestDto
+{
+    public int ProgramId { get; set; }
+    public string? FactureNumber { get; set; }
 }
 
 public class CnamBordereauExecuteBulkRequestDto
 {
-    public List<int> ProgramIds { get; set; } = new List<int>();
+    public List<CnamBordereauExecuteLineRequestDto> Lines { get; set; } = new List<CnamBordereauExecuteLineRequestDto>();
     public string? ExecutedBy { get; set; }
 }
 

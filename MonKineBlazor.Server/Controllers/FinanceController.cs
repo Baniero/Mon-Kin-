@@ -978,9 +978,9 @@ public class FinanceController : ControllerBase
     [Consumes("application/json")]
     public ActionResult<IEnumerable<CnamBordereauEntryDto>> ExecuteCnamBordereauBulk([FromBody] CnamBordereauExecuteBulkRequestDto request)
     {
-        if (request == null || request.ProgramIds == null || !request.ProgramIds.Any())
+        if (request == null || request.Lines == null || !request.Lines.Any())
         {
-            return BadRequest("La liste des programmes est requise.");
+            return BadRequest("La liste des lignes de bordereau est requise.");
         }
 
         var currentUser = GetCurrentUser();
