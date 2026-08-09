@@ -8,7 +8,7 @@
 
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-xl-7 col-lg-8">
+        <div class="col-xl-9 col-lg-10">
             <div class="register-panel shadow-lg rounded-4 overflow-hidden">
                 <div class="row g-0 align-items-stretch">
                     <div class="col-lg-6 register-intro p-5 text-white d-flex flex-column justify-content-center">
@@ -30,8 +30,10 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 p-5 bg-white">
-                        <h3 class="mb-4">Demande d'inscription</h3>
+                    <div class="col-lg-6 p-5 bg-white d-flex flex-column register-form-column">
+                        <div class="mb-4">
+                            <h3 class="mb-0">Demande d'inscription</h3>
+                        </div>
                         @if (!string.IsNullOrEmpty(successMessage))
                         {
                             <div class="alert alert-success">@successMessage</div>
@@ -42,7 +44,7 @@
                         }
 
                         <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
-                            <div class="row g-3">
+                            <div class="row g-3 flex-grow-1">
                                 <div class="col-12 col-md-6">
                                     <label class="form-label">Nom complet</label>
                                     <InputText class="form-control" @bind-Value="registrationModel.FullName" />
@@ -77,7 +79,7 @@
                             </div>
                         </EditForm>
 
-                        <div class="text-center mt-4">
+                        <div class="text-center mt-4 mt-auto">
                             <span class="text-muted">Déjà enregistré ?</span>
                             <a class="link-primary" href="login">Se connecter</a>
                         </div>

@@ -492,21 +492,45 @@ a:hover, .btn-link:hover {
     max-width: 980px;
     margin: 0 auto;
     background: #ffffff;
+    overflow: hidden;
+    border-radius: 2rem;
 }
 
 .register-panel .row.g-3 > [class*="col-"] {
     min-width: 0;
 }
 
+.register-panel .register-form-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.register-panel .register-form-column .row.g-3 {
+    flex-grow: 1;
+}
+
+.register-panel .register-intro,
+.register-panel .register-form-column,
+.register-panel .row.g-0 {
+    min-height: 100%;
+}
+
+.register-panel .col-lg-6 {
+    min-height: 100%;
+}
+
 .register-panel .form-control,
 .register-panel .form-select,
 .register-panel textarea {
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     white-space: normal;
 }
 
 .register-panel .form-label {
+    display: block;
+    margin-bottom: 0.4rem;
     font-weight: 600;
     color: #1f2e4c;
 }
@@ -515,8 +539,18 @@ a:hover, .btn-link:hover {
     min-width: 120px;
 }
 
+.register-panel .bg-white {
+    background-color: #ffffff !important;
+}
+
 .register-intro {
     background: linear-gradient(180deg, #3b4be4 0%, #1f2f8f 100%);
+}
+
+@media (min-width: 992px) {
+    .register-panel {
+        grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.15fr);
+    }
 }
 
 .icon-circle {
