@@ -1267,7 +1267,7 @@ public class FinanceController : ControllerBase
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
 
-        var header = new char[135];
+        var header = new char[139];
         for (int i = 0; i < header.Length; i++) header[i] = '0';
         header[0] = '1';
 
@@ -1297,7 +1297,7 @@ public class FinanceController : ControllerBase
 
         foreach (var row in rows)
         {
-            var line = new char[135];
+            var line = new char[139];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
             line[0] = '2';
 
@@ -1315,31 +1315,34 @@ public class FinanceController : ControllerBase
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             for (int i = 0; i < factureNumber.Length; i++) line[32 + i] = factureNumber[i];
 
+            var bordereauText = row.BordereauNumber.ToString("000");
+            for (int i = 0; i < bordereauText.Length; i++) line[40 + i] = bordereauText[i];
+
             var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length; i++) line[39 + i] = codeAct[i];
+            for (int i = 0; i < codeAct.Length; i++) line[43 + i] = codeAct[i];
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < 4; i++) line[43 + i] = decisionYear[i];
-            for (int i = 0; i < 6; i++) line[47 + i] = decisionKey[i];
+            for (int i = 0; i < 4; i++) line[47 + i] = decisionYear[i];
+            for (int i = 0; i < 6; i++) line[51 + i] = decisionKey[i];
 
             var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
-            for (int i = 0; i < 12; i++) line[53 + i] = numeroAssuree[i];
+            for (int i = 0; i < 12; i++) line[57 + i] = numeroAssuree[i];
 
             var codeQualite = "003";
-            for (int i = 0; i < 3; i++) line[65 + i] = codeQualite[i];
+            for (int i = 0; i < 3; i++) line[69 + i] = codeQualite[i];
 
             var nbSeances = row.NbSeances.ToString("000");
-            for (int i = 0; i < 3; i++) line[68 + i] = nbSeances[i];
+            for (int i = 0; i < 3; i++) line[72 + i] = nbSeances[i];
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < 4; i++) line[71 + i] = debutText[i];
-            for (int i = 0; i < 2; i++) line[75 + i] = debutText[4 + i];
-            for (int i = 0; i < 2; i++) line[77 + i] = debutText[6 + i];
+            for (int i = 0; i < 4; i++) line[75 + i] = debutText[i];
+            for (int i = 0; i < 2; i++) line[79 + i] = debutText[4 + i];
+            for (int i = 0; i < 2; i++) line[81 + i] = debutText[6 + i];
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < 4; i++) line[79 + i] = finText[i];
-            for (int i = 0; i < 2; i++) line[83 + i] = finText[4 + i];
-            for (int i = 0; i < 2; i++) line[85 + i] = finText[6 + i];
+            for (int i = 0; i < 4; i++) line[83 + i] = finText[i];
+            for (int i = 0; i < 2; i++) line[87 + i] = finText[4 + i];
+            for (int i = 0; i < 2; i++) line[89 + i] = finText[6 + i];
 
             var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
             var ttcTextRow = ttcMillimesRow.ToString().PadLeft(10, '0');
@@ -1360,14 +1363,6 @@ public class FinanceController : ControllerBase
 
             textBuilder.AppendLine(new string(line));
         }
-
-        var trailer = new char[135];
-        for (int i = 0; i < trailer.Length; i++) trailer[i] = '0';
-        trailer[0] = '3';
-        for (int i = 0; i < 4; i++) trailer[1 + i] = yearText[i];
-        for (int i = 0; i < 3; i++) trailer[5 + i] = selectedBordereauNumberText[i];
-        for (int i = 0; i < 12; i++) trailer[85 + i] = totalTtcText[i];
-        textBuilder.AppendLine(new string(trailer));
 
         return Ok(textBuilder.ToString());
 
@@ -1402,11 +1397,18 @@ public class FinanceController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(factureNumber))
             {
-                return new string(' ', 7);
+                return new string(' ', 8);
             }
 
             var normalized = factureNumber.Trim();
-            return normalized.Length <= 7 ? normalized.PadRight(7, ' ') : normalized[..7];
+            var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2 && int.TryParse(parts[0], out var sequence) && parts[1].Length == 4)
+            {
+                var invoiceText = $"{sequence:000}/{parts[1]}";
+                return invoiceText.Length <= 8 ? invoiceText.PadRight(8, ' ') : invoiceText[..8];
+            }
+
+            return normalized.Length <= 8 ? normalized.PadRight(8, ' ') : normalized[..8];
         }
 
         static (string, string) SplitDecisionParts(string? numeroDecision, int defaultYear)
