@@ -532,13 +532,21 @@ a:hover, .btn-link:hover {
 }
 
 .register-panel .row.g-3 > .col-md-6 {
-    flex: 0 0 50%;
-    max-width: 50%;
-    width: 50%;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
 }
 
 .register-panel .row.g-3 > .col-12 {
-    width: 100%;
+    width: 100% !important;
+}
+
+@media (min-width: 1200px) {
+    .register-panel .row.g-3 > .col-md-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        width: 50% !important;
+    }
 }
 
 .register-panel .form-label {
