@@ -45,27 +45,27 @@
 
                         <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
                             <div class="row g-3 flex-grow-1">
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">Nom complet</label>
                                     <InputText class="form-control" @bind-Value="registrationModel.FullName" />
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">Nom du cabinet</label>
                                     <InputText class="form-control" @bind-Value="cabinetName" />
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">Email / Nom d'utilisateur</label>
                                     <InputText class="form-control" @bind-Value="registrationModel.Username" />
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">Téléphone / WhatsApp</label>
                                     <InputText type="tel" class="form-control" @bind-Value="registrationModel.Telephone" placeholder="+216 21 234 567" />
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">Mot de passe</label>
                                     <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
                                 </div>
-                                <div class="col-12 col-md-6">
+                                <div class="col-12">
                                     <label class="form-label">N° employeur (optionnel)</label>
                                     <InputText class="form-control" @bind-Value="numeroEmployeur" />
                                 </div>
