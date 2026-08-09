@@ -8,16 +8,29 @@
 
 <div class="container py-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm rounded-4 border-0 overflow-hidden">
-                <div class="row g-0">
-                    <div class="col-lg-6 bg-primary text-white p-5 d-flex flex-column justify-content-center">
-                        <div>
-                            <h2 class="fw-bold">Ouvrez un compte pour votre cabinet</h2>
-                            <p class="text-white-75">Envoyez votre demande d'inscription et le responsable pourra la valider depuis l'administration.</p>
+        <div class="col-xl-7 col-lg-8">
+            <div class="register-panel shadow-lg rounded-4 overflow-hidden">
+                <div class="row g-0 align-items-stretch">
+                    <div class="col-lg-6 register-intro p-5 text-white d-flex flex-column justify-content-center">
+                        <span class="badge bg-light text-primary mb-3">Inscription kiné</span>
+                        <h2 class="fw-bold">Demandez un accès pour votre cabinet</h2>
+                        <p class="text-white-75">Complétez votre demande et l'administrateur pourra la valider depuis l’espace utilisateurs.</p>
+                        <div class="mt-4">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="icon-circle bg-white text-primary">1</span>
+                                <span>Soumission rapide</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="icon-circle bg-white text-primary">2</span>
+                                <span>Validation par l’administrateur</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="icon-circle bg-white text-primary">3</span>
+                                <span>Accès sécurisé et professionnel</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 p-5">
+                    <div class="col-lg-6 p-5 bg-white">
                         <h3 class="mb-4">Demande d'inscription</h3>
                         @if (!string.IsNullOrEmpty(successMessage))
                         {
@@ -57,7 +70,7 @@
                         </EditForm>
 
                         <div class="text-center mt-4">
-                            <span>Déjà enregistré ?</span>
+                            <span class="text-muted">Déjà enregistré ?</span>
                             <a class="link-primary" href="login">Se connecter</a>
                         </div>
                     </div>
