@@ -244,6 +244,7 @@ public class CnamBordereauExecuteLineRequestDto
 public class CnamBordereauExecuteBulkRequestDto
 {
     public List<CnamBordereauExecuteLineRequestDto> Lines { get; set; } = new List<CnamBordereauExecuteLineRequestDto>();
+    public List<int> ProgramIds { get; set; } = new List<int>();
     public string? ExecutedBy { get; set; }
 }
 

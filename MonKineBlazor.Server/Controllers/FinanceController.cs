@@ -727,6 +727,7 @@ public class FinanceController : ControllerBase
         cmd.CommandText = IsAdmin() ? @"
             SELECT
                 pp.id,
+                COALESCE(e.bordereau_number, 0),
                 COALESCE(pp.code_bureau, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -743,6 +744,7 @@ public class FinanceController : ControllerBase
         " : @"
             SELECT
                 pp.id,
+                COALESCE(e.bordereau_number, 0),
                 COALESCE(pp.code_bureau, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -880,9 +882,24 @@ public class FinanceController : ControllerBase
             ";
             sequenceCmd.Parameters.AddWithValue("@cabinet_id", programCabinetId);
             sequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
-            var currentNumberObj = sequenceCmd.ExecuteScalar();
-            var nextSequence = Convert.ToInt32(currentNumberObj ?? 0) + 1;
-            var factureNumber = $"{nextSequence}/{invoiceYear}";
+            var currentInvoiceNumberObj = sequenceCmd.ExecuteScalar();
+            var nextInvoiceSequence = Convert.ToInt32(currentInvoiceNumberObj ?? 0) + 1;
+
+            using var bordereauSequenceCmd = conn.CreateCommand();
+            bordereauSequenceCmd.Transaction = transaction;
+            bordereauSequenceCmd.CommandText = @"
+                SELECT COALESCE(MAX(e.bordereau_number), 0)
+                FROM cnam_bordereau_executed e
+                JOIN patient_programs pp ON pp.id = e.program_id
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE p.cabinet_id = @cabinet_id
+                  AND EXTRACT(YEAR FROM e.executed_at) = @year
+            ";
+            bordereauSequenceCmd.Parameters.AddWithValue("@cabinet_id", programCabinetId);
+            bordereauSequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
+            var currentBordereauNumberObj = bordereauSequenceCmd.ExecuteScalar();
+            var nextBordereauNumber = Convert.ToInt32(currentBordereauNumberObj ?? 0) + 1;
+            var factureNumber = $"{nextInvoiceSequence:000}/{invoiceYear}";
 
             using var insertCmd = conn.CreateCommand();
             insertCmd.Transaction = transaction;
@@ -893,7 +910,7 @@ public class FinanceController : ControllerBase
             ";
             insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
-            insertCmd.Parameters.AddWithValue("@bordereauNumber", nextSequence);
+            insertCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
             insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
             var rowsAffected = insertCmd.ExecuteNonQuery();
             _logger.LogInformation("ExecuteCnamBordereau insert executed. ProgramId={ProgramId}, FactureNumber={FactureNumber}, RowsAffected={RowsAffected}",
@@ -906,6 +923,7 @@ public class FinanceController : ControllerBase
             fetchCmd.CommandText = IsAdmin() ? @"
                 SELECT
                     pp.id,
+                    COALESCE(e.bordereau_number, 0),
                     pp.date_debut,
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
@@ -921,6 +939,7 @@ public class FinanceController : ControllerBase
             " : @"
                 SELECT
                     pp.id,
+                    COALESCE(e.bordereau_number, 0),
                     pp.date_debut,
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
@@ -957,18 +976,19 @@ public class FinanceController : ControllerBase
                     return NotFound();
                 }
 
-                var dateDebut = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1);
+                var dateDebut = reader.IsDBNull(2) ? (DateTime?)null : reader.GetDateTime(2);
                 executedEntry = new CnamBordereauEntryDto
                 {
                     ProgramId = reader.GetInt32(0),
-                    FactureNumber = reader.GetString(8),
+                    BordereauNumber = reader.GetInt32(1),
+                    FactureNumber = reader.GetString(9),
                     DateFacture = dateDebut,
-                    CodePatient = reader.GetString(2),
-                    NumeroAssuree = reader.GetString(3),
-                    PatientName = reader.GetString(4),
-                    TotalTTC = reader.GetDecimal(5),
-                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    ExecutedBy = reader.GetString(7)
+                    CodePatient = reader.GetString(3),
+                    NumeroAssuree = reader.GetString(4),
+                    PatientName = reader.GetString(5),
+                    TotalTTC = reader.GetDecimal(6),
+                    ExecutedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    ExecutedBy = reader.GetString(8)
                 };
             }
 
@@ -980,9 +1000,9 @@ public class FinanceController : ControllerBase
     [Consumes("application/json")]
     public ActionResult<IEnumerable<CnamBordereauEntryDto>> ExecuteCnamBordereauBulk([FromBody] CnamBordereauExecuteBulkRequestDto request)
     {
-        if (request == null || request.Lines == null || !request.Lines.Any())
+        if (request == null || request.ProgramIds == null || !request.ProgramIds.Any())
         {
-            return BadRequest("La liste des lignes de bordereau est requise.");
+            return BadRequest("La liste des programmes à exécuter est requise.");
         }
 
         var currentUser = GetCurrentUser();
@@ -1035,9 +1055,9 @@ public class FinanceController : ControllerBase
         }
 
         var invoiceYear = DateTime.UtcNow.Year;
-        using var sequenceCmd = conn.CreateCommand();
-        sequenceCmd.Transaction = transaction;
-        sequenceCmd.CommandText = @"
+        using var invoiceSequenceCmd = conn.CreateCommand();
+        invoiceSequenceCmd.Transaction = transaction;
+        invoiceSequenceCmd.CommandText = @"
             SELECT COALESCE(MAX((split_part(facture_number, '/', 1))::int), 0)
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
@@ -1046,11 +1066,27 @@ public class FinanceController : ControllerBase
               AND EXTRACT(YEAR FROM e.executed_at) = @year
               AND e.facture_number ~ '^[0-9]+/[0-9]{4}$'
         ";
-        sequenceCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
-        sequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
-        var currentNumberObj = sequenceCmd.ExecuteScalar();
-        var nextSequence = Convert.ToInt32(currentNumberObj ?? 0) + 1;
-        var factureNumber = $"{nextSequence}/{invoiceYear}";
+        invoiceSequenceCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        invoiceSequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
+        var currentInvoiceNumberObj = invoiceSequenceCmd.ExecuteScalar();
+        var nextInvoiceSequence = Convert.ToInt32(currentInvoiceNumberObj ?? 0) + 1;
+
+        using var bordereauSequenceCmd = conn.CreateCommand();
+        bordereauSequenceCmd.Transaction = transaction;
+        bordereauSequenceCmd.CommandText = @"
+            SELECT COALESCE(MAX(e.bordereau_number), 0)
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE p.cabinet_id = @cabinet_id
+              AND EXTRACT(YEAR FROM e.executed_at) = @year
+        ";
+        bordereauSequenceCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        bordereauSequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
+        var currentBordereauNumberObj = bordereauSequenceCmd.ExecuteScalar();
+        var nextBordereauNumber = Convert.ToInt32(currentBordereauNumberObj ?? 0) + 1;
+
+        var factureNumber = $"{nextInvoiceSequence:000}/{invoiceYear}";
 
         using var insertCmd = conn.CreateCommand();
         insertCmd.Transaction = transaction;
@@ -1060,7 +1096,7 @@ public class FinanceController : ControllerBase
         ";
         insertCmd.Parameters.Add(new NpgsqlParameter("@programId", NpgsqlTypes.NpgsqlDbType.Integer));
         insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
-        insertCmd.Parameters.AddWithValue("@bordereauNumber", nextSequence);
+        insertCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
         insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
 
         foreach (var programId in request.ProgramIds)
@@ -1075,6 +1111,7 @@ public class FinanceController : ControllerBase
         fetchCmd.CommandText = @"
             SELECT
                 pp.id,
+                COALESCE(e.bordereau_number, 0),
                 pp.date_debut,
                 COALESCE(p.code_patient, ''),
                 COALESCE(p.n_assuree, ''),
@@ -1086,10 +1123,10 @@ public class FinanceController : ControllerBase
             FROM patient_programs pp
             JOIN patients p ON p.id = pp.patient_id
             JOIN cnam_bordereau_executed e ON e.program_id = pp.id
-            WHERE e.facture_number = @factureNumber
+            WHERE e.bordereau_number = @bordereauNumber
               AND EXTRACT(YEAR FROM e.executed_at) = @year
         ";
-        fetchCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
+        fetchCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
         fetchCmd.Parameters.AddWithValue("@year", invoiceYear);
 
         using (var reader = fetchCmd.ExecuteReader())
@@ -1099,14 +1136,15 @@ public class FinanceController : ControllerBase
                 results.Add(new CnamBordereauEntryDto
                 {
                     ProgramId = reader.GetInt32(0),
-                    FactureNumber = reader.GetString(8),
-                    DateFacture = reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
-                    CodePatient = reader.GetString(2),
-                    NumeroAssuree = reader.GetString(3),
-                    PatientName = reader.GetString(4),
-                    TotalTTC = reader.GetDecimal(5),
-                    ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                    ExecutedBy = reader.GetString(7)
+                    BordereauNumber = reader.GetInt32(1),
+                    DateFacture = reader.IsDBNull(2) ? (DateTime?)null : reader.GetDateTime(2),
+                    CodePatient = reader.GetString(3),
+                    NumeroAssuree = reader.GetString(4),
+                    PatientName = reader.GetString(5),
+                    TotalTTC = reader.GetDecimal(6),
+                    ExecutedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                    ExecutedBy = reader.GetString(8),
+                    FactureNumber = reader.GetString(9)
                 });
             }
         }
@@ -1123,7 +1161,7 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-bordereau-text")]
-    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, string? bordereauNumber = null)
+    public ActionResult<string> GetCnamBordereauText(DateTime start, DateTime end, int? bordereauNumber = null)
     {
         var currentUser = GetCurrentUser();
         if (currentUser == null)
@@ -1164,7 +1202,7 @@ public class FinanceController : ControllerBase
             }
         }
 
-        var rows = new List<(string FactureNumber, string CodeBureau, string Annee, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, DateTime? DateFacture, decimal TotalTTC)>();
+        var rows = new List<(string FactureNumber, string CodeBureau, string Annee, string NumeroDecision, string NumeroAssuree, int NbSeances, DateTime? DateDebut, DateTime? DateFin, DateTime? DateFacture, decimal TotalTTC, int BordereauNumber)>();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT
@@ -1177,7 +1215,8 @@ public class FinanceController : ControllerBase
                 pp.date_debut,
                 pp.date_fin,
                 e.executed_at,
-                COALESCE(pp.prix_ttc, 0)
+                COALESCE(pp.prix_ttc, 0),
+                COALESCE(e.bordereau_number, 0)
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
             JOIN patients p ON p.id = pp.patient_id
@@ -1188,10 +1227,10 @@ public class FinanceController : ControllerBase
             cmd.CommandText += " AND p.cabinet_id = @cabinet_id";
             cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
-        if (!string.IsNullOrWhiteSpace(bordereauNumber))
+        if (bordereauNumber.HasValue)
         {
-            cmd.CommandText += " AND e.facture_number = @bordereauNumber";
-            cmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
+            cmd.CommandText += " AND e.bordereau_number = @bordereauNumber";
+            cmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber.Value);
         }
         cmd.CommandText += " ORDER BY e.executed_at, e.facture_number";
         cmd.Parameters.AddWithValue("@start", start.Date);
@@ -1211,7 +1250,8 @@ public class FinanceController : ControllerBase
                     DateDebut: reader.IsDBNull(6) ? null : reader.GetDateTime(6),
                     DateFin: reader.IsDBNull(7) ? null : reader.GetDateTime(7),
                     DateFacture: reader.IsDBNull(8) ? null : reader.GetDateTime(8),
-                    TotalTTC: reader.GetDecimal(9)
+                    TotalTTC: reader.GetDecimal(9),
+                    BordereauNumber: reader.GetInt32(10)
                 )
             );
         }
@@ -1220,7 +1260,7 @@ public class FinanceController : ControllerBase
         var bordereauYear = start.Year;
         var (codeCnam1, codeCnam2, codeCnam3) = SplitCabinetCode(cabinet.CodeCnam);
         var (employerNumber1, employerNumber2) = SplitEmployerNumber(cabinet.NumeroEmployeur);
-        var bordereauNumber = rows.FirstOrDefault().FactureNumber?.Split('/').FirstOrDefault()?.PadLeft(3, '0') ?? "000";
+        var bordereauNumber = rows.FirstOrDefault().BordereauNumber?.ToString("000") ?? "000";
         var totalFactures = rows.Count.ToString("000000");
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');

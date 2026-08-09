@@ -287,6 +287,7 @@
                             {
                                 <tr>
                                     <td>@row.ProgramId</td>
+                                    <td>@row.BordereauNumber</td>
                                     <td>@row.FactureNumber</td>
                                     <td>@row.DateFacture?.ToString("dd/MM/yyyy")</td>
                                     <td>@row.NumeroAssuree</td>
@@ -596,8 +597,10 @@
         errorMessage = null;
         successMessage = null;
 
-        var bordereauNumber = row.FactureNumber ?? string.Empty;
-        var groupedRows = cnamBordereauExecuted.Where(r => string.Equals(r.FactureNumber, bordereauNumber, StringComparison.OrdinalIgnoreCase)).ToList();
+        var bordereauNumber = row.BordereauNumber.HasValue ? row.BordereauNumber.Value.ToString("000") : string.Empty;
+        var groupedRows = row.BordereauNumber.HasValue
+            ? cnamBordereauExecuted.Where(r => r.BordereauNumber == row.BordereauNumber).ToList()
+            : cnamBordereauExecuted.Where(r => string.Equals(r.FactureNumber, row.FactureNumber, StringComparison.OrdinalIgnoreCase)).ToList();
         if (!groupedRows.Any())
         {
             errorMessage = "Aucune ligne de ce bordereau n'a été trouvée.";
@@ -607,12 +610,7 @@
         var totalTTC = groupedRows.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber.PadLeft(3, '0')}";
-
-        var pdfData = new
-        {
-            cabinet = cabinetInfo,
-            title = $"Bordereau CNAM N° {bordereauReference}",
+        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber}";
             summary = new
             {
                 Date = DateTime.Today.ToString("dd/MM/yyyy"),
@@ -639,8 +637,8 @@
 
         try
         {
-            var safeFactureNumber = SanitizeFileName(bordereauNumber);
-            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{safeFactureNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
+            var safeBordereauNumber = SanitizeFileName(bordereauNumber);
+            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_executed_{safeBordereauNumber}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
             successMessage = "Bordereau PDF exécuté généré.";
         }
         catch (JSException jsEx)
@@ -666,7 +664,7 @@
 
         try
         {
-            var bordereauNumber = row.FactureNumber ?? string.Empty;
+            var bordereauNumber = row.BordereauNumber.HasValue ? row.BordereauNumber.Value.ToString() : string.Empty;
             var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}&bordereauNumber={Uri.EscapeDataString(bordereauNumber)}");
             await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{SanitizeFileName(bordereauNumber)}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau exécuté généré.";
