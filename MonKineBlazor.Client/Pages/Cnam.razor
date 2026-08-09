@@ -262,7 +262,7 @@
     <div class="card mb-4">
         <div class="card-header">Bordereau exécuté</div>
         <div class="card-body">
-            @if (!cnamBordereauExecuted.Any())
+            @if (!ExecutedBordereaux.Any())
             {
                 <div class="alert alert-info">Aucun bordereau exécuté pour cette période.</div>
             }
@@ -272,11 +272,8 @@
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
-                                <th>Programme</th>
-                                <th>N° facture</th>
-                                <th>Date facture</th>
-                                <th>N° assurée</th>
-                                <th>Patient</th>
+                                <th>N° bordereau</th>
+                                <th>Nb factures</th>
                                 <th>Total TTC</th>
                                 <th>Date exécution</th>
                                 <th>Exécuté par</th>
@@ -284,23 +281,19 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in cnamBordereauExecuted)
+                            @foreach (var bordereau in ExecutedBordereaux)
                             {
                                 <tr>
-                                    <td>@row.ProgramId</td>
-                                    <td>@row.BordereauNumber</td>
-                                    <td>@row.FactureNumber</td>
-                                    <td>@row.DateFacture?.ToString("dd/MM/yyyy")</td>
-                                    <td>@row.NumeroAssuree</td>
-                                    <td>@row.PatientName</td>
-                                    <td>@($"{row.TotalTTC:F2} DT")</td>
-                                    <td>@row.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td>@row.ExecutedBy</td>
+                                    <td>@bordereau.BordereauNumber</td>
+                                    <td>@bordereau.NbFactures</td>
+                                    <td>@($"{bordereau.TotalTTC:F2} DT")</td>
+                                    <td>@bordereau.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@bordereau.ExecutedBy</td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauPdf(row)">Exporter Bordereau</button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauTxt(row)">Exporter TXT</button>
-                                        <button type="button" class="btn btn-sm btn-warning me-1" @onclick="() => CancelExecutedBordereau(row)">Annuler exécution</button>
-                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteExecutedBordereau(row)">Supprimer définitivement</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauPdf(bordereau.BordereauNumber)">Exporter Bordereau</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauTxt(bordereau.BordereauNumber)">Exporter TXT</button>
+                                        <button type="button" class="btn btn-sm btn-warning me-1" @onclick="() => CancelExecutedBordereau(bordereau.BordereauNumber)">Annuler exécution</button>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteExecutedBordereau(bordereau.BordereauNumber)">Supprimer définitivement</button>
                                     </td>
                                 </tr>
                             }
@@ -323,6 +316,28 @@
     private HashSet<int> selectedBordereauProgramIds = new();
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
+
+    private IEnumerable<ExecutedBordereauSummary> ExecutedBordereaux => cnamBordereauExecuted
+        .Where(r => r.BordereauNumber.HasValue)
+        .GroupBy(r => r.BordereauNumber!.Value)
+        .Select(g => new ExecutedBordereauSummary
+        {
+            BordereauNumber = g.Key,
+            NbFactures = g.Count(),
+            TotalTTC = g.Sum(x => x.TotalTTC),
+            ExecutedAt = g.Max(x => x.ExecutedAt),
+            ExecutedBy = g.Select(x => x.ExecutedBy).FirstOrDefault() ?? string.Empty
+        })
+        .OrderByDescending(g => g.BordereauNumber);
+
+    private class ExecutedBordereauSummary
+    {
+        public int BordereauNumber { get; set; }
+        public int NbFactures { get; set; }
+        public decimal TotalTTC { get; set; }
+        public DateTime? ExecutedAt { get; set; }
+        public string? ExecutedBy { get; set; }
+    }
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
     private DateTime cnamEnd = DateTime.Today;
     private string invoiceDate => DateTime.Today.ToString("dd/MM/yyyy");
@@ -595,15 +610,12 @@
         }
     }
 
-    private async Task ExportExecutedBordereauPdf(CnamBordereauEntryDto row)
+    private async Task ExportExecutedBordereauPdf(int bordereauNumber)
     {
         errorMessage = null;
         successMessage = null;
 
-        var bordereauNumber = row.BordereauNumber.HasValue ? row.BordereauNumber.Value.ToString("000") : string.Empty;
-        var groupedRows = row.BordereauNumber.HasValue
-            ? cnamBordereauExecuted.Where(r => r.BordereauNumber == row.BordereauNumber).ToList()
-            : cnamBordereauExecuted.Where(r => string.Equals(r.FactureNumber, row.FactureNumber, StringComparison.OrdinalIgnoreCase)).ToList();
+        var groupedRows = cnamBordereauExecuted.Where(r => r.BordereauNumber == bordereauNumber).ToList();
         if (!groupedRows.Any())
         {
             errorMessage = "Aucune ligne de ce bordereau n'a été trouvée.";
@@ -613,7 +625,7 @@
         var totalTTC = groupedRows.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber}";
+        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber:000}";
         var pdfData = new
         {
             cabinet = cabinetInfo,
@@ -658,22 +670,16 @@
         }
     }
 
-    private async Task ExportExecutedBordereauTxt(CnamBordereauEntryDto row)
+    private async Task ExportExecutedBordereauTxt(int bordereauNumber)
     {
-        if (row == null)
-        {
-            errorMessage = "Aucun bordereau sélectionné pour l'export.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
         try
         {
-            var bordereauNumber = row.BordereauNumber.HasValue ? row.BordereauNumber.Value.ToString() : string.Empty;
-            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}&bordereauNumber={Uri.EscapeDataString(bordereauNumber)}");
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{SanitizeFileName(bordereauNumber)}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
+            var bordereauNumberText = bordereauNumber.ToString();
+            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}&bordereauNumber={Uri.EscapeDataString(bordereauNumberText)}");
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_executed_{SanitizeFileName(bordereauNumberText)}_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent, "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau exécuté généré.";
         }
         catch (HttpRequestException httpEx)
@@ -690,27 +696,21 @@
         }
     }
 
-    private async Task CancelExecutedBordereau(CnamBordereauEntryDto row)
+    private async Task CancelExecutedBordereau(int bordereauNumber)
     {
-        if (row == null)
-        {
-            errorMessage = "Aucune bordereau sélectionné pour annulation.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
         try
         {
-            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/{row.ProgramId}?mode=cancel");
+            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/bordereau/{bordereauNumber}?mode=cancel");
             if (!response.IsSuccessStatusCode)
             {
                 errorMessage = $"Impossible d'annuler l'exécution : {response.ReasonPhrase}";
                 return;
             }
 
-            successMessage = "Exécution annulée, la facture réapparaîtra dans les factures à exécuter.";
+            successMessage = "Exécution annulée, le bordereau réapparaîtra dans les factures à exécuter.";
             await LoadCnamBordereau();
         }
         catch (Exception ex)
@@ -719,20 +719,14 @@
         }
     }
 
-    private async Task DeleteExecutedBordereau(CnamBordereauEntryDto row)
+    private async Task DeleteExecutedBordereau(int bordereauNumber)
     {
-        if (row == null)
-        {
-            errorMessage = "Aucune bordereau sélectionné pour suppression.";
-            return;
-        }
-
         errorMessage = null;
         successMessage = null;
 
         try
         {
-            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/{row.ProgramId}?mode=hard");
+            var response = await Http.DeleteAsync($"api/finance/cnam-bordereau-executed/bordereau/{bordereauNumber}?mode=hard");
             if (!response.IsSuccessStatusCode)
             {
                 errorMessage = $"Impossible de supprimer définitivement : {response.ReasonPhrase}";

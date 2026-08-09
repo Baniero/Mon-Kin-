@@ -788,8 +788,8 @@ public class FinanceController : ControllerBase
         return Ok(rows);
     }
 
-    [HttpDelete("cnam-bordereau-executed/{programId}")]
-    public IActionResult DeleteExecutedCnamBordereau(int programId, string? mode = null)
+    [HttpDelete("cnam-bordereau-executed/bordereau/{bordereauNumber}")]
+    public IActionResult DeleteExecutedCnamBordereauByBordereauNumber(int bordereauNumber, string? mode = null)
     {
         var currentUser = GetCurrentUser();
         if (currentUser == null)
@@ -814,16 +814,16 @@ public class FinanceController : ControllerBase
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
             JOIN patients p ON p.id = pp.patient_id
-            WHERE e.program_id = @programId
+            WHERE e.bordereau_number = @bordereauNumber
         " : @"
             SELECT 1
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
             JOIN patients p ON p.id = pp.patient_id
-            WHERE e.program_id = @programId
+            WHERE e.bordereau_number = @bordereauNumber
               AND p.cabinet_id = @cabinet_id
         ";
-        checkCmd.Parameters.AddWithValue("@programId", programId);
+        checkCmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
         if (!IsAdmin())
         {
             checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
@@ -832,29 +832,29 @@ public class FinanceController : ControllerBase
         var exists = checkCmd.ExecuteScalar();
         if (exists == null || exists == DBNull.Value)
         {
-            return NotFound("Aucune exécution CNAM trouvée pour ce programme.");
+            return NotFound("Aucun bordereau CNAM trouvé pour ce numéro.");
         }
 
         using var deleteCmd = conn.CreateCommand();
         deleteCmd.Transaction = transaction;
         deleteCmd.CommandText = @"
             DELETE FROM cnam_bordereau_executed
-            WHERE program_id = @programId
+            WHERE bordereau_number = @bordereauNumber
         ";
-        deleteCmd.Parameters.AddWithValue("@programId", programId);
+        deleteCmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
         var rowsAffected = deleteCmd.ExecuteNonQuery();
 
         transaction.Commit();
 
         if (rowsAffected == 0)
         {
-            return NotFound("Aucune exécution CNAM trouvée à supprimer.");
+            return NotFound("Aucun bordereau CNAM trouvé à supprimer.");
         }
 
         var action = string.Equals(mode, "hard", StringComparison.OrdinalIgnoreCase)
             ? "supprimé définitivement"
             : "annulé";
-        return Ok(new { message = $"Exécution CNAM {action}." });
+        return Ok(new { message = $"Bordereau CNAM {action}." });
     }
 
     [HttpPost("cnam-bordereau/execute")]
