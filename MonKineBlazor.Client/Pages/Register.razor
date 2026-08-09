@@ -7,88 +7,154 @@
 <PageTitle>Inscription Mon kiné</PageTitle>
 
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-xl-9 col-lg-10">
-            <div class="register-panel shadow-lg rounded-4 overflow-hidden">
-                <div class="row g-0 align-items-stretch">
-                    <div class="col-lg-6 register-intro p-5 text-white d-flex flex-column justify-content-center">
-                        <span class="badge bg-light text-primary mb-3">Inscription kiné</span>
-                        <h2 class="fw-bold">Demandez un accès pour votre cabinet</h2>
-                        <p class="text-white-75">Complétez votre demande et l'administrateur pourra la valider depuis l’espace utilisateurs.</p>
-                        <div class="mt-4">
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <span class="icon-circle bg-white text-primary">1</span>
-                                <span>Soumission rapide</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <span class="icon-circle bg-white text-primary">2</span>
-                                <span>Validation par l’administrateur</span>
-                            </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="icon-circle bg-white text-primary">3</span>
-                                <span>Accès sécurisé et professionnel</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-6 p-5 bg-white d-flex flex-column register-form-column">
-                        <div class="mb-4">
-                            <h3 class="mb-0">Demande d'inscription</h3>
-                        </div>
-                        @if (!string.IsNullOrEmpty(successMessage))
-                        {
-                            <div class="alert alert-success">@successMessage</div>
-                        }
-                        @if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            <div class="alert alert-danger">@errorMessage</div>
-                        }
-
-                        <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
-                            <div class="row g-3 flex-grow-1">
-                                <div class="col-12">
-                                    <label class="form-label">Nom complet</label>
-                                    <InputText class="form-control" @bind-Value="registrationModel.FullName" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Nom du cabinet</label>
-                                    <InputText class="form-control" @bind-Value="cabinetName" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Email / Nom d'utilisateur</label>
-                                    <InputText class="form-control" @bind-Value="registrationModel.Username" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Téléphone / WhatsApp</label>
-                                    <InputText type="tel" class="form-control" @bind-Value="registrationModel.Telephone" placeholder="+216 21 234 567" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Mot de passe</label>
-                                    <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">N° employeur (optionnel)</label>
-                                    <InputText class="form-control" @bind-Value="numeroEmployeur" />
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label">Message pour l'administrateur</label>
-                                    <InputTextArea class="form-control" rows="4" @bind-Value="requestMessage" placeholder="Parlez-nous de votre cabinet, votre projet, ou toute information utile." />
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-primary w-100 py-3" type="submit">Envoyer la demande</button>
-                                </div>
-                            </div>
-                        </EditForm>
-
-                        <div class="text-center mt-4 mt-auto">
-                            <span class="text-muted">Déjà enregistré ?</span>
-                            <a class="link-primary" href="login">Se connecter</a>
-                        </div>
-                    </div>
+    <div class="register-page__shell shadow-lg rounded-4 overflow-hidden mx-auto">
+        <section class="register-page__hero p-5 text-white d-flex flex-column justify-content-between">
+            <div>
+                <span class="badge bg-light text-primary mb-3">Inscription kiné</span>
+                <h2 class="fw-bold mb-3">Demandez un accès pour votre cabinet</h2>
+                <p class="text-white-75">Complétez votre demande et l'administrateur pourra la valider depuis l’espace utilisateurs.</p>
+            </div>
+            <div class="mt-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="icon-circle bg-white text-primary">1</span>
+                    <span>Soumission rapide</span>
+                </div>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="icon-circle bg-white text-primary">2</span>
+                    <span>Validation par l’administrateur</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="icon-circle bg-white text-primary">3</span>
+                    <span>Accès sécurisé et professionnel</span>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <section class="register-page__form p-5 bg-white">
+            <div class="register-page__form-panel d-flex flex-column h-100">
+                <div class="mb-4">
+                    <h3 class="mb-0">Demande d'inscription</h3>
+                </div>
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">@successMessage</div>
+                }
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <EditForm Model="registrationModel" OnValidSubmit="SubmitRegistration">
+                    <div class="register-page__form-grid">
+                        <div class="register-page__field">
+                            <label class="form-label">Nom complet</label>
+                            <InputText class="form-control" @bind-Value="registrationModel.FullName" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">Nom du cabinet</label>
+                            <InputText class="form-control" @bind-Value="cabinetName" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">Email / Nom d'utilisateur</label>
+                            <InputText class="form-control" @bind-Value="registrationModel.Username" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">Téléphone / WhatsApp</label>
+                            <InputText type="tel" class="form-control" @bind-Value="registrationModel.Telephone" placeholder="+216 21 234 567" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">Mot de passe</label>
+                            <InputText type="password" class="form-control" @bind-Value="registrationModel.Password" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">N° employeur (optionnel)</label>
+                            <InputText class="form-control" @bind-Value="numeroEmployeur" />
+                        </div>
+                        <div class="register-page__field">
+                            <label class="form-label">Message pour l'administrateur</label>
+                            <InputTextArea class="form-control" rows="5" @bind-Value="requestMessage" placeholder="Parlez-nous de votre cabinet, votre projet, ou toute information utile." />
+                        </div>
+                        <div class="register-page__field">
+                            <button class="btn btn-primary w-100 py-3" type="submit">Envoyer la demande</button>
+                        </div>
+                    </div>
+                </EditForm>
+
+                <div class="register-page__footer text-center mt-4">
+                    <span class="text-muted">Déjà enregistré ?</span>
+                    <a class="link-primary" href="login">Se connecter</a>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
+
+<style>
+    .register-page__shell {
+        display: flex;
+        width: 100%;
+        max-width: 980px;
+        background: #ffffff;
+        min-height: 600px;
+    }
+
+    .register-page__hero {
+        flex: 0 0 360px;
+        min-width: 300px;
+        background: linear-gradient(180deg, #3b4be4 0%, #1f2f8f 100%);
+    }
+
+    .register-page__form {
+        flex: 1 1 1;
+    }
+
+    .register-page__form-panel {
+        width: 100%;
+    }
+
+    .register-page__form-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .register-page__field label {
+        display: block;
+        margin-bottom: 0.45rem;
+        font-weight: 700;
+        color: #1f2e4c;
+    }
+
+    .register-page__field .form-control,
+    .register-page__field .form-select,
+    .register-page__field textarea {
+        width: 100%;
+        min-height: 3.5rem;
+        box-sizing: border-box;
+    }
+
+    .register-page__footer {
+        margin-top: auto;
+    }
+
+    @media (max-width: 991px) {
+        .register-page__shell {
+            flex-direction: column;
+            min-height: auto;
+        }
+
+        .register-page__hero,
+        .register-page__form {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .register-page__hero {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+    }
+</style>
 
 @code {
     private UserCreateRequestDto registrationModel = new() { Role = "kine", Active = false };
