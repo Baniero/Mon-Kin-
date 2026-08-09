@@ -489,6 +489,30 @@ a:hover, .btn-link:hover {
 .register-panel {
     display: grid;
     grid-template-columns: 1fr;
+    max-width: 980px;
+    margin: 0 auto;
+    background: #ffffff;
+}
+
+.register-panel .row.g-3 > [class*="col-"] {
+    min-width: 0;
+}
+
+.register-panel .form-control,
+.register-panel .form-select,
+.register-panel textarea {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+}
+
+.register-panel .form-label {
+    font-weight: 600;
+    color: #1f2e4c;
+}
+
+.register-panel .btn {
+    min-width: 120px;
 }
 
 .register-intro {
