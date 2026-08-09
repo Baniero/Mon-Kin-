@@ -771,14 +771,15 @@ public class FinanceController : ControllerBase
             rows.Add(new CnamBordereauEntryDto
             {
                 ProgramId = reader.GetInt32(0),
-                CodePatient = reader.GetString(1),
-                NumeroAssuree = reader.GetString(2),
-                PatientName = reader.GetString(3),
-                TotalTTC = reader.GetDecimal(4),
-                ExecutedAt = reader.IsDBNull(5) ? null : reader.GetDateTime(5),
-                ExecutedBy = reader.GetString(6),
-                FactureNumber = reader.GetString(7),
-                DateFacture = reader.IsDBNull(8) ? (DateTime?)null : reader.GetDateTime(8)
+                BordereauNumber = reader.GetInt32(1),
+                CodePatient = reader.GetString(2),
+                NumeroAssuree = reader.GetString(3),
+                PatientName = reader.GetString(4),
+                TotalTTC = reader.GetDecimal(5),
+                ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
+                ExecutedBy = reader.GetString(7),
+                FactureNumber = reader.GetString(8),
+                DateFacture = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9)
             });
         }
 
@@ -886,12 +887,13 @@ public class FinanceController : ControllerBase
             using var insertCmd = conn.CreateCommand();
             insertCmd.Transaction = transaction;
             insertCmd.CommandText = @"
-                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, facture_number)
-                VALUES (@programId, NOW(), @executedBy, @factureNumber)
+                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number)
+                VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber)
                 ON CONFLICT (program_id) DO NOTHING
             ";
             insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+            insertCmd.Parameters.AddWithValue("@bordereauNumber", nextSequence);
             insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
             var rowsAffected = insertCmd.ExecuteNonQuery();
             _logger.LogInformation("ExecuteCnamBordereau insert executed. ProgramId={ProgramId}, FactureNumber={FactureNumber}, RowsAffected={RowsAffected}",
@@ -1009,6 +1011,7 @@ public class FinanceController : ControllerBase
             WHERE pp.id = ANY(@programIds)
               AND COALESCE(p.couverture, '') <> ''
               AND COALESCE(p.n_assuree, '') <> ''
+              AND e.program_id IS NULL
         ";
         if (!IsAdmin())
         {
@@ -1052,11 +1055,12 @@ public class FinanceController : ControllerBase
         using var insertCmd = conn.CreateCommand();
         insertCmd.Transaction = transaction;
         insertCmd.CommandText = @"
-            INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, facture_number)
-            VALUES (@programId, NOW(), @executedBy, @factureNumber)
+            INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number)
+            VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber)
         ";
         insertCmd.Parameters.Add(new NpgsqlParameter("@programId", NpgsqlTypes.NpgsqlDbType.Integer));
         insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+        insertCmd.Parameters.AddWithValue("@bordereauNumber", nextSequence);
         insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
 
         foreach (var programId in request.ProgramIds)
