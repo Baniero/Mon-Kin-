@@ -187,14 +187,14 @@ else
                     <div class="task-item">
                         <div>
                             <p class="mb-1">Revenus attendus</p>
-                            <strong>@expectedRevenue:F2 DT</strong>
+                            <strong>@($"{expectedRevenue:F2} DT")</strong>
                         </div>
                         <span class="badge bg-info-soft text-info">Prévision</span>
                     </div>
                     <div class="task-item">
                         <div>
                             <p class="mb-1">Revenus encaissés</p>
-                            <strong>@collectedRevenue:F2 DT</strong>
+                            <strong>@($"{collectedRevenue:F2} DT")</strong>
                         </div>
                         <span class="badge bg-success-soft text-success">Réel</span>
                     </div>
