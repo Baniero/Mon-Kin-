@@ -234,6 +234,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@annee", (object?)program.Annee ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_decision", (object?)program.NumeroDecision ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@numero_ordre", (object?)program.NumeroOrdre ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@type_programme", (object?)program.TypeProgramme ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@prix_unitaire", program.PrixUnitaire);
         cmd.Parameters.AddWithValue("@prix_espece", program.PrixEspece);
         cmd.Parameters.AddWithValue("@prix_ht", program.PrixHT);
