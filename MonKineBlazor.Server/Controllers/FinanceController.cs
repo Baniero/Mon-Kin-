@@ -611,8 +611,8 @@ public class FinanceController : ControllerBase
                   )
                 ORDER BY pp.date_debut
             ";
-            cmd.Parameters.AddWithValue("@start", start.Date);
-            cmd.Parameters.AddWithValue("@end", end.Date);
+            cmd.Parameters.AddWithValue("@start", startDate.Date);
+            cmd.Parameters.AddWithValue("@end", endDate.Date);
             if (!IsAdmin())
             {
                 cmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
