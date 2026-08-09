@@ -305,11 +305,14 @@ else
             expectedRevenue = appointments.Sum(a => a.Amount);
             collectedRevenue = appointments.Sum(a => a.PaidAmount);
 
-            var cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={today.AddMonths(-1):yyyy-MM-dd}&end={today:AddDays(30):yyyy-MM-dd}") ?? new List<CnamProgramInvoiceDto>();
+            var startDate = today.AddMonths(-1).ToString("yyyy-MM-dd");
+            var endDate = today.AddDays(30).ToString("yyyy-MM-dd");
+
+            var cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}") ?? new List<CnamProgramInvoiceDto>();
             pendingFactures = cnamPrograms.Count;
             satisfactionRate = totalPatients > 0 ? Math.Max(60, (int)Math.Round((double)cnamPatients / totalPatients * 100)) : 0;
 
-            var cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={today:yyyy-MM-dd}&end={today.AddDays(30):yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
+            var cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={Uri.EscapeDataString(startDate)}&end={Uri.EscapeDataString(endDate)}") ?? new List<CnamBordereauEntryDto>();
             pendingBordereaux = cnamBordereau.Select(r => r.BordereauNumber).Distinct().Count(n => n.HasValue);
 
             lastUpdated = DateTime.Now.ToString("dd MMM yyyy HH:mm");

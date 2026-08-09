@@ -350,12 +350,14 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-programs")]
-    public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(DateTime start, DateTime end)
+    public ActionResult<IEnumerable<CnamProgramInvoiceDto>> GetCnamPrograms(string? start, string? end)
     {
         try
         {
             var xUserId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "<missing>";
-            _logger.LogInformation("GetCnamPrograms called. start={Start}, end={End}, X-User-Id={XUserId}, Path={Path}", start, end, xUserId, Request.Path);
+            var startDate = ParseOrDefaultDate(start, DateTime.Today.AddMonths(-1));
+            var endDate = ParseOrDefaultDate(end, DateTime.Today.AddDays(30));
+            _logger.LogInformation("GetCnamPrograms called. start={Start}, end={End}, parsedStart={ParsedStart}, parsedEnd={ParsedEnd}, X-User-Id={XUserId}, Path={Path}", start, end, startDate, endDate, xUserId, Request.Path);
 
             var currentUser = GetCurrentUser();
             if (currentUser == null)
@@ -428,8 +430,8 @@ public class FinanceController : ControllerBase
                   AND p.cabinet_id = @cabinet_id
                 ORDER BY pp.date_debut DESC
             ";
-            cmd.Parameters.AddWithValue("@start", start.Date);
-            cmd.Parameters.AddWithValue("@end", end.Date);
+            cmd.Parameters.AddWithValue("@start", startDate.Date);
+            cmd.Parameters.AddWithValue("@end", endDate.Date);
             if (!IsAdmin())
             {
                 cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
@@ -543,10 +545,12 @@ public class FinanceController : ControllerBase
     }
 
     [HttpGet("cnam-bordereau")]
-    public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereau(DateTime start, DateTime end)
+    public ActionResult<IEnumerable<CnamBordereauEntryDto>> GetCnamBordereau(string? start, string? end)
     {
         var xUserId = Request.Headers["X-User-Id"].FirstOrDefault() ?? "<missing>";
-        _logger.LogInformation("GetCnamBordereau called. start={Start}, end={End}, X-User-Id={XUserId}, Path={Path}", start, end, xUserId, Request.Path);
+        var startDate = ParseOrDefaultDate(start, DateTime.Today);
+        var endDate = ParseOrDefaultDate(end, DateTime.Today.AddDays(30));
+        _logger.LogInformation("GetCnamBordereau called. start={Start}, end={End}, parsedStart={ParsedStart}, parsedEnd={ParsedEnd}, X-User-Id={XUserId}, Path={Path}", start, end, startDate, endDate, xUserId, Request.Path);
 
         try
         {
@@ -1996,5 +2000,15 @@ public class FinanceController : ControllerBase
         }
 
         return "non_paye";
+    }
+
+    private static DateTime ParseOrDefaultDate(string? rawDate, DateTime fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(rawDate) && DateTime.TryParse(rawDate, out var parsed))
+        {
+            return parsed.Date;
+        }
+
+        return fallback.Date;
     }
 }
