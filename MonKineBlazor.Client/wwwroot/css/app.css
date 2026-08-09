@@ -94,6 +94,12 @@ html, body {
     border-radius: 1.5rem;
     padding: 1.25rem;
     min-height: 10rem;
+    color: #ffffff;
+}
+
+.feature-card h5,
+.feature-card p {
+    color: #ffffff;
 }
 
 .feature-dot {
@@ -112,6 +118,22 @@ html, body {
     max-width: 100%;
     width: 100%;
     box-shadow: 0 30px 80px rgba(15, 23, 70, 0.18);
+}
+
+.landing-hero,
+.landing-hero .hero-badge,
+.landing-hero h1,
+.landing-hero .lead,
+.landing-hero p,
+.landing-hero .feature-card,
+.landing-hero .feature-card h5,
+.landing-hero .feature-card p {
+    color: #ffffff !important;
+}
+
+.landing-hero .feature-card {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
 }
 
 .info-panel {
