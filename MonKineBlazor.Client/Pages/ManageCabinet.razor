@@ -113,6 +113,14 @@
                         <label class="form-label">RIB / RIP</label>
                         <InputText class="form-control" @bind-Value="cabinetForm.Rib" />
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Options type de programme (une option par ligne)</label>
+                        <InputTextArea class="form-control" rows="4" @bind-Value="cabinetForm.ProgrammeTypeOptions" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Options nature de séances (une option par ligne)</label>
+                        <InputTextArea class="form-control" rows="6" @bind-Value="cabinetForm.NatureSeancesOptions" />
+                    </div>
                     <div class="col-md-4">
                         <label class="form-label">Adresse du cabinet</label>
                         <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />

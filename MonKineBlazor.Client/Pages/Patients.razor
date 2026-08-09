@@ -386,8 +386,24 @@ else
                                     <InputText class="form-control" @bind-Value="newProgram.Titre" />
                                 </div>
                                 <div class="col-md-6">
+                                    <label class="form-label">Type</label>
+                                    <InputSelect class="form-select" @bind-Value="newProgram.TypeProgramme">
+                                        <option value="">-- Sélectionnez --</option>
+                                        @foreach (var typeOption in GetProgramTypeOptions())
+                                        {
+                                            <option value="@typeOption">@typeOption</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div class="col-md-6">
                                     <label class="form-label">Nature</label>
-                                    <InputText class="form-control" @bind-Value="newProgram.NatureSeances" />
+                                    <InputSelect class="form-select" @bind-Value="newProgram.NatureSeances">
+                                        <option value="">-- Sélectionnez --</option>
+                                        @foreach (var natureOption in GetNatureSeancesOptions())
+                                        {
+                                            <option value="@natureOption">@natureOption</option>
+                                        }
+                                    </InputSelect>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Nb séances</label>
@@ -874,11 +890,75 @@ else
         if (selectedPatient == null)
         {
             programs = null;
+            cabinetProgramTypeOptions = DefaultProgramTypeOptions;
+            cabinetNatureSeancesOptions = DefaultNatureSeancesOptions;
             return;
         }
 
         programs = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{selectedPatient.Id}");
+        await LoadCabinetOptions(selectedPatient.CabinetId);
     }
+
+    private async Task LoadCabinetOptions(int? cabinetId)
+    {
+        if (!cabinetId.HasValue)
+        {
+            cabinetProgramTypeOptions = DefaultProgramTypeOptions;
+            cabinetNatureSeancesOptions = DefaultNatureSeancesOptions;
+            return;
+        }
+
+        try
+        {
+            var cabinet = await Http.GetFromJsonAsync<CabinetDto>($"api/cabinets/{cabinetId.Value}");
+            cabinetProgramTypeOptions = ParseOptions(cabinet?.ProgrammeTypeOptions, DefaultProgramTypeOptions);
+            cabinetNatureSeancesOptions = ParseOptions(cabinet?.NatureSeancesOptions, DefaultNatureSeancesOptions);
+        }
+        catch
+        {
+            cabinetProgramTypeOptions = DefaultProgramTypeOptions;
+            cabinetNatureSeancesOptions = DefaultNatureSeancesOptions;
+        }
+    }
+
+    private IEnumerable<string> GetProgramTypeOptions() => cabinetProgramTypeOptions ?? DefaultProgramTypeOptions;
+    private IEnumerable<string> GetNatureSeancesOptions() => cabinetNatureSeancesOptions ?? DefaultNatureSeancesOptions;
+
+    private static string[] ParseOptions(string? options, string[] defaults)
+    {
+        if (string.IsNullOrWhiteSpace(options))
+        {
+            return defaults;
+        }
+
+        var parsed = options
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(o => o.Trim())
+            .Where(o => !string.IsNullOrWhiteSpace(o))
+            .ToArray();
+
+        return parsed.Length > 0 ? parsed : defaults;
+    }
+
+    private static readonly string[] DefaultProgramTypeOptions = new[]
+    {
+        "Prise en charge au cabinet",
+        "Prise en charge à domicile",
+        "En établissement de soins / milieu hospitalier"
+    };
+
+    private static readonly string[] DefaultNatureSeancesOptions = new[]
+    {
+        "Rééducation somato-motrice",
+        "Rééducation neurologique",
+        "Fonction respiratoire et cardiovasculaire",
+        "Rééducation des brûlés",
+        "Rééducation périnéale",
+        "Techniques donnant lieu à majoration"
+    };
+
+    private string[]? cabinetProgramTypeOptions;
+    private string[]? cabinetNatureSeancesOptions;
 
     private async Task SaveProgramAsync()
     {

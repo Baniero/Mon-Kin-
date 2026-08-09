@@ -104,7 +104,8 @@ public class PatientProgramsController : ControllerBase
                 Annee = reader.GetString(10),
                 NumeroDecision = reader.GetString(11),
                 NumeroOrdre = reader.GetString(12),
-                PrixUnitaire = reader.GetDecimal(13),
+                TypeProgramme = reader.GetString(13),
+                PrixUnitaire = reader.GetDecimal(14),
                 PrixEspece = reader.GetDecimal(14),
                 PrixHT = reader.GetDecimal(15),
                 TVA = reader.GetDecimal(16),
@@ -135,12 +136,12 @@ public class PatientProgramsController : ControllerBase
             INSERT INTO patient_programs (
                 patient_id, titre, nature_seances, nb_seances, nb_seances_par_semaine,
                 duree_seance_minutes, date_debut, date_fin, code_bureau, annee,
-                numero_decision, numero_ordre, prix_unitaire, prix_espece, prix_ht, tva,
+                numero_decision, numero_ordre, type_programme, prix_unitaire, prix_espece, prix_ht, tva,
                 montant_tva, prix_ttc, statut, objectifs, remarques
             ) VALUES (
                 @patient_id, @titre, @nature_seances, @nb_seances, @nb_seances_par_semaine,
                 @duree_seance_minutes, @date_debut, @date_fin, @code_bureau, @annee,
-                @numero_decision, @numero_ordre, @prix_unitaire, @prix_espece, @prix_ht, @tva,
+                @numero_decision, @numero_ordre, @type_programme, @prix_unitaire, @prix_espece, @prix_ht, @tva,
                 @montant_tva, @prix_ttc, @statut, @objectifs, @remarques
             )
             RETURNING id

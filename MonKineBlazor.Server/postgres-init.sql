@@ -13,16 +13,19 @@ CREATE TABLE IF NOT EXISTS cabinets (
     adresse_cabinet TEXT,
     nom_cabinet_arabe TEXT,
     nom_kine_arabe TEXT,
-    adresse_kine_arabe TEXT,
     telephone TEXT,
     rib TEXT,
     numero_assuree TEXT,
+    programme_type_options TEXT,
+    nature_seances_options TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS numero_employeur TEXT;
 ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS telephone TEXT;
 ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS rib TEXT;
+ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS programme_type_options TEXT;
+ALTER TABLE cabinets ADD COLUMN IF NOT EXISTS nature_seances_options TEXT;
 
 CREATE TABLE IF NOT EXISTS patients (
     id SERIAL PRIMARY KEY,
@@ -96,6 +99,7 @@ CREATE TABLE IF NOT EXISTS patient_programs (
     annee TEXT,
     numero_decision TEXT,
     numero_ordre TEXT,
+    type_programme TEXT,
     prix_unitaire NUMERIC DEFAULT 0,
     prix_espece NUMERIC DEFAULT 0,
     prix_ht NUMERIC DEFAULT 0,
@@ -115,6 +119,7 @@ ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS code_bureau TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS annee TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS numero_decision TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS numero_ordre TEXT;
+ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS type_programme TEXT;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_unitaire NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_espece NUMERIC DEFAULT 0;
 ALTER TABLE patient_programs ADD COLUMN IF NOT EXISTS prix_ht NUMERIC DEFAULT 0;

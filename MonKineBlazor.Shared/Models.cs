@@ -26,6 +26,7 @@ public class PatientProgramDto
     public int Id { get; set; }
     public int PatientId { get; set; }
     public string? Titre { get; set; }
+    public string? TypeProgramme { get; set; }
     public string? NatureSeances { get; set; }
     public int NbSeances { get; set; }
     public int DureeSeanceMinutes { get; set; }
@@ -299,6 +300,8 @@ public class CabinetDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public string? ProgrammeTypeOptions { get; set; }
+    public string? NatureSeancesOptions { get; set; }
 }
 
 public class CabinetCreateRequestDto
@@ -316,6 +319,8 @@ public class CabinetCreateRequestDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public string? ProgrammeTypeOptions { get; set; }
+    public string? NatureSeancesOptions { get; set; }
 }
 
 public class CabinetUpdateRequestDto
@@ -334,4 +339,6 @@ public class CabinetUpdateRequestDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public string? ProgrammeTypeOptions { get; set; }
+    public string? NatureSeancesOptions { get; set; }
 }

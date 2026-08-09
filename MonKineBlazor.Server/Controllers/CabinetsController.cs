@@ -70,7 +70,11 @@ public class CabinetsController : ControllerBase
                 NomKineArabe = reader.IsDBNull(10) ? null : reader.GetString(10),
                 AdresseKineArabe = reader.IsDBNull(11) ? null : reader.GetString(11),
                 Telephone = reader.IsDBNull(12) ? null : reader.GetString(12),
-                Rib = reader.IsDBNull(13) ? null : reader.GetString(13)
+                Rib = reader.IsDBNull(13) ? null : reader.GetString(13),
+                ProgrammeTypeOptions = reader.IsDBNull(14) ? null : reader.GetString(14),
+                NatureSeancesOptions = reader.IsDBNull(15) ? null : reader.GetString(15),
+                ProgrammeTypeOptions = reader.IsDBNull(14) ? null : reader.GetString(14),
+                NatureSeancesOptions = reader.IsDBNull(15) ? null : reader.GetString(15)
             });
         }
 
@@ -91,7 +95,8 @@ public class CabinetsController : ControllerBase
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
-                   adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib
+                   adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib,
+                   programme_type_options, nature_seances_options
             FROM cabinets
             WHERE id = @id
         ";
@@ -135,10 +140,12 @@ public class CabinetsController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
-                                  adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib)
+            INSERT INTO cabinets (nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, numero_employeur, racine, cle, qualite,
+                                  adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib,
+                                  programme_type_options, nature_seances_options)
             VALUES (@nom_cabinet, @code_etablissement, @matricule_fiscal, @nom_etablissement, @numero_employeur, @code_cnam, @qualite,
-                    @adresse_cabinet, @nom_cabinet_arabe, @nom_kine_arabe, @adresse_kine_arabe, @telephone, @rib)
+                    @adresse_cabinet, @nom_cabinet_arabe, @nom_kine_arabe, @adresse_kine_arabe, @telephone, @rib,
+                    @programme_type_options, @nature_seances_options)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
@@ -206,7 +213,9 @@ public class CabinetsController : ControllerBase
                 nom_kine_arabe = @nom_kine_arabe,
                 adresse_kine_arabe = @adresse_kine_arabe,
                 telephone = @telephone,
-                rib = @rib
+                rib = @rib,
+                programme_type_options = @programme_type_options,
+                nature_seances_options = @nature_seances_options
             WHERE id = @id
         ";
         cmd.Parameters.AddWithValue("@nom_cabinet", (object?)request.NomCabinet ?? DBNull.Value);
@@ -222,6 +231,8 @@ public class CabinetsController : ControllerBase
         cmd.Parameters.AddWithValue("@adresse_kine_arabe", (object?)request.AdresseKineArabe ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@telephone", (object?)request.Telephone ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@rib", (object?)request.Rib ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@programme_type_options", (object?)request.ProgrammeTypeOptions ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@nature_seances_options", (object?)request.NatureSeancesOptions ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
 
         var rows = cmd.ExecuteNonQuery();

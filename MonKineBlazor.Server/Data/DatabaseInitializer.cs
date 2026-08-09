@@ -63,6 +63,8 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "cabinets", "nom_kine_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinets", "adresse_kine_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinets", "numero_assuree", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "programme_type_options", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "nature_seances_options", "TEXT");
     }
 
     private static int EnsureCabinetExists(NpgsqlConnection connection, string cabinetName)
