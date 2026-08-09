@@ -105,7 +105,6 @@
                     <table class="table table-sm table-striped">
                         <thead>
                             <tr>
-                                <th>Programme</th>
                                 <th>Patient</th>
                                 <th>N° assurée</th>
                                 <th>Date début</th>
@@ -117,7 +116,6 @@
                             @foreach (var item in cnamPrograms)
                             {
                                 <tr class="@(selectedProgram?.ProgramId == item.ProgramId ? "table-active" : string.Empty)">
-                                    <td>@item.Titre</td>
                                     <td>@item.PatientName</td>
                                     <td>@item.NumeroAssuree</td>
                                     <td>@item.DateDebut?.ToString("dd/MM/yyyy")</td>
@@ -165,7 +163,6 @@
                         </div>
                         <div class="col-md-6">
                             <h6>Séance</h6>
-                            <p class="mb-1"><strong>Titre :</strong> @selectedProgram.Titre</p>
                             <p class="mb-1"><strong>Nature :</strong> @selectedProgram.NatureSeances</p>
                             <p class="mb-1"><strong>Date début :</strong> @selectedProgram.DateDebut?.ToString("dd/MM/yyyy")</p>
                             <p class="mb-1"><strong>Date fin :</strong> @selectedProgram.DateFin?.ToString("dd/MM/yyyy")</p>
@@ -487,18 +484,7 @@
                 selectedProgram.CodePatient,
                 selectedProgram.NumeroAssuree,
                 selectedProgram.Couverture,
-                selectedProgram.Titre,
-                selectedProgram.NatureSeances,
-                DateDebut = selectedProgram.DateDebut?.ToString("dd/MM/yyyy"),
-                DateFin = selectedProgram.DateFin?.ToString("dd/MM/yyyy"),
-                selectedProgram.NbSeances,
-                selectedProgram.DureeSeanceMinutes,
-                selectedProgram.PrixUnitaire,
-                selectedProgram.PrixTTC,
-                selectedProgram.CodeBureau,
-                selectedProgram.Annee,
-                selectedProgram.NumeroDecision,
-                selectedProgram.NumeroOrdre,
+
                 selectedProgram.FactureNumber,
                 MontantHT = montantHT,
                 MontantTVA = montantTVA

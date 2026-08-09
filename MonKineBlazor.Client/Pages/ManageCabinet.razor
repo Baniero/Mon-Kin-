@@ -114,17 +114,64 @@
                         <InputText class="form-control" @bind-Value="cabinetForm.Rib" />
                     </div>
                     <div class="col-md-12">
-                        <label class="form-label">Options type de programme (une option par ligne)</label>
-                        <InputTextArea class="form-control" rows="4" @bind-Value="cabinetForm.ProgrammeTypeOptions" />
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button type="button" class="nav-link @(activeCabinetSection == CabinetSection.Info ? "active" : "")" @onclick="() => SetCabinetSection(CabinetSection.Info)">Informations</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button type="button" class="nav-link @(activeCabinetSection == CabinetSection.Parametres ? "active" : "")" @onclick="() => SetCabinetSection(CabinetSection.Parametres)">Paramètres</button>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Options nature de séances (une option par ligne)</label>
-                        <InputTextArea class="form-control" rows="6" @bind-Value="cabinetForm.NatureSeancesOptions" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Adresse du cabinet</label>
-                        <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />
-                    </div>
+                    @if (activeCabinetSection == CabinetSection.Info)
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label">Adresse du cabinet</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nom cabinet en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nom du kiné en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.NomKineArabe" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Adresse du kiné en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseKineArabe" />
+                        </div>
+                    }
+                    else if (activeCabinetSection == CabinetSection.Parametres)
+                    {
+                        <div class="col-md-12">
+                            <label class="form-label">Options type de programme (une option par ligne)</label>
+                            <InputTextArea class="form-control" rows="4" @bind-Value="cabinetForm.ProgrammeTypeOptions" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Options nature de séances (une option par ligne)</label>
+                            <InputTextArea class="form-control" rows="6" @bind-Value="cabinetForm.NatureSeancesOptions" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-md-4">
+                            <label class="form-label">Adresse du cabinet</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseCabinet" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nom cabinet en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Nom du kiné en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.NomKineArabe" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Adresse du kiné en arabe</label>
+                            <InputText class="form-control" @bind-Value="cabinetForm.AdresseKineArabe" />
+                        </div>
+                    }
                     <div class="col-md-4">
                         <label class="form-label">Nom cabinet en arabe</label>
                         <InputText class="form-control" @bind-Value="cabinetForm.NomCabinetArabe" />
@@ -253,6 +300,13 @@ else
     private string? errorMessage;
     private CabinetDto cabinetForm = new();
     private CabinetDto? selectedCabinet;
+    private CabinetSection activeCabinetSection = CabinetSection.Info;
+
+    private enum CabinetSection
+    {
+        Info,
+        Parametres
+    }
 
     protected override async Task OnInitializedAsync()
     {
