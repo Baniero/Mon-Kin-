@@ -1397,16 +1397,16 @@ public class FinanceController : ControllerBase
 
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             WriteAt(32, factureNumber);
-            WriteAt(40, "4375");
+            WriteAt(39, "4375");
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, row.Annee, bordereauYear);
-            WriteAt(44, decisionYear);
-            WriteAt(48, decisionKey);
+            WriteAt(43, decisionYear);
+            WriteAt(47, decisionKey);
 
             var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
-            WriteAt(54, numeroAssuree);
-            WriteAt(66, "003");
-            WriteAt(69, row.NbSeances.ToString("000"));
+            WriteAt(53, numeroAssuree);
+            WriteAt(65, "003");
+            WriteAt(68, row.NbSeances.ToString("000"));
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
             WriteAt(72, debutText);
@@ -1464,7 +1464,7 @@ public class FinanceController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(factureNumber))
             {
-                return new string(' ', 8);
+                return new string(' ', 7);
             }
 
             var normalized = factureNumber.Trim();
@@ -1472,10 +1472,10 @@ public class FinanceController : ControllerBase
             if (parts.Length == 2 && int.TryParse(parts[0], out var sequence) && parts[1].Length == 4)
             {
                 var invoiceText = $"{sequence:000}/{parts[1]}";
-                return invoiceText.Length <= 8 ? invoiceText.PadRight(8, ' ') : invoiceText[..8];
+                return invoiceText.Length <= 7 ? invoiceText.PadRight(7, ' ') : invoiceText[..7];
             }
 
-            return normalized.Length <= 8 ? normalized.PadRight(8, ' ') : normalized[..8];
+            return normalized.Length <= 7 ? normalized.PadRight(7, ' ') : normalized[..7];
         }
 
         static IEnumerable<string> WrapText(string text, int maxLength)
