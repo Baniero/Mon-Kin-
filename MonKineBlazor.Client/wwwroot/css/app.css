@@ -238,17 +238,6 @@ html, body {
     font-weight: 700;
 }
 
-.badge-emoji {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.8rem;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--primary);
-    font-weight: 700;
-}
-
 button, input, textarea, select {
     font-family: inherit;
 }
@@ -515,6 +504,21 @@ a:hover, .btn-link:hover {
     box-shadow: 0 18px 42px rgba(23, 44, 110, 0.14);
 }
 
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-left: 1.2rem;
+    padding-right: 1.2rem;
+}
+
+.btn-icon i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
 .btn-primary {
     color: #fff;
     background: linear-gradient(135deg, var(--primary), #2f51f5);
@@ -648,10 +652,6 @@ textarea:focus {
 }
 
 .bi {
-    font-family: inherit !important;
-    font-style: normal !important;
-    font-weight: normal !important;
-    speak: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -660,73 +660,6 @@ textarea:focus {
     margin-right: 0.75rem;
     font-size: 1.1rem;
     vertical-align: middle;
-}
-
-.bi::before {
-    content: "";
-}
-
-.bi.bi-speedometer2::before,
-.bi.bi-bar-chart-line::before {
-    content: "📊";
-}
-
-.bi.bi-person-lines-fill::before {
-    content: "👤";
-}
-
-.bi.bi-calendar-check::before,
-.bi.bi-calendar-check-fill::before {
-    content: "📅";
-}
-
-.bi.bi-wallet2::before,
-.bi.bi-wallet-fill::before {
-    content: "💼";
-}
-
-.bi.bi-file-earmark-medical::before {
-    content: "🩺";
-}
-
-.bi.bi-building::before {
-    content: "🏢";
-}
-
-.bi.bi-people::before,
-.bi.bi-people-fill::before {
-    content: "👥";
-}
-
-.bi.bi-box-arrow-right::before {
-    content: "🚪";
-}
-
-.bi.bi-box-arrow-in-right::before {
-    content: "🔑";
-}
-
-.bi.bi-heart-pulse::before {
-    content: "❤️";
-}
-
-.bi.bi-clock-history::before {
-    content: "⏳";
-}
-
-.bi.bi-coin::before,
-.bi.bi-cash-stack::before,
-.bi.bi-currency-dollar::before {
-    content: "💰";
-}
-
-.bi.bi-graph-up-arrow::before {
-    content: "📈";
-}
-
-.bi.bi-shield-check::before,
-.bi.bi-shield-fill-check::before {
-    content: "🛡️";
 }
 
 .status-badge {
@@ -761,63 +694,59 @@ textarea:focus {
 
 /* UI Enhancements */
 .section-card {
-    border: 1px solid rgba(94, 111, 180, 0.12);
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,248,255,0.9));
+    border: 1px solid rgba(94, 111, 180, 0.15);
+    background: radial-gradient(circle at top left, rgba(71, 92, 255, 0.12), rgba(255, 255, 255, 0.95));
     border-radius: 1.8rem;
-    box-shadow: 0 20px 60px rgba(23, 44, 110, 0.07);
+    box-shadow: 0 24px 80px rgba(23, 44, 110, 0.10);
     padding: 1.5rem;
 }
 
-.section-heading {
+.card.section-card .card-header {
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid rgba(94, 111, 180, 0.08);
+}
+
+.card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.5rem;
 }
 
-.section-heading h2,
-.section-heading h3,
-.section-heading h4 {
-    margin: 0;
-    font-size: 1.15rem;
-    color: var(--secondary);
+.btn-group .btn {
+    min-width: 6rem;
+    border-radius: 2rem;
 }
 
-.section-heading .badge-soft {
-    font-size: 0.85rem;
+.btn-outline-primary {
+    color: var(--primary);
+    background: rgba(71, 92, 255, 0.07);
+    border-color: rgba(71, 92, 255, 0.25);
 }
 
-.btn-emoji {
-    position: relative;
-    padding-left: 2.4rem;
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background: rgba(71, 92, 255, 0.14);
 }
 
-.btn-emoji::before {
-    content: attr(data-emoji);
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1rem;
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 1.2rem;
+    padding-right: 1.2rem;
 }
 
-.input-group-emoji .form-control {
-    padding-left: 2.8rem;
-}
-
-.input-group-emoji .input-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    pointer-events: none;
+.btn-icon .bi {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
 }
 
 .table-responsive {
     background: #ffffff;
-    border: 1px solid rgba(94, 111, 180, 0.10);
+    border: 1px solid rgba(94, 111, 180, 0.14);
     border-radius: 1.25rem;
     padding: 1rem;
 }
