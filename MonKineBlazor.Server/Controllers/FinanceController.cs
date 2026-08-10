@@ -1393,8 +1393,8 @@ public class FinanceController : ControllerBase
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             for (int i = 0; i < factureNumber.Length; i++) line[32 + i] = factureNumber[i];
 
-            var bordereauText = row.BordereauNumber.ToString("000");
-            for (int i = 0; i < bordereauText.Length; i++) line[40 + i] = bordereauText[i];
+            // Champ de numéro de bordereau effacé : on laisse 3 espaces réservées
+            for (int i = 0; i < 3; i++) line[40 + i] = ' ';
 
             var codeAct = "4375";
             for (int i = 0; i < codeAct.Length; i++) line[43 + i] = codeAct[i];
