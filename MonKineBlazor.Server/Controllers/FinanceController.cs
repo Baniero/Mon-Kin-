@@ -1003,7 +1003,7 @@ public class FinanceController : ControllerBase
             bordereauSequenceCmd.Parameters.AddWithValue("@year", invoiceYear);
             var currentBordereauNumberObj = bordereauSequenceCmd.ExecuteScalar();
             var nextBordereauNumber = Convert.ToInt32(currentBordereauNumberObj ?? 0) + 1;
-            var factureNumber = $"{nextInvoiceSequence:000}/{invoiceYear}";
+            var factureNumber = $"{nextInvoiceSequence}/{invoiceYear}";
 
             using var insertCmd = conn.CreateCommand();
             insertCmd.Transaction = transaction;
