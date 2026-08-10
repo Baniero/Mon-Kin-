@@ -661,6 +661,7 @@
 
     private async Task LoadProgramsForPatient(int patientId)
     {
+        var previousProgramId = selectedProgram?.Id;
         patientPrograms.Clear();
         selectedProgram = null;
         programPreview.Clear();
@@ -676,6 +677,15 @@
         {
             patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
             ApplyProgramSchedulingFilter(patientId);
+            if (previousProgramId.HasValue)
+            {
+                selectedProgram = patientPrograms.FirstOrDefault(p => p.Id == previousProgramId.Value);
+            }
+            if (selectedProgram == null && patientPrograms.Any())
+            {
+                selectedProgram = patientPrograms[0];
+            }
+            RefreshProgramPreview();
         }
         catch (Exception ex)
         {
@@ -912,7 +922,14 @@
                 return;
             }
         }
+
         await LoadAppointments();
+
+        if (selectedProgramPatientId > 0)
+        {
+            await LoadProgramsForPatient(selectedProgramPatientId);
+        }
+
         programPreview.Clear();
         await ShowSuccessMessage("Rendez-vous du programme créés avec succès.");
     }

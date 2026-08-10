@@ -1354,11 +1354,10 @@ public class FinanceController : ControllerBase
         for (int i = 0; i < 8; i++) header[10 + i] = codeCnam2[i];
         for (int i = 0; i < 2; i++) header[18 + i] = codeCnam3[i];
 
-        var addressLines = WrapText(cabinet.AdresseCabinet ?? string.Empty, 32).ToList();
-        var firstAddressLine = addressLines.Count > 0 ? addressLines[0] : string.Empty;
+        // Adresse du cabinet non utilisée : on remplit par 32 zéros
         for (int i = 0; i < 32; i++)
         {
-            header[20 + i] = i < firstAddressLine.Length ? firstAddressLine[i] : ' ';
+            header[20 + i] = '0';
         }
 
         for (int i = 0; i < 11; i++) header[52 + i] = employerNumber1[i];
