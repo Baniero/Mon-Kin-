@@ -1471,7 +1471,8 @@ public class FinanceController : ControllerBase
             var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 2 && int.TryParse(parts[0], out var sequence) && parts[1].Length == 4)
             {
-                var invoiceText = $"{sequence:000}/{parts[1]}";
+                var sequenceText = sequence.ToString("00");
+                var invoiceText = $"{sequenceText}/{parts[1]}";
                 return invoiceText.Length <= 7 ? invoiceText.PadRight(7, ' ') : invoiceText[..7];
             }
 
