@@ -747,7 +747,7 @@ public class FinanceController : ControllerBase
         conn.Open();
 
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = IsAdmin() ? @"
+        cmd.CommandText = @"
             SELECT
                 pp.id,
                 COALESCE(e.bordereau_number, 0),
@@ -761,36 +761,19 @@ public class FinanceController : ControllerBase
                 COALESCE(pp.prix_ttc, 0),
                 e.executed_at,
                 COALESCE(e.executed_by, ''),
+                COALESCE(e.encaisse, FALSE),
                 COALESCE(e.facture_number, ''),
                 pp.date_debut
             FROM cnam_bordereau_executed e
             JOIN patient_programs pp ON pp.id = e.program_id
             JOIN patients p ON p.id = pp.patient_id
             WHERE DATE(e.executed_at) BETWEEN @start AND @end
-            ORDER BY e.executed_at DESC
-        " : @"
-            SELECT
-                pp.id,
-                COALESCE(e.bordereau_number, 0),
-                COALESCE(pp.code_bureau, ''),
-                COALESCE(pp.annee, ''),
-                COALESCE(pp.numero_decision, ''),
-                COALESCE(p.racine, ''),
-                COALESCE(p.cle, ''),
-                COALESCE(p.n_assuree, ''),
-                COALESCE(p.nom || ' ' || p.prenom, ''),
-                COALESCE(pp.prix_ttc, 0),
-                e.executed_at,
-                COALESCE(e.executed_by, ''),
-                COALESCE(e.facture_number, ''),
-                pp.date_debut
-            FROM cnam_bordereau_executed e
-            JOIN patient_programs pp ON pp.id = e.program_id
-            JOIN patients p ON p.id = pp.patient_id
-            WHERE DATE(e.executed_at) BETWEEN @start AND @end
-              AND p.cabinet_id = @cabinet_id
-            ORDER BY e.executed_at DESC
         ";
+        if (!IsAdmin())
+        {
+            cmd.CommandText += "\n              AND p.cabinet_id = @cabinet_id\n";
+        }
+        cmd.CommandText += "\n            ORDER BY e.executed_at DESC\n";
         cmd.Parameters.AddWithValue("@start", start.Date);
         cmd.Parameters.AddWithValue("@end", end.Date);
         if (!IsAdmin())
@@ -815,8 +798,9 @@ public class FinanceController : ControllerBase
                 TotalTTC = reader.GetDecimal(9),
                 ExecutedAt = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
                 ExecutedBy = reader.GetString(11),
-                FactureNumber = reader.GetString(12),
-                DateFacture = reader.IsDBNull(13) ? (DateTime?)null : reader.GetDateTime(13)
+                IsEncaisse = reader.GetBoolean(12),
+                FactureNumber = reader.GetString(13),
+                DateFacture = reader.IsDBNull(14) ? (DateTime?)null : reader.GetDateTime(14)
             });
         }
 
@@ -890,6 +874,72 @@ public class FinanceController : ControllerBase
             ? "supprimé définitivement"
             : "annulé";
         return Ok(new { message = $"Bordereau CNAM {action}." });
+    }
+
+    [HttpPost("cnam-bordereau-executed/bordereau/{bordereauNumber}/encaisse")]
+    public IActionResult SetCnamBordereauEncaisse(int bordereauNumber, bool encaisse)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? currentCabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !currentCabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+        using var transaction = conn.BeginTransaction();
+
+        using var checkCmd = conn.CreateCommand();
+        checkCmd.Transaction = transaction;
+        checkCmd.CommandText = !IsAdmin() ? @"
+            SELECT 1
+            FROM cnam_bordereau_executed e
+            JOIN patient_programs pp ON pp.id = e.program_id
+            JOIN patients p ON p.id = pp.patient_id
+            WHERE e.bordereau_number = @bordereauNumber
+              AND p.cabinet_id = @cabinet_id
+        " : @"
+            SELECT 1
+            FROM cnam_bordereau_executed e
+            WHERE e.bordereau_number = @bordereauNumber
+        ";
+        checkCmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
+        if (!IsAdmin())
+        {
+            checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
+        }
+
+        var exists = checkCmd.ExecuteScalar();
+        if (exists == null || exists == DBNull.Value)
+        {
+            return NotFound("Aucun bordereau CNAM trouvé pour ce numéro.");
+        }
+
+        using var updateCmd = conn.CreateCommand();
+        updateCmd.Transaction = transaction;
+        updateCmd.CommandText = @"
+            UPDATE cnam_bordereau_executed
+            SET encaisse = @encaisse
+            WHERE bordereau_number = @bordereauNumber
+        ";
+        updateCmd.Parameters.AddWithValue("@encaisse", encaisse);
+        updateCmd.Parameters.AddWithValue("@bordereauNumber", bordereauNumber);
+        var rowsAffected = updateCmd.ExecuteNonQuery();
+
+        transaction.Commit();
+
+        if (rowsAffected == 0)
+        {
+            return NotFound("Aucun bordereau CNAM trouvé à mettre à jour.");
+        }
+
+        return Ok(new { message = $"Bordereau CNAM {(encaisse ? "marqué encaissé" : "marqué non encaissé")}." });
     }
 
     [HttpPost("cnam-bordereau/execute")]
@@ -1008,23 +1058,28 @@ public class FinanceController : ControllerBase
             using var insertCmd = conn.CreateCommand();
             insertCmd.Transaction = transaction;
             insertCmd.CommandText = @"
-                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number)
-                VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber)
+                INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number, encaisse)
+                VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber, @encaisse)
                 ON CONFLICT (program_id) DO NOTHING
             ";
             insertCmd.Parameters.AddWithValue("@programId", request.ProgramId);
-            insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+            var executedBy = !string.IsNullOrWhiteSpace(currentUser.FullName)
+                ? currentUser.FullName
+                : currentUser.Username;
+            insertCmd.Parameters.AddWithValue("@executedBy", executedBy);
             insertCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
             insertCmd.Parameters.AddWithValue("@factureNumber", factureNumber);
+            insertCmd.Parameters.AddWithValue("@encaisse", false);
             var rowsAffected = insertCmd.ExecuteNonQuery();
-            _logger.LogInformation("ExecuteCnamBordereau insert executed. ProgramId={ProgramId}, FactureNumber={FactureNumber}, RowsAffected={RowsAffected}",
+            _logger.LogInformation("ExecuteCnamBordereau insert executed. ProgramId={ProgramId}, FactureNumber={FactureNumber}, RowsAffected={RowsAffected}, ExecutedBy={ExecutedBy}",
                 request.ProgramId,
                 factureNumber,
-                rowsAffected);
+                rowsAffected,
+                executedBy);
 
             using var fetchCmd = conn.CreateCommand();
             fetchCmd.Transaction = transaction;
-            fetchCmd.CommandText = IsAdmin() ? @"
+            fetchCmd.CommandText = @"
                 SELECT
                     pp.id,
                     COALESCE(e.bordereau_number, 0),
@@ -1035,29 +1090,35 @@ public class FinanceController : ControllerBase
                     COALESCE(pp.prix_ttc, 0),
                     e.executed_at,
                     COALESCE(e.executed_by, ''),
+                    COALESCE(e.encaisse, FALSE),
                     COALESCE(e.facture_number, '')
                 FROM patient_programs pp
                 JOIN patients p ON p.id = pp.patient_id
                 JOIN cnam_bordereau_executed e ON e.program_id = pp.id
                 WHERE pp.id = @programId
-            " : @"
-                SELECT
-                    pp.id,
-                    COALESCE(e.bordereau_number, 0),
-                    pp.date_debut,
-                    COALESCE(p.code_patient, ''),
-                    COALESCE(p.n_assuree, ''),
-                    COALESCE(p.nom || ' ' || p.prenom, ''),
-                    COALESCE(pp.prix_ttc, 0),
-                    e.executed_at,
-                    COALESCE(e.executed_by, ''),
-                    COALESCE(e.facture_number, '')
-                FROM patient_programs pp
-                JOIN patients p ON p.id = pp.patient_id
-                JOIN cnam_bordereau_executed e ON e.program_id = pp.id
-                WHERE pp.id = @programId
-                  AND p.cabinet_id = @cabinet_id
             ";
+            if (!IsAdmin())
+            {
+                fetchCmd.CommandText = @"
+                    SELECT
+                        pp.id,
+                        COALESCE(e.bordereau_number, 0),
+                        pp.date_debut,
+                        COALESCE(p.code_patient, ''),
+                        COALESCE(p.n_assuree, ''),
+                        COALESCE(p.nom || ' ' || p.prenom, ''),
+                        COALESCE(pp.prix_ttc, 0),
+                        e.executed_at,
+                        COALESCE(e.executed_by, ''),
+                        COALESCE(e.encaisse, FALSE),
+                        COALESCE(e.facture_number, '')
+                    FROM patient_programs pp
+                    JOIN patients p ON p.id = pp.patient_id
+                    JOIN cnam_bordereau_executed e ON e.program_id = pp.id
+                    WHERE pp.id = @programId
+                      AND p.cabinet_id = @cabinet_id
+                ";
+            }
             fetchCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             if (!IsAdmin())
             {
@@ -1085,14 +1146,15 @@ public class FinanceController : ControllerBase
                 {
                     ProgramId = reader.GetInt32(0),
                     BordereauNumber = reader.GetInt32(1),
-                    FactureNumber = reader.GetString(9),
                     DateFacture = dateDebut,
                     CodePatient = reader.GetString(3),
                     NumeroAssuree = reader.GetString(4),
                     PatientName = reader.GetString(5),
                     TotalTTC = reader.GetDecimal(6),
                     ExecutedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
-                    ExecutedBy = reader.GetString(8)
+                    ExecutedBy = reader.GetString(8),
+                    IsEncaisse = reader.GetBoolean(9),
+                    FactureNumber = reader.GetString(10)
                 };
             }
 
@@ -1190,22 +1252,27 @@ public class FinanceController : ControllerBase
         var currentBordereauNumberObj = bordereauSequenceCmd.ExecuteScalar();
         var nextBordereauNumber = Convert.ToInt32(currentBordereauNumberObj ?? 0) + 1;
 
+        var bulkExecutedBy = !string.IsNullOrWhiteSpace(currentUser.FullName)
+            ? currentUser.FullName
+            : currentUser.Username;
+
         using var insertCmd = conn.CreateCommand();
         insertCmd.Transaction = transaction;
         insertCmd.CommandText = @"
-            INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number)
-            VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber)
+            INSERT INTO cnam_bordereau_executed(program_id, executed_at, executed_by, bordereau_number, facture_number, encaisse)
+            VALUES (@programId, NOW(), @executedBy, @bordereauNumber, @factureNumber, @encaisse)
         ";
         insertCmd.Parameters.Add(new NpgsqlParameter("@programId", NpgsqlTypes.NpgsqlDbType.Integer));
-        insertCmd.Parameters.AddWithValue("@executedBy", request.ExecutedBy ?? "Web");
+        insertCmd.Parameters.AddWithValue("@executedBy", bulkExecutedBy);
         insertCmd.Parameters.AddWithValue("@bordereauNumber", nextBordereauNumber);
         insertCmd.Parameters.AddWithValue("@factureNumber", string.Empty);
+        insertCmd.Parameters.AddWithValue("@encaisse", false);
 
         var invoiceSequence = nextInvoiceSequence;
         foreach (var programId in request.ProgramIds)
         {
             invoiceSequence++;
-            var factureNumber = $"{invoiceSequence:000}/{invoiceYear}";
+            var factureNumber = $"{invoiceSequence}/{invoiceYear}";
             insertCmd.Parameters["@programId"].Value = programId;
             insertCmd.Parameters["@factureNumber"].Value = factureNumber;
             insertCmd.ExecuteNonQuery();
@@ -1225,6 +1292,7 @@ public class FinanceController : ControllerBase
                 COALESCE(pp.prix_ttc, 0),
                 e.executed_at,
                 COALESCE(e.executed_by, ''),
+                COALESCE(e.encaisse, FALSE),
                 COALESCE(e.facture_number, '')
             FROM patient_programs pp
             JOIN patients p ON p.id = pp.patient_id
@@ -1250,7 +1318,8 @@ public class FinanceController : ControllerBase
                     TotalTTC = reader.GetDecimal(6),
                     ExecutedAt = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
                     ExecutedBy = reader.GetString(8),
-                    FactureNumber = reader.GetString(9)
+                    IsEncaisse = reader.GetBoolean(9),
+                    FactureNumber = reader.GetString(10)
                 });
             }
         }

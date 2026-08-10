@@ -234,6 +234,7 @@ public class CnamBordereauEntryDto
     public decimal TotalTTC { get; set; }
     public DateTime? ExecutedAt { get; set; }
     public string? ExecutedBy { get; set; }
+    public bool IsEncaisse { get; set; }
 }
 
 public class CnamBordereauExecuteRequestDto

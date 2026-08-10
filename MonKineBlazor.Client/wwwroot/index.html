@@ -637,7 +637,7 @@
             doc.setFontSize(10);
             doc.text(`Date : ${summary.Date ?? summary.date ?? ''}`, margin, y);
             doc.text(`Centre : ${summary.Centre ?? summary.centre ?? ''}`, 260, y);
-            doc.text(`Nbre séances : ${summary.NbreSeances ?? summary.nbreSeances ?? 0}`, 520, y, { align: 'right' });
+            doc.text(`N° bordereau : ${summary.BordereauNumber ?? summary.bordereauNumber ?? ''}`, 520, y, { align: 'right' });
             y += 16;
             doc.text(`Année : ${summary.Annee ?? summary.annee ?? ''}`, margin, y);
             doc.text(`Nb factures : ${summary.NbFactures ?? summary.nbFactures ?? 0}`, 260, y);
@@ -697,8 +697,14 @@
             doc.line(margin, y, 555, y);
             y += 16;
             doc.setFont('helvetica', 'bold');
-            doc.text('Total général TTC :', margin, y);
-            doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 555, y, { align: 'right' });
+            doc.text('TOTAL HT :', margin, y);
+            doc.text(formatNumber(summary.MontantHT ?? summary.montantHT) + ' DT', 200, y);
+            y += 16;
+            doc.text('MNT TVA :', margin, y);
+            doc.text(formatNumber(summary.MontantTVA ?? summary.montantTVA) + ' DT', 200, y);
+            y += 16;
+            doc.text('TOTAL TTC :', margin, y);
+            doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 200, y);
 
             doc.save(filename);
         };

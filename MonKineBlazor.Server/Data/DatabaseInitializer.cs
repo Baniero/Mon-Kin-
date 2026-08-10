@@ -27,6 +27,7 @@ public static class DatabaseInitializer
         EnsureAdminUser(connection, adminCabinetId);
         EnsureCabinetInfoTable(connection);
         EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
+        EnsureColumnExists(connection, "cnam_bordereau_executed", "encaisse", "BOOLEAN DEFAULT FALSE");
     }
 
     private static void EnsureCabinetsTable(NpgsqlConnection connection)

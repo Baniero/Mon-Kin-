@@ -274,6 +274,7 @@
                                 <th>Total TTC</th>
                                 <th>Date exécution</th>
                                 <th>Exécuté par</th>
+                                <th>Encaisse</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
@@ -286,9 +287,11 @@
                                     <td>@($"{bordereau.TotalTTC:F2} DT")</td>
                                     <td>@bordereau.ExecutedAt?.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td>@bordereau.ExecutedBy</td>
+                                    <td>@(bordereau.IsEncaisse ? "Oui" : "Non")</td>
                                     <td class="text-end">
                                         <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauPdf(bordereau.BordereauNumber)">Exporter Bordereau</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ExportExecutedBordereauTxt(bordereau.BordereauNumber)">Exporter TXT</button>
+                                        <button type="button" class="btn btn-sm btn-info me-1" @onclick="() => ToggleEncaisseStatus(bordereau.BordereauNumber, !bordereau.IsEncaisse)">@(bordereau.IsEncaisse ? "Marquer non encaissé" : "Marquer encaissé")</button>
                                         <button type="button" class="btn btn-sm btn-warning me-1" @onclick="() => CancelExecutedBordereau(bordereau.BordereauNumber)">Annuler exécution</button>
                                         <button type="button" class="btn btn-sm btn-danger" @onclick="() => DeleteExecutedBordereau(bordereau.BordereauNumber)">Supprimer définitivement</button>
                                     </td>
@@ -323,7 +326,8 @@
             NbFactures = g.Count(),
             TotalTTC = g.Sum(x => x.TotalTTC),
             ExecutedAt = g.Max(x => x.ExecutedAt),
-            ExecutedBy = g.Select(x => x.ExecutedBy).FirstOrDefault() ?? string.Empty
+            ExecutedBy = g.Select(x => x.ExecutedBy).FirstOrDefault() ?? string.Empty,
+            IsEncaisse = g.Any(x => x.IsEncaisse)
         })
         .OrderByDescending(g => g.BordereauNumber);
 
@@ -334,6 +338,7 @@
         public decimal TotalTTC { get; set; }
         public DateTime? ExecutedAt { get; set; }
         public string? ExecutedBy { get; set; }
+        public bool IsEncaisse { get; set; }
     }
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
     private DateTime cnamEnd = DateTime.Today;
@@ -530,7 +535,7 @@
             {
                 Date = DateTime.Today.ToString("dd/MM/yyyy"),
                 Centre = cabinetInfo.NomEtablissement ?? string.Empty,
-                NbreSeances = cnamBordereau.Count,
+                BordereauNumber = bordereauReference,
                 MontantHT = totalHT,
                 Annee = cnamStart.Year.ToString(),
                 NbFactures = cnamBordereau.Count,
@@ -625,7 +630,7 @@
             {
                 Date = DateTime.Today.ToString("dd/MM/yyyy"),
                 Centre = cabinetInfo.NomEtablissement ?? string.Empty,
-                NbreSeances = groupedRows.Count,
+                BordereauNumber = bordereauReference,
                 MontantHT = totalHT,
                 Annee = cnamStart.Year.ToString(),
                 NbFactures = groupedRows.Count,
@@ -738,6 +743,29 @@
         }
     }
 
+    private async Task ToggleEncaisseStatus(int bordereauNumber, bool encaisse)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync($"api/finance/cnam-bordereau-executed/bordereau/{bordereauNumber}/encaisse?encaisse={encaisse}", new { });
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = $"Impossible de mettre à jour l'état encaissé : {response.ReasonPhrase}";
+                return;
+            }
+
+            successMessage = encaisse ? "Bordereau marqué encaissé." : "Bordereau marqué non encaissé.";
+            await LoadCnamBordereau();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de la mise à jour de l'état encaissé : {ex.Message}";
+        }
+    }
+
     private static string SanitizeFileName(string filename)
     {
         var invalidChars = System.IO.Path.GetInvalidFileNameChars();
@@ -754,8 +782,7 @@
         {
             var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute", new CnamBordereauExecuteRequestDto
             {
-                ProgramId = entry.ProgramId,
-                ExecutedBy = "Web"
+                ProgramId = entry.ProgramId
             });
 
             if (!response.IsSuccessStatusCode)
@@ -788,8 +815,7 @@
         {
             var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute-bulk", new
             {
-                ProgramIds = selectedBordereauProgramIds.ToList(),
-                ExecutedBy = "Web"
+                ProgramIds = selectedBordereauProgramIds.ToList()
             });
 
             if (!response.IsSuccessStatusCode)

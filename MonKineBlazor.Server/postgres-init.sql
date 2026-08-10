@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS cnam_bordereau_executed (
     executed_by TEXT,
     bordereau_number INTEGER,
     facture_number TEXT,
+    encaisse BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -216,6 +217,8 @@ ALTER TABLE cnam_bordereau_executed
     ADD COLUMN IF NOT EXISTS bordereau_number INTEGER;
 ALTER TABLE cnam_bordereau_executed
     ADD COLUMN IF NOT EXISTS facture_number TEXT;
+ALTER TABLE cnam_bordereau_executed
+    ADD COLUMN IF NOT EXISTS encaisse BOOLEAN DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,
