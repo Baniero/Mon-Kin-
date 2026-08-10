@@ -1379,63 +1379,54 @@ public class FinanceController : ControllerBase
             for (int i = 0; i < line.Length; i++) line[i] = '0';
             line[0] = '2';
 
-            for (int i = 0; i < 4; i++) line[1 + i] = yearText[i];
-            for (int i = 0; i < 3; i++) line[5 + i] = selectedBordereauNumberText[i];
-            for (int i = 0; i < 2; i++) line[8 + i] = codeCnam1[i];
-            for (int i = 0; i < 8; i++) line[10 + i] = codeCnam2[i];
-            for (int i = 0; i < 2; i++) line[18 + i] = codeCnam3[i];
+            void WriteAt(int offset, string text)
+            {
+                for (int i = 0; i < text.Length && offset + i < line.Length; i++)
+                {
+                    line[offset + i] = text[i];
+                }
+            }
 
-            var exerciceYear = DateTime.Today.Year.ToString("0000");
-            for (int i = 0; i < 4; i++) line[20 + i] = exerciceYear[i];
-
-            for (int i = 24; i <= 31; i++) line[i] = ' ';
+            WriteAt(1, yearText);
+            WriteAt(5, selectedBordereauNumberText);
+            WriteAt(8, codeCnam1);
+            WriteAt(10, codeCnam2);
+            WriteAt(18, codeCnam3);
+            WriteAt(20, DateTime.Today.Year.ToString("0000"));
+            WriteAt(24, new string(' ', 8));
 
             var factureNumber = FormatFactureNumber(row.FactureNumber);
-            for (int i = 0; i < factureNumber.Length; i++) line[32 + i] = factureNumber[i];
-
-            // Champ de numéro de bordereau effacé : code acte commence immédiatement après le numéro de facture
-            var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length; i++) line[40 + i] = codeAct[i];
+            WriteAt(32, factureNumber);
+            WriteAt(40, "4375");
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < 4; i++) line[44 + i] = decisionYear[i];
-            for (int i = 0; i < 6; i++) line[48 + i] = decisionKey[i];
+            WriteAt(44, decisionYear);
+            WriteAt(48, decisionKey);
 
             var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
-            for (int i = 0; i < 12; i++) line[57 + i] = numeroAssuree[i];
-
-            var codeQualite = "003";
-            for (int i = 0; i < 3; i++) line[69 + i] = codeQualite[i];
-
-            var nbSeances = row.NbSeances.ToString("000");
-            for (int i = 0; i < 3; i++) line[72 + i] = nbSeances[i];
+            WriteAt(54, numeroAssuree);
+            WriteAt(66, "003");
+            WriteAt(69, row.NbSeances.ToString("000"));
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < 4; i++) line[75 + i] = debutText[i];
-            for (int i = 0; i < 2; i++) line[79 + i] = debutText[4 + i];
-            for (int i = 0; i < 2; i++) line[81 + i] = debutText[6 + i];
+            WriteAt(72, debutText);
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            for (int i = 0; i < 4; i++) line[83 + i] = finText[i];
-            for (int i = 0; i < 2; i++) line[87 + i] = finText[4 + i];
-            for (int i = 0; i < 2; i++) line[89 + i] = finText[6 + i];
+            WriteAt(80, finText);
 
             var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
-            var ttcTextRow = ttcMillimesRow.ToString().PadLeft(10, '0');
-            for (int i = 0; i < 10; i++) line[91 + i] = ttcTextRow[i];
+            WriteAt(88, ttcMillimesRow.ToString().PadLeft(10, '0'));
 
             var htMillimesRow = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
-            var htTextRow = htMillimesRow.ToString().PadLeft(10, '0');
-            for (int i = 0; i < 10; i++) line[101 + i] = htTextRow[i];
+            WriteAt(98, htMillimesRow.ToString().PadLeft(10, '0'));
 
-            var tvaGeneral = "0000007";
-            for (int i = 0; i < 7; i++) line[111 + i] = tvaGeneral[i];
+            WriteAt(108, "0000007");
 
             var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
-            for (int i = 0; i < 13; i++) line[118 + i] = tvaMillimesRow[i];
+            WriteAt(115, tvaMillimesRow);
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            for (int i = 0; i < 8; i++) line[131 + i] = factureDate[i];
+            WriteAt(128, factureDate);
 
             textBuilder.AppendLine(new string(line));
         }
