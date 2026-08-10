@@ -1393,11 +1393,9 @@ public class FinanceController : ControllerBase
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             for (int i = 0; i < factureNumber.Length; i++) line[32 + i] = factureNumber[i];
 
-            // Champ de numéro de bordereau effacé : on laisse 3 espaces réservées
-            for (int i = 0; i < 3; i++) line[40 + i] = ' ';
-
+            // Champ de numéro de bordereau effacé : code acte commence immédiatement après le numéro de facture
             var codeAct = "4375";
-            for (int i = 0; i < codeAct.Length; i++) line[43 + i] = codeAct[i];
+            for (int i = 0; i < codeAct.Length; i++) line[40 + i] = codeAct[i];
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
             for (int i = 0; i < 4; i++) line[47 + i] = decisionYear[i];
