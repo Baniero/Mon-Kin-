@@ -1399,7 +1399,7 @@ public class FinanceController : ControllerBase
             WriteAt(32, factureNumber);
             WriteAt(40, "4375");
 
-            var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
+            var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, row.Annee, bordereauYear);
             WriteAt(44, decisionYear);
             WriteAt(48, decisionKey);
 
@@ -1510,24 +1510,39 @@ public class FinanceController : ControllerBase
             }
         }
 
-        static (string, string) SplitDecisionParts(string? numeroDecision, int defaultYear)
+        static (string, string) SplitDecisionParts(string? numeroDecision, string? programmeYear, int defaultYear)
         {
+            var yearPart = ParseProgrammeYear(programmeYear, defaultYear);
+            var keyPart = new string('0', 6);
+
             if (string.IsNullOrWhiteSpace(numeroDecision))
             {
-                return (defaultYear.ToString("0000"), new string('0', 6));
+                return (yearPart, keyPart);
             }
 
             var parts = numeroDecision.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            string yearPart = defaultYear.ToString("0000");
-            string keyPart = new string('0', 6);
-
-            if (parts.Length >= 1 && int.TryParse(parts[0].Trim(), out var yearValue))
+            if (parts.Length == 1)
             {
-                yearPart = yearValue.ToString("0000");
+                var digits = new string(parts[0].Where(char.IsDigit).ToArray());
+                if (digits.Length >= 10)
+                {
+                    yearPart = digits[..4];
+                    keyPart = digits[4..10];
+                }
+                else
+                {
+                    keyPart = digits.PadLeft(6, '0');
+                }
+                return (yearPart, keyPart);
             }
 
             if (parts.Length >= 2)
             {
+                if (parts[0].Trim().Length == 4 && int.TryParse(parts[0].Trim(), out var yearValue))
+                {
+                    yearPart = yearValue.ToString("0000");
+                }
+
                 var keyDigits = new string(parts[1].Where(char.IsDigit).ToArray());
                 if (keyDigits.Length > 6)
                 {
@@ -1535,21 +1550,17 @@ public class FinanceController : ControllerBase
                 }
                 keyPart = keyDigits.PadLeft(6, '0');
             }
-            else
-            {
-                var digits = new string(numeroDecision.Where(char.IsDigit).ToArray());
-                if (digits.Length >= 10)
-                {
-                    yearPart = digits[..4];
-                    keyPart = digits[4..10];
-                }
-                else if (digits.Length > 4)
-                {
-                    keyPart = digits[4..].PadLeft(6, '0');
-                }
-            }
 
             return (yearPart, keyPart);
+
+            static string ParseProgrammeYear(string? programmeYearValue, int fallbackYear)
+            {
+                if (!string.IsNullOrWhiteSpace(programmeYearValue) && int.TryParse(programmeYearValue.Trim(), out var parsedYear))
+                {
+                    return parsedYear.ToString("0000");
+                }
+                return fallbackYear.ToString("0000");
+            }
         }
     }
 
