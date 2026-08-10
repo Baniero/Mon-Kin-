@@ -1437,11 +1437,11 @@ public class FinanceController : ControllerBase
 
             var numeroAssuree = NormalizeAssureeNumber(row.NumeroAssuree);
             WriteAt(53, numeroAssuree);
-            WriteAt(69, "003");
-            WriteAt(72, row.NbSeances.ToString("000"));
+            WriteAt(65, "003");
+            WriteAt(68, row.NbSeances.ToString("000"));
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(75, debutText);
+            WriteAt(71, debutText);
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
             WriteAt(83, finText);
@@ -1497,12 +1497,25 @@ public class FinanceController : ControllerBase
             var digits = new string((raw ?? string.Empty).Where(char.IsDigit).ToArray());
             if (digits.Length >= 2)
             {
-                var keyPart = digits[^2..].PadLeft(2, '0');
-                var mainPart = digits[..^2];
+                string mainPart;
+                string keyPart;
+
+                if (digits.Length >= 12)
+                {
+                    keyPart = digits[^2..];
+                    mainPart = digits[..^2];
+                }
+                else // 2..11 digits
+                {
+                    keyPart = digits[^1..].PadLeft(2, '0');
+                    mainPart = digits[..^1];
+                }
+
                 if (mainPart.Length > 10)
                 {
                     mainPart = mainPart[^10..];
                 }
+
                 return mainPart.PadLeft(10, '0') + keyPart;
             }
 
