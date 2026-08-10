@@ -1497,9 +1497,13 @@ public class FinanceController : ControllerBase
             var digits = new string((raw ?? string.Empty).Where(char.IsDigit).ToArray());
             if (digits.Length >= 2)
             {
-                var mainPart = digits[..^2].PadLeft(10, '0');
-                var keyPart = digits[^2..];
-                return mainPart + keyPart;
+                var keyPart = digits[^2..].PadLeft(2, '0');
+                var mainPart = digits[..^2];
+                if (mainPart.Length > 10)
+                {
+                    mainPart = mainPart[^10..];
+                }
+                return mainPart.PadLeft(10, '0') + keyPart;
             }
 
             return digits.PadLeft(12, '0');
