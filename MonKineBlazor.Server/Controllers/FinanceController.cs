@@ -1497,27 +1497,24 @@ public class FinanceController : ControllerBase
         static string NormalizeAssureeNumber(string? raw)
         {
             var digits = new string((raw ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (digits.Length == 0)
+            {
+                return new string('0', 12);
+            }
+
+            if (digits.Length > 12)
+            {
+                return digits;
+            }
+
             if (digits.Length >= 2)
             {
-                string mainPart;
-                string keyPart;
-
-                if (digits.Length >= 12)
-                {
-                    keyPart = digits[^2..];
-                    mainPart = digits[..^2];
-                }
-                else // 2..11 digits
-                {
-                    keyPart = digits[^1..].PadLeft(2, '0');
-                    mainPart = digits[..^1];
-                }
-
+                var keyPart = digits[^2..];
+                var mainPart = digits[..^2];
                 if (mainPart.Length > 10)
                 {
                     mainPart = mainPart[^10..];
                 }
-
                 return mainPart.PadLeft(10, '0') + keyPart;
             }
 
