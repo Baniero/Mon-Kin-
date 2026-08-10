@@ -18,13 +18,13 @@
 
 <div class="mb-4">
     <div class="btn-group" role="group">
-        <button class="btn @(activeSection == CnamSection.Recovery ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Recovery)">Recouvrement</button>
-        <button class="btn @(activeSection == CnamSection.Invoice ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Invoice)">Facture séance</button>
-        <button class="btn @(activeSection == CnamSection.Bordereau ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Bordereau)">Bordereau CNAM</button>
+        <button class="btn btn-emoji @(activeSection == CnamSection.Recovery ? "btn-primary" : "btn-outline-primary")" data-emoji="💰" @onclick="() => SetSection(CnamSection.Recovery)">Recouvrement</button>
+        <button class="btn btn-emoji @(activeSection == CnamSection.Invoice ? "btn-primary" : "btn-outline-primary")" data-emoji="🧾" @onclick="() => SetSection(CnamSection.Invoice)">Facture séance</button>
+        <button class="btn btn-emoji @(activeSection == CnamSection.Bordereau ? "btn-primary" : "btn-outline-primary")" data-emoji="📦" @onclick="() => SetSection(CnamSection.Bordereau)">Bordereau CNAM</button>
     </div>
 </div>
 
-<div class="card mb-4">
+<div class="card section-card mb-4">
     <div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -36,10 +36,10 @@
                 <InputDate class="form-control" @bind-Value="cnamEnd" />
             </div>
             <div class="col-md-3">
-                <button class="btn btn-success w-100" @onclick="RefreshCurrentSection">Charger</button>
+                <button class="btn btn-primary btn-emoji w-100" data-emoji="🔄" @onclick="RefreshCurrentSection">Charger</button>
             </div>
             <div class="col-md-3 text-end">
-                <span class="text-muted">Période active</span>
+                <span class="badge-soft">Période active</span>
             </div>
         </div>
     </div>
