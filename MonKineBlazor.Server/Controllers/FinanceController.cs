@@ -1444,21 +1444,21 @@ public class FinanceController : ControllerBase
             WriteAt(71, debutText);
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(83, finText);
+            WriteAt(79, finText);
 
             var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(91, ttcMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(87, ttcMillimesRow.ToString().PadLeft(10, '0'));
 
             var htMillimesRow = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(101, htMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(97, htMillimesRow.ToString().PadLeft(10, '0'));
 
-            WriteAt(111, "0000007");
+            WriteAt(107, "0000007");
 
             var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
-            WriteAt(118, tvaMillimesRow);
+            WriteAt(114, tvaMillimesRow);
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            WriteAt(131, factureDate);
+            WriteAt(127, factureDate);
 
             textBuilder.AppendLine(new string(line));
         }
