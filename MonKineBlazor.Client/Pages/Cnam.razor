@@ -525,7 +525,7 @@
         var totalTTC = cnamBordereau.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{cnamBordereau.Count:000}";
+        var bordereauReference = $"BOR-{cnamBordereau.Count:000}";
 
         var pdfData = new
         {
@@ -621,7 +621,7 @@
         var totalTTC = groupedRows.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"DEC/{cnamStart:MM/yyyy}/{bordereauNumber:000}";
+        var bordereauReference = $"BOR-{bordereauNumber:000}";
         var pdfData = new
         {
             cabinet = cabinetInfo,
