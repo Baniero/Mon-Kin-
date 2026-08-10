@@ -1398,8 +1398,8 @@ public class FinanceController : ControllerBase
             for (int i = 0; i < codeAct.Length; i++) line[40 + i] = codeAct[i];
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, bordereauYear);
-            for (int i = 0; i < 4; i++) line[47 + i] = decisionYear[i];
-            for (int i = 0; i < 6; i++) line[51 + i] = decisionKey[i];
+            for (int i = 0; i < 4; i++) line[44 + i] = decisionYear[i];
+            for (int i = 0; i < 6; i++) line[48 + i] = decisionKey[i];
 
             var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
             for (int i = 0; i < 12; i++) line[57 + i] = numeroAssuree[i];
