@@ -226,6 +226,11 @@ public class CnamBordereauEntryDto
     public string? CodePatient { get; set; }
     public string? NumeroAssuree { get; set; }
     public string? PatientName { get; set; }
+    public string? CodeBureau { get; set; }
+    public string? Annee { get; set; }
+    public string? NumeroDecision { get; set; }
+    public string? Racine { get; set; }
+    public string? Cle { get; set; }
     public decimal TotalTTC { get; set; }
     public DateTime? ExecutedAt { get; set; }
     public string? ExecutedBy { get; set; }

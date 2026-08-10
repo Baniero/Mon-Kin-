@@ -568,7 +568,7 @@ public class FinanceController : ControllerBase
                 return Forbid();
             }
 
-            var pendingRows = new List<(int ProgramId, DateTime? DateDebut, string CodePatient, string NumeroAssuree, string PatientName, decimal TotalTTC, int? CabinetId)>();
+            var pendingRows = new List<(int ProgramId, DateTime? DateDebut, string CodePatient, string NumeroAssuree, string PatientName, string CodeBureau, string Annee, string NumeroDecision, string Racine, string Cle, decimal TotalTTC, int? CabinetId)>();
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
 
@@ -580,6 +580,11 @@ public class FinanceController : ControllerBase
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
                     COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.code_bureau, ''),
+                    COALESCE(pp.annee, ''),
+                    COALESCE(pp.numero_decision, ''),
+                    COALESCE(p.racine, ''),
+                    COALESCE(p.cle, ''),
                     COALESCE(pp.prix_ttc, 0),
                     p.cabinet_id
                 FROM patient_programs pp
@@ -598,6 +603,11 @@ public class FinanceController : ControllerBase
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
                     COALESCE(p.nom || ' ' || p.prenom, ''),
+                    COALESCE(pp.code_bureau, ''),
+                    COALESCE(pp.annee, ''),
+                    COALESCE(pp.numero_decision, ''),
+                    COALESCE(p.racine, ''),
+                    COALESCE(p.cle, ''),
                     COALESCE(pp.prix_ttc, 0),
                     p.cabinet_id
                 FROM patient_programs pp
@@ -628,8 +638,13 @@ public class FinanceController : ControllerBase
                         CodePatient: reader.GetString(2),
                         NumeroAssuree: reader.GetString(3),
                         PatientName: reader.GetString(4),
-                        TotalTTC: reader.GetDecimal(5),
-                        CabinetId: reader.IsDBNull(6) ? null : reader.GetInt32(6)
+                        CodeBureau: reader.GetString(5),
+                        Annee: reader.GetString(6),
+                        NumeroDecision: reader.GetString(7),
+                        Racine: reader.GetString(8),
+                        Cle: reader.GetString(9),
+                        TotalTTC: reader.GetDecimal(10),
+                        CabinetId: reader.IsDBNull(11) ? null : reader.GetInt32(11)
                     ));
                 }
             }
@@ -688,6 +703,11 @@ public class FinanceController : ControllerBase
                     CodePatient = item.CodePatient,
                     NumeroAssuree = item.NumeroAssuree,
                     PatientName = item.PatientName,
+                    CodeBureau = item.CodeBureau,
+                    Annee = item.Annee,
+                    NumeroDecision = item.NumeroDecision,
+                    Racine = item.Racine,
+                    Cle = item.Cle,
                     TotalTTC = item.TotalTTC
                 });
             }
@@ -732,6 +752,10 @@ public class FinanceController : ControllerBase
                 pp.id,
                 COALESCE(e.bordereau_number, 0),
                 COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.annee, ''),
+                COALESCE(pp.numero_decision, ''),
+                COALESCE(p.racine, ''),
+                COALESCE(p.cle, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
                 COALESCE(pp.prix_ttc, 0),
@@ -749,6 +773,10 @@ public class FinanceController : ControllerBase
                 pp.id,
                 COALESCE(e.bordereau_number, 0),
                 COALESCE(pp.code_bureau, ''),
+                COALESCE(pp.annee, ''),
+                COALESCE(pp.numero_decision, ''),
+                COALESCE(p.racine, ''),
+                COALESCE(p.cle, ''),
                 COALESCE(p.n_assuree, ''),
                 COALESCE(p.nom || ' ' || p.prenom, ''),
                 COALESCE(pp.prix_ttc, 0),
@@ -777,14 +805,18 @@ public class FinanceController : ControllerBase
             {
                 ProgramId = reader.GetInt32(0),
                 BordereauNumber = reader.GetInt32(1),
-                CodePatient = reader.GetString(2),
-                NumeroAssuree = reader.GetString(3),
-                PatientName = reader.GetString(4),
-                TotalTTC = reader.GetDecimal(5),
-                ExecutedAt = reader.IsDBNull(6) ? null : reader.GetDateTime(6),
-                ExecutedBy = reader.GetString(7),
-                FactureNumber = reader.GetString(8),
-                DateFacture = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9)
+                CodeBureau = reader.GetString(2),
+                Annee = reader.GetString(3),
+                NumeroDecision = reader.GetString(4),
+                Racine = reader.GetString(5),
+                Cle = reader.GetString(6),
+                NumeroAssuree = reader.GetString(7),
+                PatientName = reader.GetString(8),
+                TotalTTC = reader.GetDecimal(9),
+                ExecutedAt = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                ExecutedBy = reader.GetString(11),
+                FactureNumber = reader.GetString(12),
+                DateFacture = reader.IsDBNull(13) ? (DateTime?)null : reader.GetDateTime(13)
             });
         }
 
@@ -1397,15 +1429,14 @@ public class FinanceController : ControllerBase
 
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             WriteAt(32, factureNumber);
-            WriteAt(39, " ");
-            WriteAt(40, "4375");
+            WriteAt(39, "4375");
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, row.Annee, bordereauYear);
-            WriteAt(47, decisionYear);
-            WriteAt(51, decisionKey);
+            WriteAt(43, decisionYear);
+            WriteAt(47, decisionKey);
 
             var numeroAssuree = NormalizeAssureeNumber(row.NumeroAssuree);
-            WriteAt(57, numeroAssuree);
+            WriteAt(53, numeroAssuree);
             WriteAt(69, "003");
             WriteAt(72, row.NbSeances.ToString("000"));
 

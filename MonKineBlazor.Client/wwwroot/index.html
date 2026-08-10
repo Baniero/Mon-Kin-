@@ -648,8 +648,8 @@
             doc.line(margin, y, 555, y);
             y += 16;
 
-            const headers = ['N° facture', 'Date facture', 'Prise en charge', 'N° assuré', 'Assuré', 'M. HT', 'M TVA', 'M TTC'];
-            const widths = [70, 70, 90, 70, 100, 55, 55, 55];
+            const headers = ['Patient', 'N° assuré', 'N° décision', 'N° facture', 'TTC'];
+            const widths = [140, 90, 120, 70, 80];
             let x = margin;
 
             doc.setFont('helvetica', 'bold');
@@ -665,14 +665,16 @@
             doc.setFont('helvetica', 'normal');
 
             (rows || []).forEach((row) => {
+                const numeroDecision = row.NumeroDecision ?? row.numeroDecision ?? '';
+                const codeBureau = row.CodeBureau ?? row.codeBureau ?? '';
+                const annee = row.Annee ?? row.annee ?? '';
+                const decisionNumber = numeroDecision ? `${codeBureau}/${annee}/${numeroDecision}` : `${codeBureau}/${annee}`;
+
                 const values = [
-                    row.FactureNumber ?? row.factureNumber ?? '',
-                    row.DateFacture ?? row.dateFacture ?? '',
-                    row.PriseEnCharge ?? row.priseEnCharge ?? '',
-                    row.NumeroAssuree ?? row.numeroAssuree ?? '',
                     row.PatientName ?? row.patientName ?? '',
-                    formatNumber(row.MontantHT ?? row.montantHT),
-                    formatNumber(row.MontantTVA ?? row.montantTVA),
+                    row.NumeroAssuree ?? row.numeroAssuree ?? '',
+                    decisionNumber,
+                    row.FactureNumber ?? row.factureNumber ?? '',
                     formatNumber(row.MontantTTC ?? row.montantTTC)
                 ];
                 const cellLines = values.map((value, index) => splitCellLines(doc, value, widths[index]));
