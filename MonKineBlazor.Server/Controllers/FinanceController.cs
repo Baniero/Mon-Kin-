@@ -1373,7 +1373,7 @@ public class FinanceController : ControllerBase
         var totalTtcMillimes = (long)Math.Round(rows.Sum(r => r.TotalTTC) * 1000m, MidpointRounding.AwayFromZero);
         var totalTtcText = totalTtcMillimes.ToString().PadLeft(12, '0');
 
-        var header = new char[139];
+        var header = new char[135];
         for (int i = 0; i < header.Length; i++) header[i] = '0';
         header[0] = '1';
 
@@ -1401,13 +1401,16 @@ public class FinanceController : ControllerBase
 
         for (int i = 0; i < 12; i++) header[85 + i] = totalTtcText[i];
 
-        for (int i = 97; i < 139; i++) header[i] = '0';
+        for (int i = 97; i < 135; i++) header[i] = '0';
 
         textBuilder.AppendLine(new string(header));
 
         foreach (var row in rows)
         {
-            var line = new char[139];
+            var numeroAssuree = NormalizeAssureeNumber(row.NumeroAssuree);
+            var extraLength = Math.Max(0, numeroAssuree.Length - 12);
+            var lineLength = 135 + extraLength;
+            var line = new char[lineLength];
             for (int i = 0; i < line.Length; i++) line[i] = '0';
             line[0] = '2';
 
@@ -1435,30 +1438,29 @@ public class FinanceController : ControllerBase
             WriteAt(43, decisionYear);
             WriteAt(47, decisionKey);
 
-            var numeroAssuree = NormalizeAssureeNumber(row.NumeroAssuree);
             WriteAt(53, numeroAssuree);
-            WriteAt(65, "003");
-            WriteAt(68, row.NbSeances.ToString("000"));
+            WriteAt(53 + numeroAssuree.Length, "003");
+            WriteAt(56 + numeroAssuree.Length, row.NbSeances.ToString("000"));
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(71, debutText);
+            WriteAt(59 + numeroAssuree.Length, debutText);
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(79, finText);
+            WriteAt(67 + numeroAssuree.Length, finText);
 
             var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(87, ttcMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(75 + numeroAssuree.Length, ttcMillimesRow.ToString().PadLeft(10, '0'));
 
             var htMillimesRow = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(97, htMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(85 + numeroAssuree.Length, htMillimesRow.ToString().PadLeft(10, '0'));
 
-            WriteAt(107, "0000007");
+            WriteAt(95 + numeroAssuree.Length, "0000007");
 
             var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
-            WriteAt(114, tvaMillimesRow);
+            WriteAt(102 + numeroAssuree.Length, tvaMillimesRow);
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            WriteAt(127, factureDate);
+            WriteAt(115 + numeroAssuree.Length, factureDate);
 
             textBuilder.AppendLine(new string(line));
         }
