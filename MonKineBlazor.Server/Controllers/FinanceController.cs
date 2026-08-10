@@ -1397,36 +1397,37 @@ public class FinanceController : ControllerBase
 
             var factureNumber = FormatFactureNumber(row.FactureNumber);
             WriteAt(32, factureNumber);
-            WriteAt(39, "4375");
+            WriteAt(39, " ");
+            WriteAt(40, "4375");
 
             var (decisionYear, decisionKey) = SplitDecisionParts(row.NumeroDecision, row.Annee, bordereauYear);
-            WriteAt(43, decisionYear);
-            WriteAt(47, decisionKey);
+            WriteAt(47, decisionYear);
+            WriteAt(51, decisionKey);
 
-            var numeroAssuree = NormalizeDigits(row.NumeroAssuree, 12);
-            WriteAt(53, numeroAssuree);
-            WriteAt(65, "003");
-            WriteAt(68, row.NbSeances.ToString("000"));
+            var numeroAssuree = NormalizeAssureeNumber(row.NumeroAssuree);
+            WriteAt(57, numeroAssuree);
+            WriteAt(69, "003");
+            WriteAt(72, row.NbSeances.ToString("000"));
 
             var debutText = row.DateDebut.HasValue ? row.DateDebut.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(72, debutText);
+            WriteAt(75, debutText);
 
             var finText = row.DateFin.HasValue ? row.DateFin.Value.ToString("yyyyMMdd") : new string('0', 8);
-            WriteAt(80, finText);
+            WriteAt(83, finText);
 
             var ttcMillimesRow = (long)Math.Round(row.TotalTTC * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(88, ttcMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(91, ttcMillimesRow.ToString().PadLeft(10, '0'));
 
             var htMillimesRow = (long)Math.Round((row.TotalTTC / 1.07m) * 1000m, MidpointRounding.AwayFromZero);
-            WriteAt(98, htMillimesRow.ToString().PadLeft(10, '0'));
+            WriteAt(101, htMillimesRow.ToString().PadLeft(10, '0'));
 
-            WriteAt(108, "0000007");
+            WriteAt(111, "0000007");
 
             var tvaMillimesRow = (ttcMillimesRow - htMillimesRow).ToString().PadLeft(13, '0');
-            WriteAt(115, tvaMillimesRow);
+            WriteAt(118, tvaMillimesRow);
 
             var factureDate = (row.DateFacture ?? row.DateDebut ?? DateTime.Today).ToString("yyyyMMdd");
-            WriteAt(128, factureDate);
+            WriteAt(131, factureDate);
 
             textBuilder.AppendLine(new string(line));
         }
@@ -1458,6 +1459,19 @@ public class FinanceController : ControllerBase
                 digits = digits[^width..];
             }
             return digits.PadLeft(width, '0');
+        }
+
+        static string NormalizeAssureeNumber(string? raw)
+        {
+            var digits = new string((raw ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (digits.Length >= 2)
+            {
+                var mainPart = digits[..^2].PadLeft(10, '0');
+                var keyPart = digits[^2..];
+                return mainPart + keyPart;
+            }
+
+            return digits.PadLeft(12, '0');
         }
 
         static string FormatFactureNumber(string? factureNumber)
