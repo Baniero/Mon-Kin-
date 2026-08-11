@@ -613,11 +613,8 @@
             return;
         }
 
-        var selectedRows = cnamBordereau
-            .Where(r => selectedBordereauProgramIds.Contains(r.ProgramId))
-            .ToList();
-
-        if (!selectedRows.Any())
+        var selectedIds = selectedBordereauProgramIds.ToList();
+        if (!selectedIds.Any())
         {
             errorMessage = "Aucune ligne sélectionnée trouvée pour l'export.";
             return;
@@ -628,16 +625,37 @@
 
         try
         {
-            var textBuilder = new System.Text.StringBuilder();
-            textBuilder.AppendLine("FactureNumber\tDateFacture\tNumeroAssuree\tPatientName\tCodeBureau\tAnnee\tNumeroDecision\tTotalTTC");
-            foreach (var row in selectedRows)
+            var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute-bulk", new { ProgramIds = selectedIds });
+            if (!response.IsSuccessStatusCode)
             {
-                textBuilder.AppendLine($"{row.FactureNumber}\t{row.DateFacture?.ToString("dd/MM/yyyy") ?? string.Empty}\t{row.NumeroAssuree}\t{row.PatientName}\t{row.CodeBureau}\t{row.Annee}\t{row.NumeroDecision}\t{row.TotalTTC:F2}");
+                errorMessage = $"Impossible d'exécuter la sélection pour générer le bordereau : {response.ReasonPhrase}";
+                return;
             }
 
-            var filename = $"bordereau_cnam_selected_{DateTime.Today:yyyyMMdd}.txt";
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", filename, textBuilder.ToString(), "text/plain;charset=utf-8");
-            successMessage = "Fichier texte bordereau généré.";
+            var executedRows = await response.Content.ReadFromJsonAsync<List<CnamBordereauEntryDto>>() ?? new List<CnamBordereauEntryDto>();
+            if (!executedRows.Any())
+            {
+                errorMessage = "Aucune ligne n'a été exécutée pour générer le bordereau.";
+                return;
+            }
+
+            var bordereauNumber = executedRows.Select(r => r.BordereauNumber).FirstOrDefault();
+            if (!bordereauNumber.HasValue)
+            {
+                errorMessage = "Impossible de déterminer le numéro du bordereau généré.";
+                return;
+            }
+
+            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}&bordereauNumber={bordereauNumber.Value}");
+            var filename = $"bordereau_cnam_{bordereauNumber.Value:000}_{DateTime.Today:yyyyMMdd}.txt";
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", filename, textContent, "text/plain;charset=utf-8");
+
+            successMessage = $"Fichier texte bordereau généré avec le numéro {bordereauNumber.Value:000}.";
+            await LoadCnamBordereau();
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = $"Erreur lors de l'appel au serveur : {httpEx.Message}";
         }
         catch (JSException jsEx)
         {
