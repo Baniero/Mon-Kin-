@@ -196,6 +196,19 @@
             return obj[pascal] ?? obj[camel] ?? '';
         };
 
+        const formatPdfDate = (value) => {
+            if (!value) return '';
+            const raw = String(value).trim();
+            if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(raw)) {
+                return raw.substring(0, 10);
+            }
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+                return raw;
+            }
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().substring(0, 10);
+        };
+
         const getWrappedLines = (text, maxChars) => {
             if (!text) return [];
             const normalized = String(text).replace(/\s+/g, ' ').trim();
@@ -503,15 +516,13 @@
             const details = [
                 ['Titre', getString(program, 'Titre', 'titre')],
                 ['Nature', getString(program, 'NatureSeances', 'natureSeances')],
-                ['Date début', getString(program, 'DateDebut', 'dateDebut')],
-                ['Date fin', getString(program, 'DateFin', 'dateFin')],
+                ['N° décision', `${getString(program, 'CodeBureau', 'codeBureau')}/${getString(program, 'Annee', 'annee')}/${getString(program, 'NumeroDecision', 'numeroDecision')}`],
+                ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut'))],
+                ['Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
                 ['Nb séances', nbSeances],
                 ['Durée séance', `${dureeSeance} min`],
                 ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`],
                 ['Total TTC', `${prixTTC.toFixed(2)} DT`],
-                ['Code bureau', getString(program, 'CodeBureau', 'codeBureau')],
-                ['Année', getString(program, 'Annee', 'annee')],
-                ['N° décision', getString(program, 'NumeroDecision', 'numeroDecision')],
                 ['N° ordre', getString(program, 'NumeroOrdre', 'numeroOrdre')]
             ];
 

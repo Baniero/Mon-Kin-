@@ -349,7 +349,7 @@
     }
     private DateTime cnamStart = DateTime.Today.AddDays(-30);
     private DateTime cnamEnd = DateTime.Today;
-    private string invoiceDate => DateTime.Today.ToString("dd/MM/yyyy");
+    private string invoiceDate => DateTime.Today.ToString("yyyy-MM-dd");
 
     private string invoiceNumber => selectedProgram?.FactureNumber ?? string.Empty;
 
