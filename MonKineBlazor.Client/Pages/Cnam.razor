@@ -167,8 +167,9 @@
                         <div class="col-md-6">
                             <h6>Séance</h6>
                             <p class="mb-1"><strong>Nature :</strong> @selectedProgram.NatureSeances</p>
-                            <p class="mb-1"><strong>Date début :</strong> @selectedProgram.DateDebut?.ToString("dd/MM/yyyy")</p>
-                            <p class="mb-1"><strong>Date fin :</strong> @selectedProgram.DateFin?.ToString("dd/MM/yyyy")</p>
+                            <p class="mb-1"><strong>N° décision :</strong> @($"{selectedProgram.CodeBureau}/{selectedProgram.Annee}/{selectedProgram.NumeroDecision}")</p>
+                            <p class="mb-1"><strong>Date début :</strong> @selectedProgram.DateDebut?.ToString("yyyy-MM-dd")</p>
+                            <p class="mb-1"><strong>Date fin :</strong> @selectedProgram.DateFin?.ToString("yyyy-MM-dd")</p>
                             <p class="mb-1"><strong>Nb séances :</strong> @selectedProgram.NbSeances</p>
                             <p class="mb-1"><strong>Durée séance :</strong> @selectedProgram.DureeSeanceMinutes min</p>
                             <p class="mb-1"><strong>Prix unitaire :</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")</p>
