@@ -487,6 +487,8 @@
         var pdfData = new
         {
             cabinet = cabinetInfo,
+            invoiceNumber,
+            invoiceDate,
             program = new
             {
                 selectedProgram.ProgramId,
@@ -495,7 +497,18 @@
                 selectedProgram.CodePatient,
                 selectedProgram.NumeroAssuree,
                 selectedProgram.Couverture,
-
+                selectedProgram.Titre,
+                selectedProgram.NatureSeances,
+                selectedProgram.DateDebut,
+                selectedProgram.DateFin,
+                selectedProgram.NbSeances,
+                selectedProgram.DureeSeanceMinutes,
+                selectedProgram.PrixUnitaire,
+                selectedProgram.PrixTTC,
+                selectedProgram.CodeBureau,
+                selectedProgram.Annee,
+                selectedProgram.NumeroDecision,
+                selectedProgram.NumeroOrdre,
                 selectedProgram.FactureNumber,
                 MontantHT = montantHT,
                 MontantTVA = montantTVA
