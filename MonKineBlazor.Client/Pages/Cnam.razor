@@ -200,8 +200,8 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Bordereau CNAM</span>
             <div>
-                <button type="button" class="btn btn-outline-secondary btn-icon me-2" @onclick="ExportBordereauPdf" disabled="@(!cnamBordereau.Any())"><i class="bi bi-file-earmark-pdf"></i>Exporter Bordereau</button>
-                <button type="button" class="btn btn-outline-secondary btn-icon" @onclick="ExportBordereauTxt" disabled="@(!cnamBordereau.Any())"><i class="bi bi-file-earmark-text"></i>Exporter TXT</button>
+                <button type="button" class="btn btn-outline-secondary btn-icon me-2" @onclick="ExportBordereauPdf" disabled="@(!HasSelectedBordereau)"><i class="bi bi-file-earmark-pdf"></i>Exporter Bordereau</button>
+                <button type="button" class="btn btn-outline-secondary btn-icon" @onclick="ExportBordereauTxt" disabled="@(!HasSelectedBordereau)"><i class="bi bi-file-earmark-text"></i>Exporter TXT</button>
             </div>
         </div>
         <div class="card-body">
@@ -533,19 +533,29 @@
 
     private async Task ExportBordereauPdf()
     {
-        if (!cnamBordereau.Any())
+        if (!HasSelectedBordereau)
         {
-            errorMessage = "Aucun bordereau à exporter.";
+            errorMessage = "Sélectionnez au moins une facture pour exporter le bordereau.";
+            return;
+        }
+
+        var selectedRows = cnamBordereau
+            .Where(r => selectedBordereauProgramIds.Contains(r.ProgramId))
+            .ToList();
+
+        if (!selectedRows.Any())
+        {
+            errorMessage = "Aucune ligne sélectionnée trouvée pour l'export.";
             return;
         }
 
         errorMessage = null;
         successMessage = null;
 
-        var totalTTC = cnamBordereau.Sum(r => r.TotalTTC);
+        var totalTTC = selectedRows.Sum(r => r.TotalTTC);
         var totalHT = totalTTC / 1.07m;
         var totalTVA = totalTTC - totalHT;
-        var bordereauReference = $"BOR-{cnamBordereau.Count:000}";
+        var bordereauReference = $"SEL-{selectedRows.Count:000}";
 
         var pdfData = new
         {
@@ -558,11 +568,11 @@
                 BordereauNumber = bordereauReference,
                 MontantHT = totalHT,
                 Annee = cnamStart.Year.ToString(),
-                NbFactures = cnamBordereau.Count,
+                NbFactures = selectedRows.Count,
                 MontantTotalTTC = totalTTC,
                 MontantTVA = totalTVA
             },
-            rows = cnamBordereau.Select(r => new
+            rows = selectedRows.Select(r => new
             {
                 r.FactureNumber,
                 DateFacture = r.DateFacture?.ToString("dd/MM/yyyy"),
@@ -582,7 +592,7 @@
 
         try
         {
-            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.pdf", pdfData);
+            await JSRuntime.InvokeVoidAsync("generateBordereauPdf", $"bordereau_cnam_selected_{DateTime.Today:yyyyMMdd}.pdf", pdfData);
             successMessage = "Bordereau PDF généré.";
         }
         catch (JSException jsEx)
@@ -597,9 +607,19 @@
 
     private async Task ExportBordereauTxt()
     {
-        if (!cnamBordereau.Any())
+        if (!HasSelectedBordereau)
         {
-            errorMessage = "Aucun bordereau à exporter.";
+            errorMessage = "Sélectionnez au moins une facture pour exporter le bordereau.";
+            return;
+        }
+
+        var selectedRows = cnamBordereau
+            .Where(r => selectedBordereauProgramIds.Contains(r.ProgramId))
+            .ToList();
+
+        if (!selectedRows.Any())
+        {
+            errorMessage = "Aucune ligne sélectionnée trouvée pour l'export.";
             return;
         }
 
@@ -608,13 +628,16 @@
 
         try
         {
-            var textContent = await Http.GetStringAsync($"api/finance/cnam-bordereau-text?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}");
-            await JSRuntime.InvokeVoidAsync("downloadTextFile", $"bordereau_cnam_{cnamStart:yyyyMMdd}_{cnamEnd:yyyyMMdd}.txt", textContent);
+            var textBuilder = new System.Text.StringBuilder();
+            textBuilder.AppendLine("FactureNumber\tDateFacture\tNumeroAssuree\tPatientName\tCodeBureau\tAnnee\tNumeroDecision\tTotalTTC");
+            foreach (var row in selectedRows)
+            {
+                textBuilder.AppendLine($"{row.FactureNumber}\t{row.DateFacture?.ToString("dd/MM/yyyy") ?? string.Empty}\t{row.NumeroAssuree}\t{row.PatientName}\t{row.CodeBureau}\t{row.Annee}\t{row.NumeroDecision}\t{row.TotalTTC:F2}");
+            }
+
+            var filename = $"bordereau_cnam_selected_{DateTime.Today:yyyyMMdd}.txt";
+            await JSRuntime.InvokeVoidAsync("downloadTextFile", filename, textBuilder.ToString(), "text/plain;charset=utf-8");
             successMessage = "Fichier texte bordereau généré.";
-        }
-        catch (HttpRequestException httpEx)
-        {
-            errorMessage = $"Erreur lors du téléchargement du fichier texte : {httpEx.Message}";
         }
         catch (JSException jsEx)
         {
