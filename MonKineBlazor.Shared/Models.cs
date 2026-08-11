@@ -203,6 +203,7 @@ public class CnamProgramInvoiceDto
     public string? CodePatient { get; set; }
     public string? NumeroAssuree { get; set; }
     public string? Couverture { get; set; }
+    public string? Titre { get; set; }
     public string? NatureSeances { get; set; }
     public int NbSeances { get; set; }
     public int DureeSeanceMinutes { get; set; }

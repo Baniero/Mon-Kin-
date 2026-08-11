@@ -449,6 +449,7 @@ public class FinanceController : ControllerBase
                         CodePatient = reader.GetString(3),
                         NumeroAssuree = reader.GetString(4),
                         Couverture = reader.GetString(5),
+                        Titre = reader.GetString(6),
                         NatureSeances = reader.GetString(7),
                         NbSeances = reader.GetInt32(8),
                         DureeSeanceMinutes = reader.GetInt32(9),
