@@ -452,14 +452,14 @@ public class FinanceController : ControllerBase
                         NatureSeances = reader.GetString(6),
                         NbSeances = reader.GetInt32(7),
                         DureeSeanceMinutes = reader.GetInt32(8),
-                        DateDebut = reader.IsDBNull(9) ? null : reader.GetDateTime(9),
-                        DateFin = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        PrixUnitaire = reader.GetDecimal(11),
-                        PrixTTC = reader.GetDecimal(12),
-                        CodeBureau = reader.GetString(13),
-                        Annee = reader.GetString(14),
-                        NumeroDecision = reader.GetString(15),
-                        NumeroOrdre = reader.GetString(16),
+                        DateDebut = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
+                        DateFin = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                        PrixUnitaire = reader.GetDecimal(12),
+                        PrixTTC = reader.GetDecimal(13),
+                        CodeBureau = reader.GetString(14),
+                        Annee = reader.GetString(15),
+                        NumeroDecision = reader.GetString(16),
+                        NumeroOrdre = reader.GetString(17),
                         FactureNumber = null
                     });
                 }

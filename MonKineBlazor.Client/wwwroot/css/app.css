@@ -652,6 +652,10 @@ textarea:focus {
 }
 
 .bi {
+    font-family: "Bootstrap Icons";
+    font-style: normal;
+    font-weight: normal;
+    speak: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -659,6 +663,8 @@ textarea:focus {
     height: 1.25rem;
     margin-right: 0.75rem;
     font-size: 1.1rem;
+    line-height: 1;
+    text-transform: none;
     vertical-align: middle;
 }
 
