@@ -121,7 +121,7 @@
                                 <tr class="@(selectedProgram?.ProgramId == item.ProgramId ? "table-active" : string.Empty)">
                                     <td>@item.PatientName</td>
                                     <td>@item.NumeroAssuree</td>
-                                    <td>@item.DateDebut?.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.DateDebut?.ToString("yyyy-MM-dd")</td>
                                     <td>@($"{item.PrixTTC:F2} DT")</td>
                                     <td class="text-end">
                                         <button type="button" class="btn btn-sm btn-primary" @onclick="() => SelectProgram(item)">Sélectionner</button>
