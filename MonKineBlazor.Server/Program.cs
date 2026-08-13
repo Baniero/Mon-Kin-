@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using MonKineBlazor.Server.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,9 @@ builder.Configuration
     .AddCommandLine(args);
 
 // Add services to the container.
+builder.Services.AddAuthentication("NoOp")
+    .AddScheme<AuthenticationSchemeOptions, MonKineBlazor.Server.Services.NoOpAuthenticationHandler>("NoOp", options => { });
+builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
@@ -61,6 +65,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();

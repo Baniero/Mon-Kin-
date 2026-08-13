@@ -213,8 +213,8 @@
             else
             {
                 <div class="mb-3">
-                    <strong>Solde avance :</strong> @($"{patientFinance?.AdvanceBalance:F2 ?? 0m} DT")<br />
-                    <strong>Avances totales :</strong> @($"{patientFinance?.TotalAdvancePaid:F2 ?? 0m} DT")<br />
+                    <strong>Solde avance :</strong> @($"{(patientFinance?.AdvanceBalance ?? 0m):F2} DT")<br />
+                    <strong>Avances totales :</strong> @($"{(patientFinance?.TotalAdvancePaid ?? 0m):F2} DT")<br />
                     <strong>Avances utilisées :</strong> @($"{GetUsedAdvanceAmount():F2} DT")
                 </div>
                 <div class="row g-3 mb-3">
