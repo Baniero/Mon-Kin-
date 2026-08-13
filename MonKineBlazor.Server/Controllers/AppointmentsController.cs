@@ -252,6 +252,11 @@ public class AppointmentsController : ControllerBase
         cmd.Parameters.AddWithValue("@notes", (object?)appointment.Notes ?? DBNull.Value);
 
         appointment.Id = Convert.ToInt32(cmd.ExecuteScalar());
+        if (string.Equals(appointment.Status, "present", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyAdvanceAndPaymentForPresentStatus(appointment, conn, true);
+        }
+
         return CreatedAtAction(nameof(GetAll), new { id = appointment.Id }, appointment);
     }
 
@@ -290,6 +295,11 @@ public class AppointmentsController : ControllerBase
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
+        if (string.Equals(appointment.Status, "present", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyAdvanceAndPaymentForPresentStatus(appointment, conn, false);
+        }
+
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE appointments SET
@@ -317,8 +327,6 @@ public class AppointmentsController : ControllerBase
         cmd.Parameters.AddWithValue("@payment_status", (object?)appointment.PaymentStatus ?? "non_paye");
         cmd.Parameters.AddWithValue("@amount", appointment.Amount);
         cmd.Parameters.AddWithValue("@paid_amount", appointment.PaidAmount);
-        ApplyAdvanceAndPaymentForPresentStatus(appointment, conn);
-
         cmd.Parameters.AddWithValue("@cnam_covered", appointment.CnamCovered);
         cmd.Parameters.AddWithValue("@notes", (object?)appointment.Notes ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
@@ -357,7 +365,7 @@ public class AppointmentsController : ControllerBase
         return rows == 0 ? NotFound() : NoContent();
     }
 
-    private void ApplyAdvanceAndPaymentForPresentStatus(AppointmentDto appointment, NpgsqlConnection conn)
+    private void ApplyAdvanceAndPaymentForPresentStatus(AppointmentDto appointment, NpgsqlConnection conn, bool persistAppointment = false)
     {
         if (!string.Equals(appointment.Status, "present", StringComparison.OrdinalIgnoreCase))
         {
@@ -375,7 +383,6 @@ public class AppointmentsController : ControllerBase
             remainingAmount -= advanceUsed;
         }
 
-        // si reste à payer, on considère que le patient encaisse en espèces le jour même
         if (remainingAmount > 0)
         {
             appointment.PaidAmount += remainingAmount;
@@ -385,6 +392,21 @@ public class AppointmentsController : ControllerBase
         else
         {
             appointment.PaymentStatus = ComputePaymentStatus(appointment.Amount, appointment.PaidAmount);
+        }
+
+        if (persistAppointment && appointment.Id > 0)
+        {
+            using var persistCmd = conn.CreateCommand();
+            persistCmd.CommandText = @"
+                UPDATE appointments
+                SET paid_amount = @paid_amount,
+                    payment_status = @payment_status
+                WHERE id = @id
+            ";
+            persistCmd.Parameters.AddWithValue("@paid_amount", appointment.PaidAmount);
+            persistCmd.Parameters.AddWithValue("@payment_status", (object?)appointment.PaymentStatus ?? "non_paye");
+            persistCmd.Parameters.AddWithValue("@id", appointment.Id);
+            persistCmd.ExecuteNonQuery();
         }
     }
 
@@ -467,7 +489,7 @@ public class AppointmentsController : ControllerBase
     {
         if (amount <= 0)
         {
-            return "non_paye";
+            return "paye";
         }
 
         return paidAmount >= amount ? "paye" : (paidAmount > 0 ? "partiel" : "non_paye");

@@ -18,9 +18,9 @@ RUN dotnet publish -c Release -o /tmp/clientpublish
 
 # Prepare server and publish
 WORKDIR /src/MonKineBlazor.Server
-RUN mkdir -p wwwroot
-RUN cp -r /tmp/clientpublish/wwwroot/* wwwroot/
 RUN dotnet publish "MonKineBlazor.Server.csproj" -c Release -o /app/publish
+RUN mkdir -p /app/publish/wwwroot
+RUN cp -r /tmp/clientpublish/wwwroot/* /app/publish/wwwroot/
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime

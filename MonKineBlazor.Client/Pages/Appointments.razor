@@ -174,7 +174,9 @@
                         <div class="mb-3">
                             <strong>Programme :</strong> @selectedProgram.Titre<br />
                             <strong>Durée séance :</strong> @selectedProgram.DureeSeanceMinutes min<br />
-                            <strong>Prix unitaire :</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")
+                            <strong>Prix unitaire CNAM :</strong> @($"{selectedProgram.PrixUnitaire:F2} DT")<br />
+                            <strong>Prix espèces :</strong> @($"{selectedProgram.PrixEspece:F2} DT")<br />
+                            <strong>Montant à payer par séance :</strong> @($"{DetermineSessionAmount(selectedProgram, selectedProgramPatient):F2} DT")
                         </div>
                         <div class="table-responsive mb-3">
                             <table class="table table-sm table-striped">
@@ -868,7 +870,7 @@
                     Room = programRoom,
                     Status = "planifie",
                     PaymentStatus = "non_paye",
-                    Amount = program.PrixUnitaire,
+                    Amount = DetermineSessionAmount(program, selectedProgramPatient),
                     CnamCovered = 0,
                     Notes = $"Programme {program.Titre}"
                 });
@@ -878,6 +880,22 @@
         }
 
         return result;
+    }
+
+    private decimal DetermineSessionAmount(PatientProgramDto program, PatientDto? patient)
+    {
+        if (program.PrixEspece > 0)
+        {
+            return program.PrixEspece;
+        }
+
+        if (patient == null)
+        {
+            return program.PrixUnitaire;
+        }
+
+        var hasCnam = !string.IsNullOrWhiteSpace(patient.Couverture);
+        return hasCnam ? 0m : program.PrixUnitaire;
     }
 
     private async Task ShowSuccessMessage(string message)
