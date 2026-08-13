@@ -710,7 +710,9 @@
         if (int.TryParse(e.Value?.ToString(), out var patientId))
         {
             selectedPatientId = patientId;
-            await LoadFinanceData();
+            await LoadAdvanceData();
+            await LoadAdvanceLots();
+            await LoadPaymentProjections();
         }
     }
 
