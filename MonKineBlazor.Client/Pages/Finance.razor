@@ -710,6 +710,19 @@
         if (int.TryParse(e.Value?.ToString(), out var patientId))
         {
             selectedPatientId = patientId;
+        }
+        else
+        {
+            selectedPatientId = 0;
+        }
+
+        advanceTransactions = new();
+        patientFinance = null;
+        advanceLots = new();
+        paymentProjections = new();
+
+        if (selectedPatientId > 0)
+        {
             await LoadAdvanceData();
             await LoadAdvanceLots();
             await LoadPaymentProjections();
