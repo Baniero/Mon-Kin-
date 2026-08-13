@@ -567,6 +567,10 @@
         {
             await LoadAllTransactions();
         }
+        if ((section == FinanceSection.Advances || section == FinanceSection.Projections) && selectedPatientId > 0)
+        {
+            await LoadFinanceData();
+        }
     }
 
     private async Task ValidateCashClosing()
@@ -661,9 +665,7 @@
                 await ShowSuccessMessage("Avance enregistrée.");
             }
 
-            await LoadAdvanceData();
-            await LoadAdvanceLots();
-            await LoadPaymentProjections();
+            await LoadFinanceData();
             ResetAdvanceForm();
         }
         catch (Exception ex)
@@ -693,8 +695,7 @@
         var response = await Http.DeleteAsync($"api/finance/advance-transactions/{transactionId}");
         if (response.IsSuccessStatusCode)
         {
-            await LoadAdvanceData();
-            await LoadAdvanceLots();
+            await LoadFinanceData();
             await LoadAllTransactions();
             await ShowSuccessMessage("Avance annulée.");
         }
@@ -709,18 +710,14 @@
         if (int.TryParse(e.Value?.ToString(), out var patientId))
         {
             selectedPatientId = patientId;
-            await LoadAdvanceData();
-            await LoadAdvanceLots();
-            await LoadPaymentProjections();
+            await LoadFinanceData();
         }
     }
 
     private async Task EditTransaction(AdvanceTransactionDto transaction)
     {
         selectedPatientId = transaction.PatientId;
-        await LoadAdvanceData();
-        await LoadAdvanceLots();
-        await LoadPaymentProjections();
+        await LoadFinanceData();
         BeginEditAdvance(transaction);
         await SetSection(FinanceSection.Advances);
     }
