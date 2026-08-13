@@ -187,7 +187,10 @@
             <div class="row g-3 mb-3">
                 <div class="col-md-5">
                     <label class="form-label">Patient</label>
-                    <InputSelect class="form-select" @bind-Value="selectedPatientId" @onchange="OnPatientChanged">
+                    <InputSelect class="form-select"
+                                 Value="selectedPatientId"
+                                 ValueChanged="async (int value) => await OnPatientSelected(value)"
+                                 ValueExpression="@(() => selectedPatientId)">
                         <option value="0">-- Sélectionnez --</option>
                         @foreach (var patient in FilteredPatients)
                         {
@@ -258,6 +261,10 @@
                             </table>
                         </div>
                     </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">Aucun lot d'avance trouvé pour ce patient.</div>
                 }
                 @if (advanceTransactions.Any())
                 {
@@ -705,17 +712,9 @@
         }
     }
 
-    private async Task OnPatientChanged(ChangeEventArgs e)
+    private async Task OnPatientSelected(int patientId)
     {
-        if (int.TryParse(e.Value?.ToString(), out var patientId))
-        {
-            selectedPatientId = patientId;
-        }
-        else
-        {
-            selectedPatientId = 0;
-        }
-
+        selectedPatientId = patientId;
         advanceTransactions = new();
         patientFinance = null;
         advanceLots = new();
