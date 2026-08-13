@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MonKineBlazor.Shared\MonKineBlazor.Shared.csproj" />
+    <ProjectReference Include="..\MonKineBlazor.Client\MonKineBlazor.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

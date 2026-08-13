@@ -699,16 +699,33 @@
             return;
         }
 
-        var response = await Http.DeleteAsync($"api/finance/advance-transactions/{transactionId}");
-        if (response.IsSuccessStatusCode)
+        try
         {
-            await LoadFinanceData();
-            await LoadAllTransactions();
-            await ShowSuccessMessage("Avance annulée.");
+            var response = await Http.DeleteAsync($"api/finance/advance-transactions/{transactionId}");
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadFinanceData();
+                await LoadAllTransactions();
+                await ShowSuccessMessage("Avance annulée.");
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                errorMessage = "Accès refusé pour annuler cette avance.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                errorMessage = "L'avance est introuvable ou a déjà été supprimée.";
+                await LoadFinanceData();
+                await LoadAllTransactions();
+            }
+            else
+            {
+                errorMessage = "Impossible d'annuler l'avance.";
+            }
         }
-        else
+        catch (Exception ex)
         {
-            errorMessage = "Impossible d'annuler l'avance.";
+            errorMessage = "Erreur lors de la suppression de l'avance : " + ex.Message;
         }
     }
 

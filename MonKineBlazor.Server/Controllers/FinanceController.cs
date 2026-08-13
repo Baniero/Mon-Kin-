@@ -1884,9 +1884,10 @@ public class FinanceController : ControllerBase
         using var financeCmd = conn.CreateCommand();
         financeCmd.CommandText = @"
             INSERT INTO patient_finance(patient_id, session_price, patient_share, cnam_share, advance_balance, total_advance_paid)
-            VALUES (@patientId, 0, 0, 0, @amount, 0)
+            VALUES (@patientId, 0, 0, 0, @amount, @amount)
             ON CONFLICT (patient_id) DO UPDATE
-            SET advance_balance = patient_finance.advance_balance + EXCLUDED.advance_balance
+            SET advance_balance = patient_finance.advance_balance + EXCLUDED.advance_balance,
+                total_advance_paid = patient_finance.total_advance_paid + EXCLUDED.total_advance_paid
         ";
         financeCmd.Parameters.AddWithValue("@patientId", request.PatientId);
         financeCmd.Parameters.AddWithValue("@amount", request.Amount);
@@ -1997,21 +1998,71 @@ public class FinanceController : ControllerBase
     {
         if (!IsAdmin() && !IsAdvanceTransactionAccessible(transactionId))
         {
-            return Forbid();
+            return StatusCode(403);
         }
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
+        int patientId;
+        decimal amount;
+        decimal remainingAmount;
+        using (var selectCmd = conn.CreateCommand())
+        {
+            selectCmd.CommandText = @"
+                SELECT t.patient_id, t.amount, COALESCE(SUM(l.remaining_amount), 0)
+                FROM advance_transactions t
+                LEFT JOIN advance_lots l ON l.transaction_id = t.id
+                WHERE t.id = @transactionId
+                GROUP BY t.patient_id, t.amount
+            ";
+            selectCmd.Parameters.AddWithValue("@transactionId", transactionId);
+
+            using var reader = selectCmd.ExecuteReader();
+            if (!reader.Read())
+            {
+                return NotFound();
+            }
+
+            patientId = reader.GetInt32(0);
+            amount = reader.GetDecimal(1);
+            remainingAmount = reader.GetDecimal(2);
+        }
+
+        using var deleteLotCmd = conn.CreateCommand();
+        deleteLotCmd.CommandText = @"
+            DELETE FROM advance_lots
+            WHERE transaction_id = @transactionId
+        ";
+        deleteLotCmd.Parameters.AddWithValue("@transactionId", transactionId);
+        deleteLotCmd.ExecuteNonQuery();
+
+        using var deleteTransactionCmd = conn.CreateCommand();
+        deleteTransactionCmd.CommandText = @"
             DELETE FROM advance_transactions
             WHERE id = @transactionId
         ";
-        cmd.Parameters.AddWithValue("@transactionId", transactionId);
+        deleteTransactionCmd.Parameters.AddWithValue("@transactionId", transactionId);
 
-        var rows = cmd.ExecuteNonQuery();
-        return rows == 0 ? NotFound() : NoContent();
+        var rows = deleteTransactionCmd.ExecuteNonQuery();
+        if (rows == 0)
+        {
+            return NotFound();
+        }
+
+        using var updateFinanceCmd = conn.CreateCommand();
+        updateFinanceCmd.CommandText = @"
+            UPDATE patient_finance
+            SET advance_balance = CASE WHEN advance_balance - @remainingAmount < 0 THEN 0 ELSE advance_balance - @remainingAmount END,
+                total_advance_paid = CASE WHEN total_advance_paid - @amount < 0 THEN 0 ELSE total_advance_paid - @amount END
+            WHERE patient_id = @patientId
+        ";
+        updateFinanceCmd.Parameters.AddWithValue("@amount", amount);
+        updateFinanceCmd.Parameters.AddWithValue("@remainingAmount", remainingAmount);
+        updateFinanceCmd.Parameters.AddWithValue("@patientId", patientId);
+        updateFinanceCmd.ExecuteNonQuery();
+
+        return NoContent();
     }
 
     [HttpPut("advance-transactions/{transactionId}")]
