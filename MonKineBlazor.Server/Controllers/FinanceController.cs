@@ -402,6 +402,12 @@ public class FinanceController : ControllerBase
                 JOIN patients p ON p.id = pp.patient_id
                 WHERE DATE(pp.date_debut) BETWEEN @start AND @end
                   AND COALESCE(p.couverture, '') <> ''
+                  AND EXISTS (
+                      SELECT 1 FROM appointments a
+                      WHERE a.patient_id = pp.patient_id
+                        AND a.start_datetime >= pp.date_debut
+                        AND (pp.date_fin IS NULL OR a.start_datetime <= pp.date_fin)
+                  )
                 ORDER BY pp.date_debut DESC
             " : @"
                 SELECT
@@ -428,6 +434,12 @@ public class FinanceController : ControllerBase
                 WHERE DATE(pp.date_debut) BETWEEN @start AND @end
                   AND COALESCE(p.couverture, '') <> ''
                   AND p.cabinet_id = @cabinet_id
+                  AND EXISTS (
+                      SELECT 1 FROM appointments a
+                      WHERE a.patient_id = pp.patient_id
+                        AND a.start_datetime >= pp.date_debut
+                        AND (pp.date_fin IS NULL OR a.start_datetime <= pp.date_fin)
+                  )
                 ORDER BY pp.date_debut DESC
             ";
             cmd.Parameters.AddWithValue("@start", startDate.Date);
@@ -593,6 +605,12 @@ public class FinanceController : ControllerBase
                 WHERE DATE(pp.date_debut) BETWEEN @start AND @end
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
+                  AND EXISTS (
+                      SELECT 1 FROM appointments a
+                      WHERE a.patient_id = pp.patient_id
+                        AND a.start_datetime >= pp.date_debut
+                        AND (pp.date_fin IS NULL OR a.start_datetime <= pp.date_fin)
+                  )
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
@@ -617,6 +635,12 @@ public class FinanceController : ControllerBase
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
                   AND p.cabinet_id = @cabinet_id
+                  AND EXISTS (
+                      SELECT 1 FROM appointments a
+                      WHERE a.patient_id = pp.patient_id
+                        AND a.start_datetime >= pp.date_debut
+                        AND (pp.date_fin IS NULL OR a.start_datetime <= pp.date_fin)
+                  )
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
