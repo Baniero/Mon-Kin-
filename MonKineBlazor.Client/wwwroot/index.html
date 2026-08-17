@@ -575,10 +575,10 @@
             doc.text(patientCode, 420, y);
             y += 16;
 
-            doc.text('Programme :', margin, y);
-            doc.text(programTitle, margin + 80, y);
-            doc.text('Nature :', 320, y);
-            doc.text(programNature, 420, y);
+            doc.text('Nature :', margin, y);
+            doc.text(programNature, margin + 80, y);
+            doc.text('N° assurée :', 320, y);
+            doc.text(getString(patient, 'NumeroAssuree', 'numeroAssuree'), 420, y);
             y += 16;
 
             doc.text('Date début :', margin, y);
