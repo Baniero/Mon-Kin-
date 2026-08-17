@@ -466,7 +466,7 @@ else
                                     </div>
                                     <div class="col-md-2">
                                         <label class="form-label">Prix séance TTC</label>
-                                        <InputNumber class="form-control" @bind-Value="newProgram.PrixSeanceTTC" step="0.001" disabled />
+                                        <InputNumber class="form-control" @bind-Value="newProgram.PrixSeanceTTC" step="0.001" @onchange="_ => RecalculateProgram()" />
                                     </div>
                                 }
                                 <div class="col-md-3">
@@ -922,6 +922,7 @@ else
             if (!isEditingProgram && cabinetInfo != null)
             {
                 newProgram.PrixSeanceTTC = cabinetInfo.PrixSeanceTTC;
+                RecalculateProgram();
             }
         }
         catch
@@ -1081,6 +1082,11 @@ else
         else
         {
             newProgram.DateFin = null;
+        }
+
+        if (newProgram.PrixSeanceTTC > 0 && newProgram.NbSeances > 0)
+        {
+            newProgram.PrixTTC = Math.Round(newProgram.NbSeances * newProgram.PrixSeanceTTC, 3);
         }
 
         if (newProgram.PrixTTC < 0)
