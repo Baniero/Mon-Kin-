@@ -481,53 +481,35 @@
             const invoiceNumber = data?.invoiceNumber ?? data?.invoice_number ?? 'N/A';
             const invoiceDate = data?.invoiceDate ?? data?.invoice_date ?? 'N/A';
 
-            let y = await renderPdfHeader(doc, data, 'FACTURE CNAM', iconDataUrl);
+            let y = await renderPdfHeader(doc, data, `FACTURE N° ${invoiceNumber}`, iconDataUrl);
 
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(12);
-            doc.text('Facture', margin, y);
-            y += 18;
+            const patientName = `${getString(program, 'PatientName', 'patientName')} ${getString(program, 'PatientPrenom', 'patientPrenom')}`.trim();
+            const numeroAssuree = getString(program, 'NumeroAssuree', 'numeroAssuree');
+            const qualite = getString(program, 'Couverture', 'couverture');
+            const priseEnCharge = `${getString(program, 'CodeBureau', 'codeBureau')}/${getString(program, 'Annee', 'annee')}/${getString(program, 'NumeroDecision', 'numeroDecision')}`;
+            const nbSeances = getNumber(program, 'NbSeances', 'nbSeances');
+            const prixUnitaire = getNumber(program, 'PrixUnitaire', 'prixUnitaire');
+            const prixHT = getNumber(program, 'PrixHT', 'prixHT') || Number((getNumber(program, 'PrixTTC', 'prixTTC') / 1.07).toFixed(3));
+            const prixTTC = getNumber(program, 'PrixTTC', 'prixTTC');
+            const montantTVA = Number((prixTTC - prixHT).toFixed(3));
+            const totalTtcWords = numberToFrenchWords(prixTTC);
 
             const invoiceFields = [
-                ['N° facture', invoiceNumber],
-                ['Date facture', invoiceDate],
-                ['Patient', getString(program, 'PatientName', 'patientName')],
-                ['N° assurée', getString(program, 'NumeroAssuree', 'numeroAssuree')],
-                ['Code patient', getString(program, 'CodePatient', 'codePatient')],
-                ['Couverture', getString(program, 'Couverture', 'couverture')]
+                ['Patient', patientName || 'N/A'],
+                ['N° assurée', numeroAssuree || 'N/A'],
+                ['Qualité', qualite || 'N/A'],
+                ['N° prise en charge', priseEnCharge || 'N/A'],
+                ['Nb séances', nbSeances],
+                ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut'))],
+                ['Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
+                ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`],
+                ['Montant HT', `${prixHT.toFixed(2)} DT`],
+                ['Montant TVA', `${montantTVA.toFixed(2)} DT`],
+                ['Montant TOTAL TTC', `${prixTTC.toFixed(2)} DT`]
             ];
 
             doc.setFont('helvetica', 'normal');
             invoiceFields.forEach(([label, value]) => {
-                y += drawKeyValue(doc, label, value ?? 'N/A', margin, margin + 130, y, 340);
-            });
-
-            y += 8;
-            doc.setFont('helvetica', 'bold');
-            doc.text('Détails du programme', margin, y);
-            y += 16;
-            doc.setFont('helvetica', 'normal');
-
-            const nbSeances = getNumber(program, 'NbSeances', 'nbSeances');
-            const dureeSeance = getNumber(program, 'DureeSeanceMinutes', 'dureeSeanceMinutes');
-            const prixUnitaire = getNumber(program, 'PrixUnitaire', 'prixUnitaire');
-            const prixTTC = getNumber(program, 'PrixTTC', 'prixTTC');
-
-            const details = [
-                ['Titre', getString(program, 'Titre', 'titre')],
-                ['Nature', getString(program, 'NatureSeances', 'natureSeances')],
-                ['Code bureau', getString(program, 'CodeBureau', 'codeBureau')],
-                ['Année', getString(program, 'Annee', 'annee')],
-                ['N° décision', getString(program, 'NumeroDecision', 'numeroDecision')],
-                ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut'))],
-                ['Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
-                ['Nb séances', nbSeances],
-                ['Durée séance', `${dureeSeance} min`],
-                ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`],
-                ['Total TTC', `${prixTTC.toFixed(2)} DT`]
-            ];
-
-            details.forEach(([label, value]) => {
                 if (y > 760) {
                     doc.addPage();
                     y = margin;
@@ -540,10 +522,70 @@
                 doc.addPage();
                 y = margin;
             }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Total TTC en toutes lettres :', margin, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+            doc.text(totalTtcWords, margin, y);
+            y += 24;
+
+            if (y > 760) {
+                doc.addPage();
+                y = margin;
+            }
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
             doc.save(filename);
+        };
+
+        const numberToFrenchWords = (amount) => {
+            const integerPart = Math.floor(amount);
+            const cents = Math.round((amount - integerPart) * 100);
+            const integerText = integerPart === 0 ? 'zéro' : intToFrenchWords(integerPart);
+            if (cents > 0) {
+                return `${integerText} dinars et ${intToFrenchWords(cents)} centimes`;
+            }
+            return `${integerText} dinars`;
+        };
+
+        const intToFrenchWords = (num) => {
+            const units = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize'];
+            const tens = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+
+            if (num < 17) return units[num];
+            if (num < 20) return `dix-${units[num - 10]}`;
+            if (num < 70) {
+                const ten = Math.floor(num / 10);
+                const unit = num % 10;
+                if (unit === 1) return `${tens[ten]} et un`;
+                return `${tens[ten]}${unit > 0 ? `-${units[unit]}` : ''}`;
+            }
+            if (num < 80) {
+                const unit = num - 60;
+                return `soixante${unit === 0 ? '' : unit === 1 ? ' et un' : `-${units[unit]}`}`;
+            }
+            if (num < 100) {
+                const unit = num - 80;
+                return `quatre-vingt${unit === 0 ? '' : unit === 1 ? '-un' : `-${units[unit]}`}`;
+            }
+            if (num < 200) return `cent${num === 100 ? '' : ` ${intToFrenchWords(num - 100)}`}`;
+            if (num < 1000) {
+                const hundreds = Math.floor(num / 100);
+                const remainder = num % 100;
+                return `${units[hundreds]} cent${hundreds > 1 ? 's' : ''}${remainder > 0 ? ` ${intToFrenchWords(remainder)}` : ''}`;
+            }
+            if (num < 2000) return `mille${num === 1000 ? '' : ` ${intToFrenchWords(num - 1000)}`}`;
+            if (num < 1000000) {
+                const thousands = Math.floor(num / 1000);
+                const remainder = num % 1000;
+                return `${intToFrenchWords(thousands)} mille${remainder > 0 ? ` ${intToFrenchWords(remainder)}` : ''}`;
+            }
+            if (num < 2000000) return `un million${num === 1000000 ? '' : ` ${intToFrenchWords(num - 1000000)}`}`;
+            const millions = Math.floor(num / 1000000);
+            const remainder = num % 1000000;
+            return `${intToFrenchWords(millions)} millions${remainder > 0 ? ` ${intToFrenchWords(remainder)}` : ''}`;
         };
 
         window.generateSignatureSheetPdf = async (filename, data) => {
@@ -581,14 +623,9 @@
             doc.text(getString(patient, 'NumeroAssuree', 'numeroAssuree'), 420, y);
             y += 16;
 
-            doc.text('Code bureau :', margin, y);
-            doc.text(getString(program, 'CodeBureau', 'codeBureau'), margin + 80, y);
-            doc.text('Année :', 320, y);
-            doc.text(getString(program, 'Annee', 'annee'), 420, y);
-            y += 16;
-
-            doc.text('N° décision :', margin, y);
-            doc.text(getString(program, 'NumeroDecision', 'numeroDecision'), margin + 80, y);
+            const priseEnCharge = `${getString(program, 'CodeBureau', 'codeBureau')}/${getString(program, 'Annee', 'annee')}/${getString(program, 'NumeroDecision', 'numeroDecision')}`;
+            doc.text('N° prise en charge :', margin, y);
+            doc.text(priseEnCharge, margin + 130, y);
             doc.text('Date début :', 320, y);
             doc.text(programDateDebut, 420, y);
             y += 16;
