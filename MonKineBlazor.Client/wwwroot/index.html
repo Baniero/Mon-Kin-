@@ -236,9 +236,10 @@
         const drawKeyValue = (doc, label, value, xLabel, xValue, y, valueWidth, lineHeight = 14) => {
             const rawText = String(value ?? '');
             const textLines = doc.splitTextToSize(rawText, valueWidth);
+            const renderedLines = Array.isArray(textLines) ? textLines : [textLines];
             doc.text(`${label} :`, xLabel, y);
-            doc.text(textLines, xValue, y);
-            return Math.max(1, Array.isArray(textLines) ? textLines.length : 1) * lineHeight;
+            doc.text(renderedLines, xValue, y);
+            return renderedLines.length * lineHeight;
         };
 
         const splitCellLines = (doc, value, width) => {
@@ -510,11 +511,12 @@
 
             doc.setFont('helvetica', 'normal');
             invoiceFields.forEach(([label, value]) => {
+                const lineHeight = drawKeyValue(doc, label, value ?? '', margin, margin + 130, y, 360);
+                y += lineHeight + 6;
                 if (y > 760) {
                     doc.addPage();
                     y = margin;
                 }
-                y += drawKeyValue(doc, label, value ?? '', margin, margin + 130, y, 360);
             });
 
             y += 24;
