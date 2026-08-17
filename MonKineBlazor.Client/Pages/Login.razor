@@ -50,7 +50,9 @@
         var query = ParseQueryString(uri.Query);
         if (query.TryGetValue("message", out var message))
         {
-            loginMessage = message;
+            loginMessage = string.Equals(message, "Please login to access this page", StringComparison.OrdinalIgnoreCase)
+                ? "Entrez votre nom d'utilisateur et mot de passe."
+                : message;
         }
     }
 

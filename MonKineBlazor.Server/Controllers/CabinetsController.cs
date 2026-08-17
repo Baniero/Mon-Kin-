@@ -226,7 +226,7 @@ public class CabinetsController : ControllerBase
                 cle = @code_cnam,
                 qualite = @qualite,
                 adresse_cabinet = @adresse_cabinet,
-                nom_cabinet_arabe = @nom_kine_arabe,
+                nom_cabinet_arabe = @nom_cabinet_arabe,
                 nom_kine_arabe = @nom_kine_arabe,
                 adresse_kine_arabe = @adresse_kine_arabe,
                 telephone = @telephone,
