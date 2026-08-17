@@ -237,8 +237,10 @@
             const rawText = String(value ?? '');
             const textLines = doc.splitTextToSize(rawText, valueWidth);
             const renderedLines = Array.isArray(textLines) ? textLines : [textLines];
+            doc.setFont('helvetica', 'bold');
             doc.text(`${label} :`, xLabel, y);
-            doc.text(renderedLines, xValue, y);
+            doc.setFont('helvetica', 'normal');
+            doc.text(renderedLines, xValue, y, { align: 'right' });
             return renderedLines.length * lineHeight;
         };
 
@@ -511,8 +513,8 @@
 
             doc.setFont('helvetica', 'normal');
             invoiceFields.forEach(([label, value]) => {
-                const lineHeight = drawKeyValue(doc, label, value ?? '', margin, margin + 130, y, 360);
-                y += lineHeight + 6;
+                const lineHeight = drawKeyValue(doc, label, value ?? '', margin, 520, y, 80);
+                y += lineHeight + 12;
                 if (y > 760) {
                     doc.addPage();
                     y = margin;
