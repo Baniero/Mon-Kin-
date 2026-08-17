@@ -211,6 +211,7 @@ else
                                             <td>@(program.DateDebut.HasValue ? program.DateDebut.Value.ToString("dd/MM/yyyy") : string.Empty)</td>
                                             <td>@program.Statut</td>
                                             <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-success me-2" @onclick="() => GenerateProgramInvoice(program)">Facture</button>
                                                 <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => ExportSignatureSheet(program)">Feuille signature</button>
                                                 <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditProgram(program)">Modifier</button>
                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteProgram(program.Id)">Supprimer</button>
@@ -1061,6 +1062,66 @@ else
         else
         {
             statusMessage = "Erreur lors de la suppression du programme.";
+        }
+    }
+
+    private async Task GenerateProgramInvoice(PatientProgramDto program)
+    {
+        errorMessage = null;
+        statusMessage = null;
+
+        if (selectedPatient == null)
+        {
+            errorMessage = "Sélectionnez d'abord un patient.";
+            return;
+        }
+
+        var invoiceNumber = !string.IsNullOrWhiteSpace(program.NumeroOrdre)
+            ? program.NumeroOrdre
+            : $"PROG-{program.Id}";
+
+        var montantHT = program.PrixTTC / 1.07m;
+        var montantTVA = program.PrixTTC - montantHT;
+
+        var payload = new
+        {
+            cabinet = cabinetInfo,
+            invoiceNumber,
+            invoiceDate = DateTime.Today.ToString("yyyy-MM-dd"),
+            program = new
+            {
+                programId = program.Id,
+                patientId = program.PatientId,
+                patientName = $"{selectedPatient.Nom} {selectedPatient.Prenom}".Trim(),
+                codePatient = selectedPatient.CodePatient,
+                numeroAssuree = selectedPatient.NumeroAssuree,
+                couverture = selectedPatient.Couverture,
+                titre = program.Titre,
+                natureSeances = program.NatureSeances,
+                nbSeances = program.NbSeances,
+                dureeSeanceMinutes = program.DureeSeanceMinutes,
+                dateDebut = program.DateDebut,
+                dateFin = program.DateFin,
+                prixUnitaire = program.PrixUnitaire,
+                prixTTC = program.PrixTTC,
+                codeBureau = program.CodeBureau,
+                annee = program.Annee,
+                numeroDecision = program.NumeroDecision,
+                numeroOrdre = program.NumeroOrdre,
+                factureNumber = invoiceNumber,
+                MontantHT = montantHT,
+                MontantTVA = montantTVA
+            }
+        };
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_programme_{program.Id}_{DateTime.Today:yyyyMMdd}.pdf", payload);
+            successMessage = "Facture générée.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors de la génération de la facture : " + ex.Message;
         }
     }
 

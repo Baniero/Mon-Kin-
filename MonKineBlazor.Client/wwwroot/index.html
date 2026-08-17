@@ -581,10 +581,20 @@
             doc.text(getString(patient, 'NumeroAssuree', 'numeroAssuree'), 420, y);
             y += 16;
 
-            doc.text('Date début :', margin, y);
-            doc.text(programDateDebut, margin + 80, y);
-            doc.text('Date fin :', 320, y);
-            doc.text(programDateFin, 420, y);
+            doc.text('Code bureau :', margin, y);
+            doc.text(getString(program, 'CodeBureau', 'codeBureau'), margin + 80, y);
+            doc.text('Année :', 320, y);
+            doc.text(getString(program, 'Annee', 'annee'), 420, y);
+            y += 16;
+
+            doc.text('N° décision :', margin, y);
+            doc.text(getString(program, 'NumeroDecision', 'numeroDecision'), margin + 80, y);
+            doc.text('Date début :', 320, y);
+            doc.text(programDateDebut, 420, y);
+            y += 16;
+
+            doc.text('Date fin :', margin, y);
+            doc.text(programDateFin, margin + 80, y);
             y += 24;
 
             const headers = ['Séance', 'Date rendez-vous', 'Signature patient'];
