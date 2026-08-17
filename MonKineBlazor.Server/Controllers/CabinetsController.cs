@@ -43,7 +43,7 @@ public class CabinetsController : ControllerBase
         {
             cmd.CommandText = @"
                 SELECT id, nom_cabinet, code_etablissement, matricule_fiscal, nom_etablissement, racine, cle, qualite,
-                       adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib,
+                       adresse_cabinet, nom_cabinet_arabe, nom_kine_arabe, adresse_kine_arabe, telephone, rib, prix_seance_ttc,
                        programme_type_options, nature_seances_options
                 FROM cabinets
                 WHERE id = @cabinet_id
