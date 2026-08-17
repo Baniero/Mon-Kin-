@@ -516,7 +516,9 @@
             const details = [
                 ['Titre', getString(program, 'Titre', 'titre')],
                 ['Nature', getString(program, 'NatureSeances', 'natureSeances')],
-                ['N° décision', `${getString(program, 'CodeBureau', 'codeBureau')}/${getString(program, 'Annee', 'annee')}/${getString(program, 'NumeroDecision', 'numeroDecision')}`],
+                ['Code bureau', getString(program, 'CodeBureau', 'codeBureau')],
+                ['Année', getString(program, 'Annee', 'annee')],
+                ['N° décision', getString(program, 'NumeroDecision', 'numeroDecision')],
                 ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut'))],
                 ['Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
                 ['Nb séances', nbSeances],
@@ -553,7 +555,7 @@
             const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
             const margin = 40;
             const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
-            let y = await renderPdfHeader(doc, data, 'FEUILLE DE SIGNATURE', iconDataUrl);
+            let y = await renderPdfHeader(doc, data, 'MÉMOIRES DE SÉANCES PEC', iconDataUrl);
 
             const patient = data.patient ?? data.Patient ?? {};
             const program = data.program ?? data.Program ?? {};
@@ -562,8 +564,8 @@
             const patientCode = getString(patient, 'CodePatient', 'codePatient');
             const programTitle = getString(program, 'Titre', 'titre');
             const programNature = getString(program, 'NatureSeances', 'natureSeances');
-            const programDateDebut = getString(program, 'DateDebut', 'dateDebut');
-            const programDateFin = getString(program, 'DateFin', 'dateFin');
+            const programDateDebut = formatPdfDate(getString(program, 'DateDebut', 'dateDebut'));
+            const programDateFin = formatPdfDate(getString(program, 'DateFin', 'dateFin'));
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
@@ -585,8 +587,8 @@
             doc.text(programDateFin, 420, y);
             y += 24;
 
-            const headers = ['Séance', 'Date rendez-vous', 'Signature patient', 'Signature kiné'];
-            const widths = [60, 120, 165, 165];
+            const headers = ['Séance', 'Date rendez-vous', 'Signature patient'];
+            const widths = [60, 160, 335];
             let x = margin;
 
             doc.setFont('helvetica', 'bold');
@@ -606,7 +608,6 @@
                 const values = [
                     row.Sequence ?? row.sequence ?? '',
                     row.Date ?? row.date ?? '',
-                    '',
                     ''
                 ];
                 const cellLines = values.map((value, index) => splitCellLines(doc, value, widths[index]));
@@ -624,7 +625,17 @@
                 y += rowHeight;
             });
 
-            y += 18;
+            y += 24;
+            if (y + 40 > 760) {
+                doc.addPage();
+                y = margin;
+            }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Signature kiné :', margin, y);
+            doc.setLineWidth(0.5);
+            doc.line(margin + 100, y + 4, 520, y + 4);
+            y += 24;
             doc.setFontSize(9);
             doc.text('Remarques :', margin, y);
             doc.save(filename);
