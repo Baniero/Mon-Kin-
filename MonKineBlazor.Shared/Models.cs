@@ -43,6 +43,7 @@ public class PatientProgramDto
     public decimal TVA { get; set; }
     public decimal MontantTVA { get; set; }
     public decimal PrixTTC { get; set; }
+    public decimal PrixSeanceTTC { get; set; }
     public string? Statut { get; set; }
     public string? Objectifs { get; set; }
     public string? Remarques { get; set; }
@@ -309,6 +310,7 @@ public class CabinetDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public decimal PrixSeanceTTC { get; set; }
     public string? ProgrammeTypeOptions { get; set; }
     public string? NatureSeancesOptions { get; set; }
 }
@@ -328,6 +330,7 @@ public class CabinetCreateRequestDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public decimal PrixSeanceTTC { get; set; }
     public string? ProgrammeTypeOptions { get; set; }
     public string? NatureSeancesOptions { get; set; }
 }
@@ -344,10 +347,11 @@ public class CabinetUpdateRequestDto
     public string? Qualite { get; set; }
     public string? AdresseCabinet { get; set; }
     public string? NomCabinetArabe { get; set; }
-    public string? NomKineArabe { get; set; }
     public string? AdresseKineArabe { get; set; }
+    public string? NomKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public decimal PrixSeanceTTC { get; set; }
     public string? ProgrammeTypeOptions { get; set; }
     public string? NatureSeancesOptions { get; set; }
 }

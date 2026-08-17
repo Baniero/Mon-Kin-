@@ -464,6 +464,10 @@ else
                                         <label class="form-label">Prix TTC</label>
                                         <InputNumber class="form-control" @bind-Value="newProgram.PrixTTC" step="0.001" @onchange="_ => RecalculateProgram()" />
                                     </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Prix séance TTC</label>
+                                        <InputNumber class="form-control" @bind-Value="newProgram.PrixSeanceTTC" step="0.001" disabled />
+                                    </div>
                                 }
                                 <div class="col-md-3">
                                     <label class="form-label">Prix Espèce</label>
@@ -905,6 +909,7 @@ else
         {
             cabinetProgramTypeOptions = DefaultProgramTypeOptions;
             cabinetNatureSeancesOptions = DefaultNatureSeancesOptions;
+            cabinetInfo = new CabinetDto();
             return;
         }
 
@@ -913,16 +918,19 @@ else
             var cabinet = await Http.GetFromJsonAsync<CabinetDto>($"api/cabinets/{cabinetId.Value}");
             cabinetProgramTypeOptions = ParseOptions(cabinet?.ProgrammeTypeOptions, DefaultProgramTypeOptions);
             cabinetNatureSeancesOptions = ParseOptions(cabinet?.NatureSeancesOptions, DefaultNatureSeancesOptions);
+            cabinetInfo = cabinet ?? new CabinetDto();
+            if (!isEditingProgram && cabinetInfo != null)
+            {
+                newProgram.PrixSeanceTTC = cabinetInfo.PrixSeanceTTC;
+            }
         }
         catch
         {
             cabinetProgramTypeOptions = DefaultProgramTypeOptions;
             cabinetNatureSeancesOptions = DefaultNatureSeancesOptions;
+            cabinetInfo = new CabinetDto();
         }
     }
-
-    private IEnumerable<string> GetProgramTypeOptions() => cabinetProgramTypeOptions ?? DefaultProgramTypeOptions;
-    private IEnumerable<string> GetNatureSeancesOptions() => cabinetNatureSeancesOptions ?? DefaultNatureSeancesOptions;
 
     private static string[] ParseOptions(string? options, string[] defaults)
     {
@@ -1026,6 +1034,7 @@ else
             TVA = program.TVA,
             MontantTVA = program.MontantTVA,
             PrixTTC = program.PrixTTC,
+            PrixSeanceTTC = program.PrixSeanceTTC,
             Statut = program.Statut,
             Objectifs = program.Objectifs,
             Remarques = program.Remarques
@@ -1113,6 +1122,7 @@ else
             PrixHT = 0,
             MontantTVA = 0,
             PrixTTC = 0,
+            PrixSeanceTTC = cabinetInfo?.PrixSeanceTTC ?? 0
         };
     }
 }

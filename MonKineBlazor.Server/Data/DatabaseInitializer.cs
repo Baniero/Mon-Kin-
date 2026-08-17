@@ -22,6 +22,7 @@ public static class DatabaseInitializer
         command.ExecuteNonQuery();
 
         EnsureCabinetsTable(connection);
+        EnsureColumnExists(connection, "patient_programs", "prix_seance_ttc", "NUMERIC(18,3) DEFAULT 0");
         EnsureUsersTable(connection);
         var adminCabinetId = EnsureCabinetExists(connection, "CabinetAdmin");
         EnsureAdminUser(connection, adminCabinetId);
@@ -48,6 +49,7 @@ public static class DatabaseInitializer
                 nom_kine_arabe TEXT,
                 adresse_kine_arabe TEXT,
                 numero_assuree TEXT,
+                prix_seance_ttc NUMERIC(18,3) DEFAULT 0,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         ";
@@ -66,6 +68,7 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "cabinets", "numero_assuree", "TEXT");
         EnsureColumnExists(connection, "cabinets", "programme_type_options", "TEXT");
         EnsureColumnExists(connection, "cabinets", "nature_seances_options", "TEXT");
+        EnsureColumnExists(connection, "cabinets", "prix_seance_ttc", "NUMERIC(18,3) DEFAULT 0");
     }
 
     private static int EnsureCabinetExists(NpgsqlConnection connection, string cabinetName)

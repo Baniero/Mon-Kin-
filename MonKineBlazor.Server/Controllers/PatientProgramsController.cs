@@ -78,6 +78,7 @@ public class PatientProgramsController : ControllerBase
                 COALESCE(tva, 0),
                 COALESCE(montant_tva, 0),
                 COALESCE(prix_ttc, 0),
+                COALESCE(prix_seance_ttc, 0),
                 COALESCE(statut, ''),
                 COALESCE(objectifs, ''),
                 COALESCE(remarques, '')
@@ -112,9 +113,10 @@ public class PatientProgramsController : ControllerBase
                 TVA = reader.GetDecimal(17),
                 MontantTVA = reader.GetDecimal(18),
                 PrixTTC = reader.GetDecimal(19),
-                Statut = reader.GetString(20),
-                Objectifs = reader.GetString(21),
-                Remarques = reader.GetString(22),
+                PrixSeanceTTC = reader.GetDecimal(20),
+                Statut = reader.GetString(21),
+                Objectifs = reader.GetString(22),
+                Remarques = reader.GetString(23),
             });
         }
 
@@ -138,12 +140,12 @@ public class PatientProgramsController : ControllerBase
                 patient_id, titre, nature_seances, nb_seances, nb_seances_par_semaine,
                 duree_seance_minutes, date_debut, date_fin, code_bureau, annee,
                 numero_decision, numero_ordre, type_programme, prix_unitaire, prix_espece, prix_ht, tva,
-                montant_tva, prix_ttc, statut, objectifs, remarques
+                montant_tva, prix_ttc, prix_seance_ttc, statut, objectifs, remarques
             ) VALUES (
                 @patient_id, @titre, @nature_seances, @nb_seances, @nb_seances_par_semaine,
                 @duree_seance_minutes, @date_debut, @date_fin, @code_bureau, @annee,
                 @numero_decision, @numero_ordre, @type_programme, @prix_unitaire, @prix_espece, @prix_ht, @tva,
-                @montant_tva, @prix_ttc, @statut, @objectifs, @remarques
+                @montant_tva, @prix_ttc, @prix_seance_ttc, @statut, @objectifs, @remarques
             )
             RETURNING id
         ";
@@ -166,6 +168,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@tva", program.TVA);
         cmd.Parameters.AddWithValue("@montant_tva", program.MontantTVA);
         cmd.Parameters.AddWithValue("@prix_ttc", program.PrixTTC);
+        cmd.Parameters.AddWithValue("@prix_seance_ttc", program.PrixSeanceTTC);
         cmd.Parameters.AddWithValue("@statut", (object?)program.Statut ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@objectifs", (object?)program.Objectifs ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@remarques", (object?)program.Remarques ?? DBNull.Value);
@@ -217,6 +220,7 @@ public class PatientProgramsController : ControllerBase
                 tva = @tva,
                 montant_tva = @montant_tva,
                 prix_ttc = @prix_ttc,
+                prix_seance_ttc = @prix_seance_ttc,
                 statut = @statut,
                 objectifs = @objectifs,
                 remarques = @remarques
@@ -241,6 +245,7 @@ public class PatientProgramsController : ControllerBase
         cmd.Parameters.AddWithValue("@tva", program.TVA);
         cmd.Parameters.AddWithValue("@montant_tva", program.MontantTVA);
         cmd.Parameters.AddWithValue("@prix_ttc", program.PrixTTC);
+        cmd.Parameters.AddWithValue("@prix_seance_ttc", program.PrixSeanceTTC);
         cmd.Parameters.AddWithValue("@statut", (object?)program.Statut ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@objectifs", (object?)program.Objectifs ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@remarques", (object?)program.Remarques ?? DBNull.Value);

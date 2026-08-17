@@ -155,6 +155,10 @@
                             <label class="form-label">Options nature de séances (une option par ligne)</label>
                             <InputTextArea class="form-control" rows="6" @bind-Value="cabinetForm.NatureSeancesOptions" />
                         </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Prix séance TTC</label>
+                            <InputNumber class="form-control" @bind-Value="cabinetForm.PrixSeanceTTC" step="0.001" />
+                        </div>
                     }
                     <div class="col-md-12 d-flex justify-content-end">
                         <button class="btn btn-success" type="submit">Enregistrer le cabinet</button>
