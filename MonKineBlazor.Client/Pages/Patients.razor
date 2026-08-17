@@ -932,6 +932,9 @@ else
         }
     }
 
+    private IEnumerable<string> GetProgramTypeOptions() => cabinetProgramTypeOptions ?? DefaultProgramTypeOptions;
+    private IEnumerable<string> GetNatureSeancesOptions() => cabinetNatureSeancesOptions ?? DefaultNatureSeancesOptions;
+
     private static string[] ParseOptions(string? options, string[] defaults)
     {
         if (string.IsNullOrWhiteSpace(options))
