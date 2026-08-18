@@ -470,6 +470,22 @@
     private HashSet<int> selectedBordereauProgramIds = new();
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
+    private PatientDto createPatient = new() { Couverture = "CNAM", Age = 0 };
+    private PatientProgramDto createProgram = new()
+    {
+        DateDebut = DateTime.Today,
+        Statut = "planifie",
+        NbSeances = 1,
+        NbSeancesParSemaine = 3,
+        DureeSeanceMinutes = 30,
+        TVA = 7,
+        PrixEspece = 0,
+        PrixHT = 0,
+        MontantTVA = 0,
+        PrixTTC = 0,
+        PrixSeanceTTC = 0
+    };
+    private string? createSectionMessage;
 
     private IEnumerable<ExecutedBordereauSummary> ExecutedBordereaux => cnamBordereauExecuted
         .Where(r => r.BordereauNumber.HasValue)
