@@ -700,6 +700,29 @@
         return program.NumeroOrdre ?? $"{program.Id:00}/{DateTime.Today.Year}";
     }
 
+    private IEnumerable<string> GetProgramTypeOptions()
+    {
+        return new[]
+        {
+            "Prise en charge au cabinet",
+            "Prise en charge à domicile",
+            "En établissement de soins / milieu hospitalier"
+        };
+    }
+
+    private IEnumerable<string> GetNatureSeancesOptions()
+    {
+        return new[]
+        {
+            "Rééducation somato-motrice",
+            "Rééducation neurologique",
+            "Fonction respiratoire et cardiovasculaire",
+            "Rééducation des brûlés",
+            "Rééducation périnéale",
+            "Techniques donnant lieu à majoration"
+        };
+    }
+
     private async Task SaveCnamPatientProgramAsync()
     {
         createSectionMessage = null;
