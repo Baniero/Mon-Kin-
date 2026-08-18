@@ -207,6 +207,128 @@ public class PatientsController : ControllerBase
         return Ok(patient);
     }
 
+    [HttpGet("search")]
+    public ActionResult<IEnumerable<PatientDto>> Search([FromQuery] string? racine, [FromQuery] string? cle, [FromQuery] string? qualite)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (string.IsNullOrWhiteSpace(racine) || string.IsNullOrWhiteSpace(cle) || string.IsNullOrWhiteSpace(qualite))
+        {
+            return BadRequest("Racine, clé et qualité sont requis pour la recherche de patient.");
+        }
+
+        var normalizedRacine = racine.Trim().ToLowerInvariant();
+        var normalizedCle = cle.Trim().ToLowerInvariant();
+        var normalizedQualite = qualite.Trim().ToLowerInvariant();
+
+        var patients = new List<PatientDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        if (IsAdmin())
+        {
+            cmd.CommandText = @"
+                SELECT
+                    id,
+                    cabinet_id,
+                    COALESCE(code_patient, ''),
+                    COALESCE(dossier_patient, ''),
+                    nom,
+                    COALESCE(prenom, ''),
+                    CASE
+                        WHEN date_naissance IS NOT NULL
+                            THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
+                        ELSE COALESCE(age, 0)
+                    END AS age,
+                    date_naissance,
+                    COALESCE(sexe, ''),
+                    COALESCE(telephone1, ''),
+                    COALESCE(telephone2, ''),
+                    COALESCE(adresse, ''),
+                    COALESCE(couverture, ''),
+                    COALESCE(racine, ''),
+                    COALESCE(cle, ''),
+                    COALESCE(qualite, ''),
+                    COALESCE(n_assuree, '')
+                FROM patients
+                WHERE lower(trim(COALESCE(racine, ''))) = @racine
+                  AND lower(trim(COALESCE(cle, ''))) = @cle
+                  AND lower(trim(COALESCE(qualite, ''))) = @qualite
+                ORDER BY nom, prenom
+            ";
+        }
+        else
+        {
+            cmd.CommandText = @"
+                SELECT
+                    id,
+                    cabinet_id,
+                    COALESCE(code_patient, ''),
+                    COALESCE(dossier_patient, ''),
+                    nom,
+                    COALESCE(prenom, ''),
+                    CASE
+                        WHEN date_naissance IS NOT NULL
+                            THEN CAST(DATE_PART('year', AGE(CURRENT_DATE, date_naissance)) AS INTEGER)
+                        ELSE COALESCE(age, 0)
+                    END AS age,
+                    date_naissance,
+                    COALESCE(sexe, ''),
+                    COALESCE(telephone1, ''),
+                    COALESCE(telephone2, ''),
+                    COALESCE(adresse, ''),
+                    COALESCE(couverture, ''),
+                    COALESCE(racine, ''),
+                    COALESCE(cle, ''),
+                    COALESCE(qualite, ''),
+                    COALESCE(n_assuree, '')
+                FROM patients
+                WHERE cabinet_id = @cabinet_id
+                  AND lower(trim(COALESCE(racine, ''))) = @racine
+                  AND lower(trim(COALESCE(cle, ''))) = @cle
+                  AND lower(trim(COALESCE(qualite, ''))) = @qualite
+                ORDER BY nom, prenom
+            ";
+            cmd.Parameters.AddWithValue("@cabinet_id", currentUser.CabinetId.HasValue ? (object)currentUser.CabinetId.Value : DBNull.Value);
+        }
+
+        cmd.Parameters.AddWithValue("@racine", normalizedRacine);
+        cmd.Parameters.AddWithValue("@cle", normalizedCle);
+        cmd.Parameters.AddWithValue("@qualite", normalizedQualite);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            patients.Add(new PatientDto
+            {
+                Id = reader.GetInt32(0),
+                CabinetId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                CodePatient = reader.GetString(2),
+                DossierPatient = reader.GetString(3),
+                Nom = reader.GetString(4),
+                Prenom = reader.GetString(5),
+                Age = reader.GetInt32(6),
+                DateNaissance = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                Sexe = reader.GetString(8),
+                Telephone1 = reader.GetString(9),
+                Telephone2 = reader.GetString(10),
+                Adresse = reader.GetString(11),
+                Couverture = reader.GetString(12),
+                Racine = reader.GetString(13),
+                Cle = reader.GetString(14),
+                Qualite = reader.GetString(15),
+                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
+            });
+        }
+
+        return Ok(patients);
+    }
+
     [HttpPost]
     public ActionResult<PatientDto> Create(PatientDto patient)
     {

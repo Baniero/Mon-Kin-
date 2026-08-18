@@ -120,15 +120,15 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Racine</label>
-                    <InputText class="form-control" @bind-Value="createPatient.Racine" />
+                    <InputText class="form-control" @bind-Value="createPatient.Racine" @onchange="_ => SearchExistingPatients()" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Clé</label>
-                    <InputText class="form-control" @bind-Value="createPatient.Cle" />
+                    <InputText class="form-control" @bind-Value="createPatient.Cle" @onchange="_ => SearchExistingPatients()" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Qualité</label>
-                    <InputSelect class="form-select" @bind-Value="createPatient.Qualite">
+                    <InputSelect class="form-select" @bind-Value="createPatient.Qualite" @onchange="_ => SearchExistingPatients()">
                         <option value="">-- Sélectionnez --</option>
                         <option value="Assuré lui-même">Assuré lui-même</option>
                         <option value="Conjoint">Conjoint</option>
@@ -140,6 +140,50 @@
                 <div class="col-md-3">
                     <label class="form-label">N° assurée</label>
                     <input class="form-control" value="@CreateComputedNumeroAssuree" readonly />
+                </div>
+                @if (existingPatientSearchPerformed)
+                {
+                    <div class="col-md-12">
+                        @if (existingPatients.Any())
+                        {
+                            <div class="alert alert-warning">
+                                Patient existant trouvé avec la même racine / clé / qualité. Sélectionnez un patient ou modifiez les valeurs.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">Aucun patient existant trouvé avec cette racine, clé et qualité.</div>
+                        }
+                    </div>
+                }
+                @if (existingPatients.Any())
+                {
+                    <div class="col-md-12">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Nom</th>
+                                        <th>Prénom</th>
+                                        <th>Code patient</th>
+                                        <th>Choisir</th>
+                                    </tr>
+                                </thead>
+                            <tbody>
+                                @foreach (var patient in existingPatients)
+                                {
+                                    <tr>
+                                        <td>@patient.Nom</td>
+                                        <td>@patient.Prenom</td>
+                                        <td>@patient.CodePatient</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectExistingPatient(patient)">Sélectionner</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="col-md-12">
                     <h5 class="mt-4">Programme</h5>
@@ -478,6 +522,9 @@
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
     private PatientDto createPatient = new() { Couverture = "CNAM", Age = 0 };
+    private List<PatientDto> existingPatients = new();
+    private PatientDto? selectedExistingPatient;
+    private bool existingPatientSearchPerformed;
     private PatientProgramDto createProgram = new()
     {
         DateDebut = DateTime.Today,
@@ -767,6 +814,21 @@
         createPatient.NumeroAssuree = CreateComputedNumeroAssuree;
         RecalculateCreateProgram();
 
+        if (existingPatients.Any() && selectedExistingPatient == null)
+        {
+            createSectionMessage = "Un patient existant a été trouvé. Sélectionnez-le pour créer la prise en charge ou modifiez la racine/clé/qualité.";
+            return;
+        }
+
+        if (selectedExistingPatient != null)
+        {
+            createProgram.PatientId = selectedExistingPatient.Id;
+            createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
+
+            await CreateProgramAndPrint(selectedExistingPatient);
+            return;
+        }
+
         PatientDto? createdPatient = null;
         try
         {
@@ -819,6 +881,88 @@
         await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
         createSectionMessage = "Patient et programme CNAM créés avec succès. Facture et fiche signature générées.";
         await LoadCnamPrograms();
+    }
+
+    private async Task CreateProgramAndPrint(PatientDto patient)
+    {
+        PatientProgramDto? createdProgram = null;
+        try
+        {
+            var programResponse = await Http.PostAsJsonAsync("api/patientprograms", createProgram);
+            if (!programResponse.IsSuccessStatusCode)
+            {
+                createSectionMessage = "Le patient existe, mais l'ajout du programme a échoué.";
+                return;
+            }
+
+            createdProgram = await programResponse.Content.ReadFromJsonAsync<PatientProgramDto>();
+            if (createdProgram == null)
+            {
+                createSectionMessage = "Le programme n'a pas pu être créé.";
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            createSectionMessage = "Erreur API création programme : " + ex.Message;
+            return;
+        }
+
+        await GenerateInvoiceAndSignatureAsync(patient, createdProgram);
+        createSectionMessage = "Programme CNAM créé avec succès pour le patient existant. Facture et fiche signature générées.";
+        await LoadCnamPrograms();
+    }
+
+    private void SelectExistingPatient(PatientDto patient)
+    {
+        selectedExistingPatient = patient;
+        createPatient = new PatientDto
+        {
+            Id = patient.Id,
+            CabinetId = patient.CabinetId,
+            CodePatient = patient.CodePatient,
+            DossierPatient = patient.DossierPatient,
+            Nom = patient.Nom,
+            Prenom = patient.Prenom,
+            Age = patient.Age,
+            DateNaissance = patient.DateNaissance,
+            Sexe = patient.Sexe,
+            Telephone1 = patient.Telephone1,
+            Telephone2 = patient.Telephone2,
+            Adresse = patient.Adresse,
+            Couverture = patient.Couverture,
+            Racine = patient.Racine,
+            Cle = patient.Cle,
+            Qualite = patient.Qualite,
+            NumeroAssuree = patient.NumeroAssuree,
+        };
+        createSectionMessage = $"Patient existant sélectionné : {patient.Nom} {patient.Prenom}.";
+    }
+
+    private async Task SearchExistingPatients()
+    {
+        selectedExistingPatient = null;
+        existingPatients.Clear();
+        existingPatientSearchPerformed = false;
+        createSectionMessage = null;
+
+        if (string.IsNullOrWhiteSpace(createPatient.Racine) || string.IsNullOrWhiteSpace(createPatient.Cle) || string.IsNullOrWhiteSpace(createPatient.Qualite))
+        {
+            return;
+        }
+
+        existingPatientSearchPerformed = true;
+        try
+        {
+            var racine = Uri.EscapeDataString(createPatient.Racine.Trim());
+            var cle = Uri.EscapeDataString(createPatient.Cle.Trim());
+            var qualite = Uri.EscapeDataString(createPatient.Qualite.Trim());
+            existingPatients = await Http.GetFromJsonAsync<List<PatientDto>>($"api/patients/search?racine={racine}&cle={cle}&qualite={qualite}") ?? new List<PatientDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Erreur lors de la recherche du patient existant : " + ex.Message;
+        }
     }
 
     private async Task GenerateInvoiceAndSignatureAsync(PatientDto patient, PatientProgramDto program)
