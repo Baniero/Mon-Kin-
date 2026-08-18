@@ -685,6 +685,21 @@
         return lastDate;
     }
 
+    private static string GetProgramInvoiceNumber(PatientProgramDto program)
+    {
+        if (!string.IsNullOrWhiteSpace(program.NumeroOrdre) && !string.IsNullOrWhiteSpace(program.Annee))
+        {
+            return program.NumeroOrdre.Contains('/') ? program.NumeroOrdre : $"{program.NumeroOrdre}/{program.Annee}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(program.Annee) && program.Id > 0)
+        {
+            return $"{program.Id:00}/{program.Annee}";
+        }
+
+        return program.NumeroOrdre ?? $"{program.Id:00}/{DateTime.Today.Year}";
+    }
+
     private async Task SaveCnamPatientProgramAsync()
     {
         createSectionMessage = null;
