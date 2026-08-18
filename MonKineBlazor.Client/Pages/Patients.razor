@@ -1150,8 +1150,7 @@ else
     {
         if (newProgram.DateDebut.HasValue && newProgram.NbSeances > 0 && newProgram.NbSeancesParSemaine > 0)
         {
-            var weeks = (int)Math.Ceiling(newProgram.NbSeances / (double)newProgram.NbSeancesParSemaine);
-            newProgram.DateFin = newProgram.DateDebut.Value.AddDays((weeks * 7) - 1);
+            newProgram.DateFin = GetProgramEndDate(newProgram.DateDebut, newProgram.NbSeances, newProgram.NbSeancesParSemaine);
         }
         else
         {
@@ -1188,6 +1187,43 @@ else
         newProgram.PrixUnitaire = newProgram.NbSeances > 0
             ? Math.Round(newProgram.PrixHT / newProgram.NbSeances, 3)
             : 0;
+    }
+
+    private static DateTime? GetProgramEndDate(DateTime? startDate, int totalSessions, int sessionsPerWeek)
+    {
+        if (!startDate.HasValue || totalSessions <= 0 || sessionsPerWeek <= 0)
+        {
+            return startDate;
+        }
+
+        var allowedDays = sessionsPerWeek switch
+        {
+            1 => new[] { DayOfWeek.Monday },
+            2 => new[] { DayOfWeek.Monday, DayOfWeek.Thursday },
+            3 => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday },
+            _ => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday }
+        };
+
+        var currentDate = startDate.Value.Date;
+        var sessionsScheduled = 0;
+        DateTime? lastDate = null;
+
+        while (sessionsScheduled < totalSessions)
+        {
+            if (allowedDays.Contains(currentDate.DayOfWeek))
+            {
+                lastDate = currentDate;
+                sessionsScheduled++;
+                if (sessionsScheduled >= totalSessions)
+                {
+                    break;
+                }
+            }
+
+            currentDate = currentDate.AddDays(1);
+        }
+
+        return lastDate;
     }
 
     private void ResetProgramForm()

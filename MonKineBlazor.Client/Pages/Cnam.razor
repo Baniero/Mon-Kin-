@@ -19,6 +19,7 @@
 <div class="mb-4">
     <div class="btn-group" role="group">
         <button class="btn btn-icon @(activeSection == CnamSection.Recovery ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Recovery)"><i class="bi bi-wallet2"></i>Recouvrement</button>
+        <button class="btn btn-icon @(activeSection == CnamSection.Create ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Create)"><i class="bi bi-person-plus"></i>Création prise en charge</button>
         <button class="btn btn-icon @(activeSection == CnamSection.Invoice ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Invoice)"><i class="bi bi-receipt"></i>Facture séance</button>
         <button class="btn btn-icon @(activeSection == CnamSection.Bordereau ? "btn-primary" : "btn-outline-primary")" @onclick="() => SetSection(CnamSection.Bordereau)"><i class="bi bi-file-earmark-spreadsheet"></i>Bordereau CNAM</button>
     </div>
@@ -86,6 +87,152 @@
                     <strong>Total CNAM à réclamer :</strong> @($"{cnamRecovery.Sum(r => r.MontantCnam):F2} DT")
                 </div>
             }
+        </div>
+    </div>
+}
+
+@if (activeSection == CnamSection.Create)
+{
+    <div class="card section-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Création prise en charge</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <h5>Patient CNAM</h5>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Code patient</label>
+                    <InputText class="form-control" @bind-Value="createPatient.CodePatient" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Numéro dossier</label>
+                    <InputText class="form-control" @bind-Value="createPatient.DossierPatient" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Nom</label>
+                    <InputText class="form-control" @bind-Value="createPatient.Nom" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prénom</label>
+                    <InputText class="form-control" @bind-Value="createPatient.Prenom" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Racine</label>
+                    <InputText class="form-control" @bind-Value="createPatient.Racine" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Clé</label>
+                    <InputText class="form-control" @bind-Value="createPatient.Cle" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Qualité</label>
+                    <InputText class="form-control" @bind-Value="createPatient.Qualite" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">N° assurée</label>
+                    <input class="form-control" value="@CreateComputedNumeroAssuree" readonly />
+                </div>
+                <div class="col-md-12">
+                    <h5 class="mt-4">Programme</h5>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Titre</label>
+                    <InputText class="form-control" @bind-Value="createProgram.Titre" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nature</label>
+                    <InputSelect class="form-select" @bind-Value="createProgram.NatureSeances">
+                        <option value="">-- Sélectionnez --</option>
+                        @foreach (var natureOption in GetNatureSeancesOptions())
+                        {
+                            <option value="@natureOption">@natureOption</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Type de programme</label>
+                    <InputSelect class="form-select" @bind-Value="createProgram.TypeProgramme">
+                        <option value="">-- Sélectionnez --</option>
+                        @foreach (var typeOption in GetProgramTypeOptions())
+                        {
+                            <option value="@typeOption">@typeOption</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Nb séances</label>
+                    <InputNumber class="form-control" @bind-Value="createProgram.NbSeances" @onchange="_ => RecalculateCreateProgram()" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Séances / semaine</label>
+                    <InputSelect class="form-select" @bind-Value="createProgram.NbSeancesParSemaine" @onchange="_ => RecalculateCreateProgram()">
+                        @for (int i = 1; i <= 3; i++)
+                        {
+                            <option value="@i">@i</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Durée (min)</label>
+                    <InputNumber class="form-control" @bind-Value="createProgram.DureeSeanceMinutes" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date début</label>
+                    <InputDate class="form-control" @bind-Value="createProgram.DateDebut" @onchange="_ => RecalculateCreateProgram()" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date fin</label>
+                    <InputDate class="form-control" @bind-Value="createProgram.DateFin" disabled />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Code bureau</label>
+                    <InputText class="form-control" @bind-Value="createProgram.CodeBureau" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Année</label>
+                    <InputText class="form-control" @bind-Value="createProgram.Annee" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">N° décision</label>
+                    <InputText class="form-control" @bind-Value="createProgram.NumeroDecision" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">N° ordre</label>
+                    <InputText class="form-control" @bind-Value="createProgram.NumeroOrdre" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prix séance TTC</label>
+                    <InputNumber class="form-control" step="0.001" @bind-Value="createProgram.PrixSeanceTTC" @onchange="_ => RecalculateCreateProgram()" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Prix TTC</label>
+                    <InputNumber class="form-control" step="0.001" @bind-Value="createProgram.PrixTTC" disabled />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">TVA (%)</label>
+                    <InputNumber class="form-control" @bind-Value="createProgram.TVA" @onchange="_ => RecalculateCreateProgram()" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Montant TVA</label>
+                    <InputNumber class="form-control" @bind-Value="createProgram.MontantTVA" disabled />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Prix HT</label>
+                    <InputNumber class="form-control" @bind-Value="createProgram.PrixHT" disabled />
+                </div>
+                <div class="col-md-12 d-flex gap-2">
+                    <button class="btn btn-success" @onclick="SaveCnamPatientProgramAsync">Créer et imprimer</button>
+                    <button class="btn btn-outline-secondary" @onclick="ResetCreateCnamForm">Réinitialiser</button>
+                </div>
+                @if (!string.IsNullOrEmpty(createSectionMessage))
+                {
+                    <div class="col-md-12 mt-3">
+                        <div class="alert alert-info">@createSectionMessage</div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 }
@@ -425,6 +572,280 @@
         {
             errorMessage = ex.Message;
         }
+    }
+
+    private static string FormatNumeroAssuree(string? racine, string? cle, string? fallback = null)
+    {
+        var cleanRacine = string.IsNullOrWhiteSpace(racine) ? string.Empty : racine.Trim();
+        var cleanCle = string.IsNullOrWhiteSpace(cle) ? string.Empty : cle.Trim();
+
+        if (!string.IsNullOrEmpty(cleanRacine) && !string.IsNullOrEmpty(cleanCle))
+        {
+            return $"{cleanRacine}/{cleanCle}";
+        }
+
+        return fallback ?? string.Empty;
+    }
+
+    private string CreateComputedNumeroAssuree => FormatNumeroAssuree(createPatient.Racine, createPatient.Cle, createPatient.NumeroAssuree);
+
+    private void RecalculateCreateProgram()
+    {
+        if (createProgram.DateDebut.HasValue && createProgram.NbSeances > 0 && createProgram.NbSeancesParSemaine > 0)
+        {
+            createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
+        }
+        else
+        {
+            createProgram.DateFin = null;
+        }
+
+        if (createProgram.PrixSeanceTTC > 0 && createProgram.NbSeances > 0)
+        {
+            createProgram.PrixTTC = Math.Round(createProgram.NbSeances * createProgram.PrixSeanceTTC, 3);
+        }
+
+        if (createProgram.PrixTTC < 0)
+        {
+            createProgram.PrixTTC = 0;
+        }
+
+        if (createProgram.TVA < 0)
+        {
+            createProgram.TVA = 0;
+        }
+
+        if (createProgram.TVA == 0)
+        {
+            createProgram.PrixHT = Math.Round(createProgram.PrixTTC, 3);
+            createProgram.MontantTVA = 0;
+        }
+        else
+        {
+            var rate = 1 + (createProgram.TVA / 100m);
+            createProgram.PrixHT = Math.Round(createProgram.PrixTTC / rate, 3);
+            createProgram.MontantTVA = Math.Round(createProgram.PrixTTC - createProgram.PrixHT, 2);
+        }
+
+        createProgram.PrixUnitaire = createProgram.NbSeances > 0
+            ? Math.Round(createProgram.PrixHT / createProgram.NbSeances, 3)
+            : 0;
+    }
+
+    private static DateTime? GetProgramEndDate(DateTime? startDate, int totalSessions, int sessionsPerWeek)
+    {
+        if (!startDate.HasValue || totalSessions <= 0 || sessionsPerWeek <= 0)
+        {
+            return startDate;
+        }
+
+        var allowedDays = sessionsPerWeek switch
+        {
+            1 => new[] { DayOfWeek.Monday },
+            2 => new[] { DayOfWeek.Monday, DayOfWeek.Thursday },
+            3 => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday },
+            _ => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday }
+        };
+
+        var currentDate = startDate.Value.Date;
+        int sessionsScheduled = 0;
+        DateTime? lastDate = null;
+
+        while (sessionsScheduled < totalSessions)
+        {
+            if (allowedDays.Contains(currentDate.DayOfWeek))
+            {
+                lastDate = currentDate;
+                sessionsScheduled++;
+                if (sessionsScheduled >= totalSessions)
+                {
+                    break;
+                }
+            }
+
+            currentDate = currentDate.AddDays(1);
+        }
+
+        return lastDate;
+    }
+
+    private async Task SaveCnamPatientProgramAsync()
+    {
+        createSectionMessage = null;
+        if (string.IsNullOrWhiteSpace(createPatient.Nom) || string.IsNullOrWhiteSpace(createPatient.Prenom))
+        {
+            createSectionMessage = "Le nom et le prénom du patient sont requis.";
+            return;
+        }
+
+        createPatient.Couverture = "CNAM";
+        createPatient.NumeroAssuree = CreateComputedNumeroAssuree;
+        RecalculateCreateProgram();
+
+        PatientDto? createdPatient = null;
+        try
+        {
+            var patientResponse = await Http.PostAsJsonAsync("api/patients", createPatient);
+            if (!patientResponse.IsSuccessStatusCode)
+            {
+                createSectionMessage = "Erreur lors de la création du patient.";
+                return;
+            }
+
+            createdPatient = await patientResponse.Content.ReadFromJsonAsync<PatientDto>();
+            if (createdPatient == null)
+            {
+                createSectionMessage = "Le patient n'a pas pu être créé.";
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            createSectionMessage = "Erreur API création patient : " + ex.Message;
+            return;
+        }
+
+        createProgram.PatientId = createdPatient.Id;
+        createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
+
+        PatientProgramDto? createdProgram = null;
+        try
+        {
+            var programResponse = await Http.PostAsJsonAsync("api/patientprograms", createProgram);
+            if (!programResponse.IsSuccessStatusCode)
+            {
+                createSectionMessage = "Patient créé, mais l'ajout du programme a échoué.";
+                return;
+            }
+
+            createdProgram = await programResponse.Content.ReadFromJsonAsync<PatientProgramDto>();
+            if (createdProgram == null)
+            {
+                createSectionMessage = "Le programme n'a pas pu être créé.";
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            createSectionMessage = "Erreur API création programme : " + ex.Message;
+            return;
+        }
+
+        await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
+        createSectionMessage = "Patient et programme CNAM créés avec succès. Facture et fiche signature générées.";
+        await LoadCnamPrograms();
+    }
+
+    private async Task GenerateInvoiceAndSignatureAsync(PatientDto patient, PatientProgramDto program)
+    {
+        var invoiceNumber = GetProgramInvoiceNumber(program);
+        var montantHT = program.PrixTTC / 1.07m;
+        var montantTVA = program.PrixTTC - montantHT;
+
+        var invoicePayload = new
+        {
+            cabinet = cabinetInfo,
+            invoiceNumber,
+            invoiceDate = DateTime.Today.ToString("yyyy-MM-dd"),
+            program = new
+            {
+                programId = program.Id,
+                patientId = program.PatientId,
+                patientName = $"{patient.Nom} {patient.Prenom}".Trim(),
+                codePatient = patient.CodePatient,
+                numeroAssuree = patient.NumeroAssuree,
+                couverture = patient.Couverture,
+                titre = program.Titre,
+                natureSeances = program.NatureSeances,
+                nbSeances = program.NbSeances,
+                dureeSeanceMinutes = program.DureeSeanceMinutes,
+                dateDebut = program.DateDebut,
+                dateFin = program.DateFin,
+                prixUnitaire = program.PrixUnitaire,
+                prixTTC = program.PrixTTC,
+                codeBureau = program.CodeBureau,
+                annee = program.Annee,
+                numeroDecision = program.NumeroDecision,
+                numeroOrdre = program.NumeroOrdre,
+                factureNumber = invoiceNumber,
+                MontantHT = montantHT,
+                MontantTVA = montantTVA
+            }
+        };
+
+        await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{program.Id}_{DateTime.Today:yyyyMMdd}.pdf", invoicePayload);
+
+        var signatureRows = BuildSignatureRowsFromProgram(program);
+        var signaturePayload = new
+        {
+            cabinet = cabinetInfo,
+            program,
+            patient,
+            rows = signatureRows
+        };
+
+        await JSRuntime.InvokeVoidAsync("generateSignatureSheetPdf", $"fiche_signature_{program.Id}_{patient.CodePatient}.pdf", signaturePayload);
+    }
+
+    private List<object> BuildSignatureRowsFromProgram(PatientProgramDto program)
+    {
+        var rows = new List<object>();
+        if (program.NbSeances <= 0 || !program.DateDebut.HasValue || !program.DateFin.HasValue)
+        {
+            return rows;
+        }
+
+        var schedule = new List<DateTime>();
+        var allowedDays = program.NbSeancesParSemaine switch
+        {
+            1 => new[] { DayOfWeek.Monday },
+            2 => new[] { DayOfWeek.Monday, DayOfWeek.Thursday },
+            3 => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday },
+            _ => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday }
+        };
+
+        var currentDate = program.DateDebut.Value.Date;
+        while (schedule.Count < program.NbSeances && currentDate <= program.DateFin.Value.Date)
+        {
+            if (allowedDays.Contains(currentDate.DayOfWeek))
+            {
+                schedule.Add(currentDate);
+            }
+            currentDate = currentDate.AddDays(1);
+        }
+
+        for (int i = 0; i < program.NbSeances; i++)
+        {
+            rows.Add(new
+            {
+                Sequence = i + 1,
+                Date = i < schedule.Count ? schedule[i].ToString("dd/MM/yyyy") : string.Empty,
+                SignaturePatient = string.Empty,
+                SignatureKine = string.Empty
+            });
+        }
+
+        return rows;
+    }
+
+    private void ResetCreateCnamForm()
+    {
+        createPatient = new PatientDto { Couverture = "CNAM", Age = 0 };
+        createProgram = new PatientProgramDto
+        {
+            DateDebut = DateTime.Today,
+            Statut = "planifie",
+            NbSeances = 1,
+            NbSeancesParSemaine = 3,
+            DureeSeanceMinutes = 30,
+            TVA = 7,
+            PrixEspece = 0,
+            PrixHT = 0,
+            MontantTVA = 0,
+            PrixTTC = 0,
+            PrixSeanceTTC = 0
+        };
+        createSectionMessage = null;
     }
 
     private async Task LoadCnamRecovery()
@@ -919,6 +1340,7 @@
     private enum CnamSection
     {
         Recovery,
+        Create,
         Invoice,
         Bordereau
     }

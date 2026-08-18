@@ -131,6 +131,8 @@ public class PatientProgramsController : ControllerBase
             return Forbid();
         }
 
+        program.DateFin = CalculateProgramEndDate(program.DateDebut, program.NbSeances, program.NbSeancesParSemaine);
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -193,6 +195,8 @@ public class PatientProgramsController : ControllerBase
         {
             return Forbid();
         }
+
+        program.DateFin = CalculateProgramEndDate(program.DateDebut, program.NbSeances, program.NbSeancesParSemaine);
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -258,6 +262,43 @@ public class PatientProgramsController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    private static DateTime? CalculateProgramEndDate(DateTime? startDate, int totalSessions, int sessionsPerWeek)
+    {
+        if (!startDate.HasValue || totalSessions <= 0 || sessionsPerWeek <= 0)
+        {
+            return startDate;
+        }
+
+        var allowedDays = sessionsPerWeek switch
+        {
+            1 => new[] { DayOfWeek.Monday },
+            2 => new[] { DayOfWeek.Monday, DayOfWeek.Thursday },
+            3 => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday },
+            _ => new[] { DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday }
+        };
+
+        var currentDate = startDate.Value.Date;
+        int sessionsScheduled = 0;
+        DateTime? lastDate = null;
+
+        while (sessionsScheduled < totalSessions)
+        {
+            if (allowedDays.Contains(currentDate.DayOfWeek))
+            {
+                lastDate = currentDate;
+                sessionsScheduled++;
+                if (sessionsScheduled >= totalSessions)
+                {
+                    break;
+                }
+            }
+
+            currentDate = currentDate.AddDays(1);
+        }
+
+        return lastDate;
     }
 
     [HttpDelete("{id}")]
