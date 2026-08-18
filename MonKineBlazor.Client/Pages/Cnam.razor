@@ -692,19 +692,43 @@
         return lastDate;
     }
 
-    private static string GetProgramInvoiceNumber(PatientProgramDto program)
+    private static bool IsPlaceholderOrderNumber(string? orderNumber)
     {
-        if (!string.IsNullOrWhiteSpace(program.NumeroOrdre) && !string.IsNullOrWhiteSpace(program.Annee))
+        if (string.IsNullOrWhiteSpace(orderNumber))
         {
-            return program.NumeroOrdre.Contains('/') ? program.NumeroOrdre : $"{program.NumeroOrdre}/{program.Annee}";
+            return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(program.Annee) && program.Id > 0)
+        var trimmed = orderNumber.Trim();
+        return trimmed.Trim('-').Length == 0;
+    }
+
+    private static string GetProgramInvoiceNumber(PatientProgramDto program)
+    {
+        var numeroOrdre = program.NumeroOrdre?.Trim();
+        var hasValidNumeroOrdre = !IsPlaceholderOrderNumber(numeroOrdre);
+
+        if (hasValidNumeroOrdre && !string.IsNullOrWhiteSpace(program.Annee))
+        {
+            return numeroOrdre!.Contains('/') ? numeroOrdre : $"{numeroOrdre}/{program.Annee}";
+        }
+
+        if (hasValidNumeroOrdre)
+        {
+            return numeroOrdre!;
+        }
+
+        if (program.Id > 0 && !string.IsNullOrWhiteSpace(program.Annee))
         {
             return $"{program.Id:00}/{program.Annee}";
         }
 
-        return program.NumeroOrdre ?? $"{program.Id:00}/{DateTime.Today.Year}";
+        if (program.Id > 0)
+        {
+            return $"{program.Id:00}/{DateTime.Today.Year}";
+        }
+
+        return $"00/{DateTime.Today.Year}";
     }
 
     private IEnumerable<string> GetProgramTypeOptions()
