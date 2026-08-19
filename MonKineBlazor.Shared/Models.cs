@@ -226,7 +226,13 @@ public class CnamBordereauEntryDto
     public int? BordereauNumber { get; set; }
     public string? FactureNumber { get; set; }
     public DateTime? DateFacture { get; set; }
-        public DateTime? DateFin { get; set; }
+    public DateTime? DateFin { get; set; }
+    public string? CodePatient { get; set; }
+    public string? NumeroAssuree { get; set; }
+    public string? PatientName { get; set; }
+    public string? CodeBureau { get; set; }
+    public string? Annee { get; set; }
+    public string? NumeroDecision { get; set; }
     public string? Racine { get; set; }
     public string? Cle { get; set; }
     public decimal TotalTTC { get; set; }
