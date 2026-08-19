@@ -520,10 +520,9 @@
                         <tbody>
                             @foreach (var row in cnamBordereau)
                             {
-                                var isBlocked = IsBordereauRowBlocked(row);
-                                <tr class="@(isBlocked ? "table-danger" : string.Empty)">
+                                <tr class=@(IsBordereauRowBlocked(row) ? "table-danger" : string.Empty)>
                                     <td>
-                                        <input class="form-check-input" type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" disabled="@isBlocked" @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
+                                        <input class="form-check-input" type="checkbox" checked=@IsSelectedBordereau(row.ProgramId) disabled=@(IsBordereauRowBlocked(row)) @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
                                     </td>
                                     <td>@row.ProgramId</td>
                                     <td>@row.FactureNumber</td>
@@ -533,7 +532,7 @@
                                     <td>@row.PatientName</td>
                                     <td>@($"{row.TotalTTC:F2} DT")</td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@isBlocked" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
+                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@(IsBordereauRowBlocked(row))" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
                                     </td>
                                 </tr>
                             }
