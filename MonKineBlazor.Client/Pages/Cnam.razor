@@ -916,11 +916,9 @@
     {
         createSectionMessage = null;
         validationMessage = null;
-        isBusy = true;
 
         if (!ValidateCnamForm())
         {
-            isBusy = false;
             return;
         }
 
@@ -931,21 +929,22 @@
         if (existingPatients.Any() && selectedExistingPatient == null)
         {
             validationMessage = "Un patient existant a été trouvé. Sélectionnez-le pour créer la prise en charge ou modifiez la racine/clé/qualité.";
-            isBusy = false;
             return;
         }
 
-        if (selectedExistingPatient != null)
+        isBusy = true;
+        try
         {
-            createProgram.PatientId = selectedExistingPatient.Id;
-            createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
+            if (selectedExistingPatient != null)
+            {
+                createProgram.PatientId = selectedExistingPatient.Id;
+                createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
 
-            await CreateProgramAndPrint(selectedExistingPatient);
-            isBusy = false;
-            return;
-        }
+                await CreateProgramAndPrint(selectedExistingPatient);
+                return;
+            }
 
-        PatientDto? createdPatient = null;
+            PatientDto? createdPatient = null;
         try
         {
             var patientResponse = await Http.PostAsJsonAsync("api/patients", createPatient);
@@ -997,6 +996,10 @@
         await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
         createSectionMessage = "Patient et programme CNAM créés avec succès. Facture et fiche signature générées.";
         await LoadCnamPrograms();
+    }
+    finally
+    {
+        isBusy = false;
     }
 
     private async Task CreateProgramAndPrint(PatientDto patient)
@@ -1082,15 +1085,23 @@
 
     private async Task StartProgramForExistingPatient(PatientDto patient)
     {
-        await SelectExistingPatient(patient);
-        if (!ValidateCnamForm())
-        {
-            createSectionMessage = "Complétez le formulaire avant de créer la prise en charge pour ce patient.";
-            return;
-        }
-
         showExistingPatientModal = false;
-        await CreateProgramAndPrint(patient);
+        isBusy = true;
+        try
+        {
+            await SelectExistingPatient(patient);
+            if (!ValidateCnamForm())
+            {
+                createSectionMessage = "Complétez le formulaire avant de créer la prise en charge pour ce patient.";
+                return;
+            }
+
+            await CreateProgramAndPrint(patient);
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
     private bool ValidateCnamForm()
@@ -1154,13 +1165,14 @@
         existingPatients.Clear();
         existingPatientSearchPerformed = false;
         createSectionMessage = null;
+        validationMessage = null;
 
         if (string.IsNullOrWhiteSpace(createPatient.Racine) || string.IsNullOrWhiteSpace(createPatient.Cle) || string.IsNullOrWhiteSpace(createPatient.Qualite))
         {
             return;
         }
 
-        existingPatientSearchPerformed = true;
+        isSearchingExistingPatient = true;
         try
         {
             var racine = Uri.EscapeDataString(createPatient.Racine.Trim());
@@ -1171,6 +1183,11 @@
         catch (Exception ex)
         {
             errorMessage = "Erreur lors de la recherche du patient existant : " + ex.Message;
+        }
+        finally
+        {
+            isSearchingExistingPatient = false;
+            existingPatientSearchPerformed = true;
         }
     }
 
