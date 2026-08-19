@@ -498,6 +498,8 @@
                                     <th>Nb factures</th>
                                     <th>Total TTC</th>
                                     <th>Date d'exécution</th>
+                                    <th>Etat</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -508,6 +510,14 @@
                                         <td>@summary.NbFactures</td>
                                         <td>@(summary.TotalTTC.ToString("F2")) DT</td>
                                         <td>@summary.ExecutedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>@(summary.IsEncaisse ? "Encaisse" : "Non encaissé")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ToggleEncaisseStatus(summary.BordereauNumber, !summary.IsEncaisse)">
+                                                @(summary.IsEncaisse ? "Décocher encaissé" : "Marquer encaissé")
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger me-1" @onclick="() => DeleteExecutedBordereau(summary.BordereauNumber)">Supprimer</button>
+                                            <button class="btn btn-sm btn-outline-warning" @onclick="() => CancelExecutedBordereau(summary.BordereauNumber)">Annuler</button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -554,6 +564,8 @@
         PrixSeanceTTC = 0
     };
     private string? createSectionMessage;
+    private int? selectedExecutedBordereauNumber;
+    private List<CnamBordereauEntryDto> selectedExecutedBordereauRows = new();
 
     private IEnumerable<ExecutedBordereauSummary> ExecutedBordereaux => cnamBordereauExecuted
         .Where(r => r.BordereauNumber.HasValue)
@@ -1630,6 +1642,21 @@
         {
             errorMessage = $"Erreur lors de la mise à jour de l'état encaissé : {ex.Message}";
         }
+    }
+
+    private void ShowExecutedBordereau(int bordereauNumber)
+    {
+        selectedExecutedBordereauNumber = bordereauNumber;
+        selectedExecutedBordereauRows = cnamBordereauExecuted
+            .Where(r => r.BordereauNumber == bordereauNumber)
+            .OrderBy(r => r.FactureNumber)
+            .ToList();
+    }
+
+    private void ClearExecutedBordereauPreview()
+    {
+        selectedExecutedBordereauNumber = null;
+        selectedExecutedBordereauRows.Clear();
     }
 
     private static string SanitizeFileName(string filename)
