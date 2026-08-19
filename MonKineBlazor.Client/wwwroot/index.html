@@ -565,6 +565,91 @@
             doc.save(filename);
         };
 
+        const formatNumber = (value) => {
+            const number = Number(value ?? 0);
+            if (Number.isNaN(number)) {
+                return '0.00';
+            }
+            return number.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        window.generateBordereauPdf = async (filename, data) => {
+            const jsPDFClass = await ensureJsPdfAvailable();
+            if (!jsPDFClass) {
+                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
+            }
+
+            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
+            await loadArabicFont(doc);
+            const margin = 40;
+            const iconDataUrl = await loadImageDataUrl(resolveAssetUrl('icon_caduceus.png'));
+            let y = await renderPdfHeader(doc, data, data?.title ?? 'Bordereau CNAM', iconDataUrl);
+
+            const summary = data?.summary ?? {};
+            const rows = Array.isArray(data?.rows) ? data.rows : [];
+
+            const headerLabels = ['N° facture', 'Date facture', 'Patient', 'N° assuré', 'Montant TTC'];
+            const widths = [90, 80, 150, 90, 95];
+            let x = margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            headerLabels.forEach((label, index) => {
+                doc.text(label, x, y);
+                x += widths[index];
+            });
+            y += 16;
+            doc.setLineWidth(0.25);
+            doc.line(margin, y, 555, y);
+            y += 14;
+            doc.setFont('helvetica', 'normal');
+
+            rows.forEach((row) => {
+                const rowValues = [
+                    row.FactureNumber ?? row.factureNumber ?? '',
+                    row.DateFacture ?? row.dateFacture ?? '',
+                    row.PatientName ?? row.patientName ?? '',
+                    row.NumeroAssuree ?? row.numeroAssuree ?? '',
+                    formatNumber(row.MontantTTC ?? row.montantTTC)
+                ];
+
+                const cellLines = rowValues.map((value, index) => splitCellLines(doc, value, widths[index]));
+                const rowHeight = Math.max(...cellLines.map((lines) => Array.isArray(lines) ? lines.length : 1)) * 14 + 8;
+                if (y + rowHeight > 760) {
+                    doc.addPage();
+                    y = margin;
+                }
+
+                x = margin;
+                cellLines.forEach((lines, index) => {
+                    doc.text(lines, x + 2, y);
+                    x += widths[index];
+                });
+                y += rowHeight;
+            });
+
+            y += 24;
+            if (y > 760) {
+                doc.addPage();
+                y = margin;
+            }
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text(`Nombre de factures : ${rows.length}`, margin, y);
+            y += 16;
+            doc.text('Montant total TTC :', 420, y);
+            doc.text(`${formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC ?? 0)} DT`, 540, y, { align: 'right' });
+            y += 24;
+
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9);
+            doc.text('Ce bordereau CNAM a été généré automatiquement.', margin, y);
+
+            renderPdfFooter(doc);
+            doc.save(filename);
+        };
+
         const numberToFrenchWords = (amount) => {
             const integerPart = Math.floor(amount);
             const cents = Math.round((amount - integerPart) * 100);
