@@ -508,7 +508,7 @@
 
             const patientName = `${getString(program, 'PatientName', 'patientName')} ${getString(program, 'PatientPrenom', 'patientPrenom')}`.trim();
             const numeroAssuree = getString(program, 'NumeroAssuree', 'numeroAssuree');
-            const qualite = getString(program, 'Couverture', 'couverture');
+            const qualite = getString(program, 'Qualite', 'qualite') || getString(program, 'Couverture', 'couverture');
             const priseEnCharge = `${getString(program, 'CodeBureau', 'codeBureau')}/${getString(program, 'Annee', 'annee')}/${getString(program, 'NumeroDecision', 'numeroDecision')}`;
             const nbSeances = getNumber(program, 'NbSeances', 'nbSeances');
             const prixUnitaire = getNumber(program, 'PrixUnitaire', 'prixUnitaire');

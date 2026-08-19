@@ -15,9 +15,9 @@ public class PatientDto
     public string? Telephone2 { get; set; }
     public string? Adresse { get; set; }
     public string? Couverture { get; set; }
+    public string? Qualite { get; set; }
     public string? Racine { get; set; }
     public string? Cle { get; set; }
-    public string? Qualite { get; set; }
     public string? NumeroAssuree { get; set; }
 }
 
@@ -204,6 +204,7 @@ public class CnamProgramInvoiceDto
     public string? CodePatient { get; set; }
     public string? NumeroAssuree { get; set; }
     public string? Couverture { get; set; }
+    public string? Qualite { get; set; }
     public string? Titre { get; set; }
     public string? NatureSeances { get; set; }
     public int NbSeances { get; set; }

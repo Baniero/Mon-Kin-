@@ -141,49 +141,29 @@
                     <label class="form-label">N° assurée</label>
                     <input class="form-control" value="@CreateComputedNumeroAssuree" readonly />
                 </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" @onclick="SearchExistingPatients" disabled="@(isSearchingExistingPatient || isBusy)">
+                        @if (isSearchingExistingPatient)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        Rechercher patient CNAM
+                    </button>
+                </div>
                 @if (existingPatientSearchPerformed)
                 {
                     <div class="col-md-12">
                         @if (existingPatients.Any())
                         {
-                            <div class="alert alert-warning">
-                                Patient existant trouvé avec la même racine / clé / qualité. Sélectionnez un patient ou modifiez les valeurs.
+                            <div class="alert alert-warning d-flex justify-content-between align-items-center">
+                                <span>Patient existant détecté avec la même racine / clé / qualité. Sélectionnez un patient ou modifiez les valeurs.</span>
+                                <button class="btn btn-sm btn-primary" @onclick="() => showExistingPatientModal = true">Voir les patients existants</button>
                             </div>
                         }
                         else
                         {
                             <div class="alert alert-info">Aucun patient existant trouvé avec cette racine, clé et qualité.</div>
                         }
-                    </div>
-                }
-                @if (existingPatients.Any())
-                {
-                    <div class="col-md-12">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>Nom</th>
-                                        <th>Prénom</th>
-                                        <th>Code patient</th>
-                                        <th>Choisir</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var patient in existingPatients)
-                                    {
-                                        <tr>
-                                            <td>@patient.Nom</td>
-                                            <td>@patient.Prenom</td>
-                                            <td>@patient.CodePatient</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectExistingPatient(patient)">Sélectionner</button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                 }
                 <div class="col-md-12">
@@ -193,6 +173,37 @@
                             Patient sélectionné : <strong>@selectedExistingPatient.Nom @selectedExistingPatient.Prenom</strong> - @selectedExistingPatient.CodePatient
                             <button class="btn btn-sm btn-outline-secondary ms-3" @onclick="ClearSelectedExistingPatient">Changer de patient</button>
                         </div>
+                        @if (selectedPatientHistory.Any())
+                        {
+                            <div class="card card-body mb-3">
+                                <h6>Historique CNAM du patient</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Date début</th>
+                                                <th>Date fin</th>
+                                                <th>Titre</th>
+                                                <th>Nb séances</th>
+                                                <th>Total TTC</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var history in selectedPatientHistory)
+                                            {
+                                                <tr>
+                                                    <td>@history.DateDebut?.ToString("yyyy-MM-dd")</td>
+                                                    <td>@history.DateFin?.ToString("yyyy-MM-dd")</td>
+                                                    <td>@history.Titre</td>
+                                                    <td>@history.NbSeances</td>
+                                                    <td>@($"{history.PrixTTC:F2} DT")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
                     }
                     <h5 class="mt-4">Programme</h5>
                 </div>
@@ -282,13 +293,25 @@
                     <InputNumber class="form-control" @bind-Value="createProgram.PrixHT" disabled />
                 </div>
                 <div class="col-md-12 d-flex gap-2">
-                    <button class="btn btn-success" @onclick="SaveCnamPatientProgramAsync">Créer et imprimer</button>
-                    <button class="btn btn-outline-secondary" @onclick="ResetCreateCnamForm">Réinitialiser</button>
+                    <button class="btn btn-success" @onclick="SaveCnamPatientProgramAsync" disabled="@(isBusy || isSearchingExistingPatient)">
+                        @if (isBusy)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        Créer et imprimer
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="ResetCreateCnamForm" disabled="@(isBusy || isSearchingExistingPatient)">Réinitialiser</button>
                 </div>
                 @if (!string.IsNullOrEmpty(createSectionMessage))
                 {
                     <div class="col-md-12 mt-3">
                         <div class="alert alert-info">@createSectionMessage</div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(validationMessage))
+                {
+                    <div class="col-md-12 mt-3">
+                        <div class="alert alert-danger">@validationMessage</div>
                     </div>
                 }
             </div>
@@ -368,6 +391,7 @@
                                 <p class="mb-1"><strong>N° assurée :</strong> @selectedProgram.NumeroAssuree</p>
                             }
                             <p class="mb-1"><strong>Code patient :</strong> @selectedProgram.CodePatient</p>
+                            <p class="mb-1"><strong>Qualité :</strong> @selectedProgram.Qualite</p>
                             <p class="mb-0"><strong>Couverture :</strong> @selectedProgram.Couverture</p>
                         </div>
                         <div class="col-md-6">
@@ -533,6 +557,11 @@
     private List<PatientDto> existingPatients = new();
     private PatientDto? selectedExistingPatient;
     private bool existingPatientSearchPerformed;
+    private bool isSearchingExistingPatient;
+    private bool isBusy;
+    private bool showExistingPatientModal;
+    private string? validationMessage;
+    private List<PatientProgramDto> selectedPatientHistory = new();
     private PatientProgramDto createProgram = new()
     {
         DateDebut = DateTime.Today,
@@ -941,7 +970,7 @@
         await LoadCnamPrograms();
     }
 
-    private void SelectExistingPatient(PatientDto patient)
+    private async Task SelectExistingPatient(PatientDto patient)
     {
         selectedExistingPatient = patient;
         createPatient = new PatientDto
@@ -965,6 +994,8 @@
             NumeroAssuree = patient.NumeroAssuree,
         };
         createSectionMessage = $"Patient existant sélectionné : {patient.Nom} {patient.Prenom}.";
+        showExistingPatientModal = false;
+        await LoadSelectedPatientHistory(patient.Id);
     }
 
     private void ClearSelectedExistingPatient()
@@ -973,6 +1004,89 @@
         createSectionMessage = null;
         existingPatientSearchPerformed = false;
         existingPatients.Clear();
+        selectedPatientHistory.Clear();
+        showExistingPatientModal = false;
+    }
+
+    private async Task LoadSelectedPatientHistory(int patientId)
+    {
+        selectedPatientHistory.Clear();
+        try
+        {
+            selectedPatientHistory = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patients/{patientId}/cnam-history") ?? new List<PatientProgramDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Impossible de charger l'historique CNAM du patient : " + ex.Message;
+        }
+    }
+
+    private async Task StartProgramForExistingPatient(PatientDto patient)
+    {
+        await SelectExistingPatient(patient);
+        if (!ValidateCnamForm())
+        {
+            createSectionMessage = "Complétez le formulaire avant de créer la prise en charge pour ce patient.";
+            return;
+        }
+
+        showExistingPatientModal = false;
+        await CreateProgramAndPrint(patient);
+    }
+
+    private bool ValidateCnamForm()
+    {
+        validationMessage = null;
+
+        if (string.IsNullOrWhiteSpace(createPatient.Nom))
+        {
+            validationMessage = "Le nom du patient est requis.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(createPatient.Prenom))
+        {
+            validationMessage = "Le prénom du patient est requis.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(createPatient.Racine))
+        {
+            validationMessage = "La racine CNAM est requise.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(createPatient.Cle) || createPatient.Cle.Trim().Length < 2)
+        {
+            validationMessage = "La clé CNAM est requise et doit contenir au moins 2 caractères.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(createPatient.Qualite))
+        {
+            validationMessage = "La qualité CNAM est requise.";
+            return false;
+        }
+
+        if (createProgram.NbSeances <= 0)
+        {
+            validationMessage = "Le nombre de séances doit être supérieur à zéro.";
+            return false;
+        }
+
+        if (!createProgram.DateDebut.HasValue)
+        {
+            validationMessage = "La date de début du programme est requise.";
+            return false;
+        }
+
+        if (createProgram.PrixSeanceTTC <= 0)
+        {
+            validationMessage = "Le prix séance TTC doit être supérieur à zéro.";
+            return false;
+        }
+
+        return true;
     }
 
     private async Task SearchExistingPatients()
@@ -1020,6 +1134,7 @@
                 codePatient = patient.CodePatient,
                 numeroAssuree = patient.NumeroAssuree,
                 couverture = patient.Couverture,
+                qualite = patient.Qualite,
                 titre = program.Titre,
                 natureSeances = program.NatureSeances,
                 nbSeances = program.NbSeances,
@@ -1187,6 +1302,7 @@
                 selectedProgram.CodePatient,
                 selectedProgram.NumeroAssuree,
                 selectedProgram.Couverture,
+                selectedProgram.Qualite,
                 selectedProgram.Titre,
                 selectedProgram.NatureSeances,
                 selectedProgram.DateDebut,

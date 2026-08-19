@@ -32,6 +32,11 @@ public class PatientsController : ControllerBase
         return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
     }
 
+    private static string NormalizeTextValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
     private static bool PatientExists(NpgsqlConnection connection, int? cabinetId, string? racine, string? cle, string? qualite, int? excludeId = null)
     {
         using var cmd = connection.CreateCommand();
@@ -237,6 +242,79 @@ public class PatientsController : ControllerBase
         return Ok(patient);
     }
 
+    [HttpGet("{id}/cnam-history")]
+    public ActionResult<IEnumerable<PatientProgramDto>> GetCnamHistory(int id)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT
+                id,
+                patient_id,
+                COALESCE(titre, ''),
+                COALESCE(nature_seances, ''),
+                COALESCE(nb_seances, 0)::int,
+                COALESCE(nb_seances_par_semaine, 0)::int,
+                COALESCE(duree_seance_minutes, 0)::int,
+                date_debut,
+                date_fin,
+                COALESCE(code_bureau, ''),
+                COALESCE(annee, ''),
+                COALESCE(numero_decision, ''),
+                COALESCE(numero_ordre, ''),
+                COALESCE(type_programme, ''),
+                COALESCE(prix_unitaire, 0),
+                COALESCE(prix_espece, 0),
+                COALESCE(prix_ht, 0),
+                COALESCE(tva, 0),
+                COALESCE(montant_tva, 0),
+                COALESCE(prix_ttc, 0)
+            FROM patient_programs
+            WHERE patient_id = @patientId
+            ORDER BY date_debut DESC
+        ";
+        cmd.Parameters.AddWithValue("@patientId", id);
+
+        using var reader = cmd.ExecuteReader();
+        var programs = new List<PatientProgramDto>();
+        while (reader.Read())
+        {
+            programs.Add(new PatientProgramDto
+            {
+                Id = reader.GetInt32(0),
+                PatientId = reader.GetInt32(1),
+                Titre = reader.GetString(2),
+                NatureSeances = reader.GetString(3),
+                NbSeances = reader.GetInt32(4),
+                NbSeancesParSemaine = reader.GetInt32(5),
+                DureeSeanceMinutes = reader.GetInt32(6),
+                DateDebut = reader.IsDBNull(7) ? null : reader.GetDateTime(7),
+                DateFin = reader.IsDBNull(8) ? null : reader.GetDateTime(8),
+                CodeBureau = reader.GetString(9),
+                Annee = reader.GetString(10),
+                NumeroDecision = reader.GetString(11),
+                NumeroOrdre = reader.GetString(12),
+                TypeProgramme = reader.GetString(13),
+                PrixUnitaire = reader.GetDecimal(14),
+                PrixEspece = reader.GetDecimal(15),
+                PrixHT = reader.GetDecimal(16),
+                TVA = reader.GetDecimal(17),
+                MontantTVA = reader.GetDecimal(18),
+                PrixTTC = reader.GetDecimal(19)
+            });
+        }
+
+        return Ok(programs);
+    }
+
     [HttpGet("search")]
     public ActionResult<IEnumerable<PatientDto>> Search([FromQuery] string? racine, [FromQuery] string? cle, [FromQuery] string? qualite)
     {
@@ -381,6 +459,11 @@ public class PatientsController : ControllerBase
             patient.CabinetId = currentUser.CabinetId;
         }
 
+        patient.Racine = NormalizeTextValue(patient.Racine);
+        patient.Cle = NormalizeTextValue(patient.Cle);
+        patient.Qualite = NormalizeTextValue(patient.Qualite);
+        patient.NumeroAssuree = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
+
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
@@ -456,6 +539,11 @@ public class PatientsController : ControllerBase
         {
             return Forbid();
         }
+
+        patient.Racine = NormalizeTextValue(patient.Racine);
+        patient.Cle = NormalizeTextValue(patient.Cle);
+        patient.Qualite = NormalizeTextValue(patient.Qualite);
+        patient.NumeroAssuree = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
