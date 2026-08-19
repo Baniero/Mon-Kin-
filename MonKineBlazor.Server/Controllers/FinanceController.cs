@@ -572,7 +572,7 @@ public class FinanceController : ControllerBase
                 return Forbid();
             }
 
-            var pendingRows = new List<(int ProgramId, DateTime? DateDebut, string CodePatient, string NumeroAssuree, string PatientName, string CodeBureau, string Annee, string NumeroDecision, string Racine, string Cle, decimal TotalTTC, int? CabinetId)>();
+            var pendingRows = new List<(int ProgramId, DateTime? DateDebut, DateTime? DateFin, string CodePatient, string NumeroAssuree, string PatientName, string CodeBureau, string Annee, string NumeroDecision, string Racine, string Cle, decimal TotalTTC, int? CabinetId)>();
             using var conn = DatabaseConnectionProvider.CreateConnection();
             conn.Open();
 
@@ -581,6 +581,7 @@ public class FinanceController : ControllerBase
                 SELECT
                     pp.id,
                     pp.date_debut,
+                    pp.date_fin,
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
                     COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -604,6 +605,7 @@ public class FinanceController : ControllerBase
                 SELECT
                     pp.id,
                     pp.date_debut,
+                    pp.date_fin,
                     COALESCE(p.code_patient, ''),
                     COALESCE(p.n_assuree, ''),
                     COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -639,16 +641,17 @@ public class FinanceController : ControllerBase
                     pendingRows.Add((
                         ProgramId: reader.GetInt32(0),
                         DateDebut: reader.IsDBNull(1) ? (DateTime?)null : reader.GetDateTime(1),
-                        CodePatient: reader.GetString(2),
-                        NumeroAssuree: reader.GetString(3),
-                        PatientName: reader.GetString(4),
-                        CodeBureau: reader.GetString(5),
-                        Annee: reader.GetString(6),
-                        NumeroDecision: reader.GetString(7),
-                        Racine: reader.GetString(8),
-                        Cle: reader.GetString(9),
-                        TotalTTC: reader.GetDecimal(10),
-                        CabinetId: reader.IsDBNull(11) ? null : reader.GetInt32(11)
+                        DateFin: reader.IsDBNull(2) ? (DateTime?)null : reader.GetDateTime(2),
+                        CodePatient: reader.GetString(3),
+                        NumeroAssuree: reader.GetString(4),
+                        PatientName: reader.GetString(5),
+                        CodeBureau: reader.GetString(6),
+                        Annee: reader.GetString(7),
+                        NumeroDecision: reader.GetString(8),
+                        Racine: reader.GetString(9),
+                        Cle: reader.GetString(10),
+                        TotalTTC: reader.GetDecimal(11),
+                        CabinetId: reader.IsDBNull(12) ? null : reader.GetInt32(12)
                     ));
                 }
             }
@@ -704,6 +707,7 @@ public class FinanceController : ControllerBase
                     ProgramId = item.ProgramId,
                     FactureNumber = $"{currentSequence:000}/{year}",
                     DateFacture = item.DateDebut,
+                    DateFin = item.DateFin,
                     CodePatient = item.CodePatient,
                     NumeroAssuree = item.NumeroAssuree,
                     PatientName = item.PatientName,
@@ -991,6 +995,7 @@ public class FinanceController : ControllerBase
                 WHERE pp.id = @programId
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
+                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
@@ -1002,10 +1007,13 @@ public class FinanceController : ControllerBase
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
                   AND p.cabinet_id = @cabinet_id
+                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
             ";
+            checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
+            checkCmd.Parameters.AddWithValue("@today", DateTime.Today);
             checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             if (!IsAdmin())
             {
@@ -1108,6 +1116,7 @@ public class FinanceController : ControllerBase
                         pp.id,
                         COALESCE(e.bordereau_number, 0),
                         pp.date_debut,
+                        pp.date_fin,
                         COALESCE(p.code_patient, ''),
                         COALESCE(p.n_assuree, ''),
                         COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -1201,6 +1210,7 @@ public class FinanceController : ControllerBase
             WHERE pp.id = ANY(@programIds)
               AND COALESCE(p.couverture, '') <> ''
               AND COALESCE(p.n_assuree, '') <> ''
+              AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
               AND e.program_id IS NULL
         ";
         if (!IsAdmin())
@@ -1209,6 +1219,7 @@ public class FinanceController : ControllerBase
             checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
         checkCmd.Parameters.AddWithValue("@programIds", request.ProgramIds.ToArray());
+        checkCmd.Parameters.AddWithValue("@today", DateTime.Today);
 
         var validPrograms = new HashSet<int>();
         using (var reader = checkCmd.ExecuteReader())

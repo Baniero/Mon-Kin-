@@ -226,6 +226,7 @@ public class CnamBordereauEntryDto
     public int? BordereauNumber { get; set; }
     public string? FactureNumber { get; set; }
     public DateTime? DateFacture { get; set; }
+    public DateTime? DateFin { get; set; }
     public string? CodePatient { get; set; }
     public string? NumeroAssuree { get; set; }
     public string? PatientName { get; set; }
@@ -238,6 +239,8 @@ public class CnamBordereauEntryDto
     public DateTime? ExecutedAt { get; set; }
     public string? ExecutedBy { get; set; }
     public bool IsEncaisse { get; set; }
+
+    public bool IsExecutable => !DateFin.HasValue || DateFin.Value.Date <= DateTime.Today;
 }
 
 public class CnamBordereauExecuteRequestDto
