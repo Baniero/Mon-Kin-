@@ -801,15 +801,15 @@
             doc.line(margin, y, 555, y);
             y += 16;
 
-            const summaryHeaders = ['Patient', 'N° assuré', 'N° décision', 'N° facture', 'TTC'];
-            const summaryWidths = [140, 90, 120, 70, 80];
-            let x2 = margin;
+            const headers = ['Patient', 'N° assuré', 'N° décision', 'N° facture', 'TTC'];
+            const widths = [140, 90, 120, 70, 80];
+            let x = margin;
 
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
-            summaryHeaders.forEach((header, index) => {
-                doc.text(header, x2, y);
-                x2 += summaryWidths[index];
+            headers.forEach((header, index) => {
+                doc.text(header, x, y);
+                x += widths[index];
             });
             y += 16;
             doc.setLineWidth(0.25);
@@ -830,17 +830,17 @@
                     row.FactureNumber ?? row.factureNumber ?? '',
                     formatNumber(row.MontantTTC ?? row.montantTTC)
                 ];
-                const cellLines = values.map((value, index) => splitCellLines(doc, value, summaryWidths[index]));
+                const cellLines = values.map((value, index) => splitCellLines(doc, value, widths[index]));
                 const rowHeight = Math.max(...cellLines.map((lines) => Array.isArray(lines) ? lines.length : 1)) * 14 + 8;
                 if (y + rowHeight > 760) {
                     doc.addPage();
                     y = margin;
                 }
 
-                x2 = margin;
+                x = margin;
                 cellLines.forEach((lines, index) => {
-                    doc.text(lines, x2 + 2, y);
-                    x2 += summaryWidths[index];
+                    doc.text(lines, x + 2, y);
+                    x += widths[index];
                 });
                 y += rowHeight;
             });
