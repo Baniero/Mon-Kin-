@@ -520,9 +520,9 @@
                         <tbody>
                             @foreach (var row in cnamBordereau)
                             {
-                                <tr class=@(IsBordereauRowBlocked(row) ? "table-danger" : string.Empty)>
+                                <tr class="@GetBordereauRowClass(row)">
                                     <td>
-                                        <input class="form-check-input" type="checkbox" checked=@IsSelectedBordereau(row.ProgramId) disabled=@(IsBordereauRowBlocked(row)) @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
+                                        <input class="form-check-input" type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" disabled="@IsBordereauRowBlocked(row)" @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
                                     </td>
                                     <td>@row.ProgramId</td>
                                     <td>@row.FactureNumber</td>
@@ -1810,6 +1810,11 @@
     private bool IsBordereauRowBlocked(CnamBordereauEntryDto row)
     {
         return row.DateFin.HasValue && row.DateFin.Value.Date > DateTime.Today;
+    }
+
+    private string GetBordereauRowClass(CnamBordereauEntryDto row)
+    {
+        return IsBordereauRowBlocked(row) ? "table-danger" : string.Empty;
     }
 
     private bool HasSelectedBordereau => selectedBordereauProgramIds.Any(id => cnamBordereau.Any(r => r.ProgramId == id && !IsBordereauRowBlocked(r)));
