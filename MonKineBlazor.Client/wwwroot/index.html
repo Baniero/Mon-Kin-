@@ -517,50 +517,83 @@
             const montantTVA = Number((prixTTC - prixHT).toFixed(3));
             const totalTtcWords = numberToFrenchWords(prixTTC);
 
-            const invoiceFields = [
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const rightColumnX = pageWidth - margin - 180;
+            const valueX = margin + 110;
+            const lineHeight = 16;
+
+            const leftDetails = [
                 ['Patient', patientName || 'N/A'],
                 ['N° assurée', numeroAssuree || 'N/A'],
                 ['Qualité', qualite || 'N/A'],
-                ['N° prise en charge', priseEnCharge || 'N/A'],
+                ['N° prise en charge', priseEnCharge || 'N/A']
+            ];
+
+            const rightDetails = [
+                ['Facture', invoiceNumber],
+                ['Date facture', invoiceDate],
                 ['Nb séances', nbSeances],
-                ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut'))],
-                ['Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
-                ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`],
-                ['Montant HT', `${prixHT.toFixed(2)} DT`],
-                ['Montant TVA', `${montantTVA.toFixed(2)} DT`],
-                ['Montant TOTAL TTC', `${prixTTC.toFixed(2)} DT`]
+                ['Prix unitaire', `${prixUnitaire.toFixed(2)} DT`]
+            ];
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Informations facturation', margin, y);
+            y += 18;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            leftDetails.forEach(([label, value], index) => {
+                const currentY = y + index * lineHeight;
+                doc.text(`${label} :`, margin, currentY);
+                doc.text(String(value), valueX, currentY);
+            });
+
+            rightDetails.forEach(([label, value], index) => {
+                const currentY = y + index * lineHeight;
+                doc.text(`${label} :`, rightColumnX, currentY);
+                doc.text(String(value), rightColumnX + 90, currentY);
+            });
+
+            y += Math.max(leftDetails.length, rightDetails.length) * lineHeight + 18;
+
+            const tableY = y;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.text('Détails de la prestation', margin, tableY);
+            y += 18;
+
+            const tableCols = [margin, 220, 400, 520];
+            const tableRows = [
+                ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut')), 'Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
+                ['Montant HT', `${prixHT.toFixed(2)} DT`, 'Montant TVA', `${montantTVA.toFixed(2)} DT`],
+                ['Total TTC', `${prixTTC.toFixed(2)} DT`, 'Total lettres', totalTtcWords]
             ];
 
             doc.setFont('helvetica', 'normal');
-            invoiceFields.forEach(([label, value]) => {
-                const lineHeight = drawKeyValue(doc, label, value ?? '', margin, 520, y, 80);
-                y += lineHeight + 12;
-                if (y > 760) {
-                    doc.addPage();
-                    y = margin;
-                }
+            tableRows.forEach((row) => {
+                row.forEach((cell, index) => {
+                    doc.text(String(cell), tableCols[index], y);
+                });
+                y += 16;
             });
 
-            y += 24;
-            if (y > 760) {
-                doc.addPage();
-                y = margin;
-            }
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text('Total TTC en toutes lettres :', margin, y);
             y += 14;
-            doc.setFont('helvetica', 'normal');
-            doc.text(totalTtcWords, margin, y);
-            y += 24;
+            doc.setLineWidth(0.6);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 14;
 
-            if (y > 760) {
-                doc.addPage();
-                y = margin;
-            }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.text('Montant total TTC', margin, y);
+            doc.text(`${prixTTC.toFixed(2)} DT`, pageWidth - margin, y, { align: 'right' });
+            y += 22;
+
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+            y += 14;
+
             renderPdfFooter(doc);
             doc.save(filename);
         };
@@ -634,13 +667,17 @@
                 y = margin;
             }
 
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const totalLabelX = 420;
+            const totalValueRightX = pageWidth - margin;
+
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
             doc.text(`Nombre de factures : ${rows.length}`, margin, y);
-            y += 16;
-            doc.text('Montant total TTC :', 420, y);
-            doc.text(`${formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC ?? 0)} DT`, 540, y, { align: 'right' });
-            y += 24;
+            y += 20;
+            doc.text('Montant total TTC :', totalLabelX, y);
+            doc.text(`${formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC ?? 0)} DT`, totalValueRightX, y, { align: 'right' });
+            y += 28;
 
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(9);
