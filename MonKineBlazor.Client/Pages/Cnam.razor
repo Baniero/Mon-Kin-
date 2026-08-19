@@ -532,7 +532,7 @@
                                     <td>@row.PatientName</td>
                                     <td>@($"{row.TotalTTC:F2} DT")</td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@(IsBordereauRowBlocked(row))" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
+                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@IsBordereauRowBlocked(row)" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
                                     </td>
                                 </tr>
                             }
