@@ -166,6 +166,60 @@
                         }
                     </div>
                 }
+                @if (showExistingPatientModal)
+                {
+                    <div class="modal-backdrop fade show"></div>
+                    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Patients CNAM existants</h5>
+                                    <button type="button" class="btn-close" aria-label="Close" @onclick="() => showExistingPatientModal = false"></button>
+                                </div>
+                                <div class="modal-body">
+                                    @if (!existingPatients.Any())
+                                    {
+                                        <div class="alert alert-info">Aucun patient à afficher. Modifiez les critères de recherche et relancez la recherche.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Nom</th>
+                                                        <th>Prénom</th>
+                                                        <th>Code patient</th>
+                                                        <th>Qualité</th>
+                                                        <th class="text-end">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var patient in existingPatients)
+                                                    {
+                                                        <tr>
+                                                            <td>@patient.Nom</td>
+                                                            <td>@patient.Prenom</td>
+                                                            <td>@patient.CodePatient</td>
+                                                            <td>@patient.Qualite</td>
+                                                            <td class="text-end">
+                                                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SelectExistingPatient(patient)">Sélectionner</button>
+                                                                <button class="btn btn-sm btn-success" @onclick="() => StartProgramForExistingPatient(patient)">Créer une prise en charge pour ce patient</button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="modal-footer">
+                                    <button class="btn btn-secondary" @onclick="() => showExistingPatientModal = false">Fermer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
                 <div class="col-md-12">
                     @if (selectedExistingPatient != null)
                     {
@@ -861,9 +915,12 @@
     private async Task SaveCnamPatientProgramAsync()
     {
         createSectionMessage = null;
-        if (string.IsNullOrWhiteSpace(createPatient.Nom) || string.IsNullOrWhiteSpace(createPatient.Prenom))
+        validationMessage = null;
+        isBusy = true;
+
+        if (!ValidateCnamForm())
         {
-            createSectionMessage = "Le nom et le prénom du patient sont requis.";
+            isBusy = false;
             return;
         }
 
@@ -873,7 +930,8 @@
 
         if (existingPatients.Any() && selectedExistingPatient == null)
         {
-            createSectionMessage = "Un patient existant a été trouvé. Sélectionnez-le pour créer la prise en charge ou modifiez la racine/clé/qualité.";
+            validationMessage = "Un patient existant a été trouvé. Sélectionnez-le pour créer la prise en charge ou modifiez la racine/clé/qualité.";
+            isBusy = false;
             return;
         }
 
@@ -883,6 +941,7 @@
             createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
 
             await CreateProgramAndPrint(selectedExistingPatient);
+            isBusy = false;
             return;
         }
 
