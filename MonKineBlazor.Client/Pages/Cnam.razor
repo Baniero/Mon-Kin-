@@ -496,31 +496,9 @@
                     <button class="btn btn-outline-secondary btn-icon" @onclick="ClearBordereauSelection" disabled="@(!HasSelectedBordereau)"><i class="bi bi-x-circle"></i>Désélectionner</button>
                 </div>
             </div>
-            <div class="row gx-3 mb-3">
-                <div class="col-md-4">
-                    <InputText class="form-control" placeholder="Filtrer facture, patient ou assuré" @bind-Value="bordereauFilter" @oninput="_ => ResetBordereauPagination()" />
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check mt-2">
-                        <InputCheckbox class="form-check-input" @bind-Value="onlyExecutableBordereau" @onchange="_ => ResetBordereauPagination()" />
-                        <label class="form-check-label">Factures exécutables uniquement</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Taille page</label>
-                    <InputSelect class="form-select" @bind-Value="bordereauPageSize" @onchange="_ => ResetBordereauPagination()">
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                    </InputSelect>
-                </div>
-                <div class="col-md-2 text-end align-self-end">
-                    <small class="text-muted">Page @((bordereauPageIndex + 1).ToString()) / @Math.Max(1, (int)Math.Ceiling((double)FilteredBordereau.Count() / bordereauPageSize))</small>
-                </div>
-            </div>
-            @if (!FilteredBordereau.Any())
+            @if (!cnamBordereau.Any())
             {
-                <div class="alert alert-info">Aucune facture à exécuter ne correspond au filtre ou à la période sélectionnée.</div>
+                <div class="alert alert-info">Aucune facture à exécuter pour cette durée.</div>
             }
             else
             {
@@ -540,11 +518,12 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in PagedBordereauEntries)
+                            @foreach (var row in cnamBordereau)
                             {
-                                <tr class='@(row.IsExecutable ? string.Empty : "table-danger")'>
+                                var isBlocked = IsBordereauRowBlocked(row);
+                                <tr class="@(isBlocked ? "table-danger" : string.Empty)">
                                     <td>
-                                        <input class="form-check-input" type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" disabled="@(!row.IsExecutable)" @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
+                                        <input class="form-check-input" type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" disabled="@isBlocked" @onchange="e => ToggleBordereauSelection(row.ProgramId, e)" />
                                     </td>
                                     <td>@row.ProgramId</td>
                                     <td>@row.FactureNumber</td>
@@ -554,25 +533,15 @@
                                     <td>@row.PatientName</td>
                                     <td>@($"{row.TotalTTC:F2} DT")</td>
                                     <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@(!row.IsExecutable)" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
+                                        <button type="button" class="btn btn-sm btn-success btn-icon" disabled="@isBlocked" @onclick="() => ExecuteBordereau(row)"><i class="bi bi-play-circle"></i>Exécuter</button>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
-                <div class="row align-items-center mb-3">
-                    <div class="col-md-6">
-                        <strong>Total général TTC :</strong> @($"{cnamBordereau.Sum(r => r.TotalTTC):F2} DT")
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <small class="text-muted">@FilteredBordereau.Count() au total, @FilteredBordereau.Count(r => !r.IsExecutable) non exécutables</small>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="PreviousBordereauPage" disabled="@(bordereauPageIndex == 0)">Précédent</button>
-                    <span>Page @(bordereauPageIndex + 1) / @Math.Max(1, (int)Math.Ceiling(FilteredBordereau.Count() / (double)bordereauPageSize))</span>
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="NextBordereauPage" disabled="@(bordereauPageIndex >= Math.Max(0, (int)Math.Ceiling(FilteredBordereau.Count() / (double)bordereauPageSize) - 1))">Suivant</button>
+                <div class="mt-3">
+                    <strong>Total général TTC :</strong> @($"{cnamBordereau.Sum(r => r.TotalTTC):F2} DT")
                 </div>
             }
         </div>
@@ -640,10 +609,6 @@
     private List<CnamBordereauEntryDto> cnamBordereauExecuted = new();
     private HashSet<int> selectedBordereauProgramIds = new();
     private CnamProgramInvoiceDto? selectedProgram;
-    private string bordereauFilter = string.Empty;
-    private bool onlyExecutableBordereau = true;
-    private int bordereauPageSize = 10;
-    private int bordereauPageIndex = 0;
     private CabinetInfoDto cabinetInfo = new();
     private PatientDto createPatient = new() { Couverture = "CNAM", Age = 0 };
     private List<PatientDto> existingPatients = new();
@@ -1782,10 +1747,19 @@
 
     private async Task ExecuteSelectedBordereau()
     {
-        if (!HasSelectedBordereau)
+        var selectedProgramIds = selectedBordereauProgramIds
+            .Where(id => cnamBordereau.Any(r => r.ProgramId == id && !IsBordereauRowBlocked(r)))
+            .ToList();
+
+        if (!selectedProgramIds.Any())
         {
             errorMessage = "Sélectionnez au moins une facture à exécuter.";
             return;
+        }
+
+        if (selectedProgramIds.Count != selectedBordereauProgramIds.Count)
+        {
+            errorMessage = "Les programmes non terminés ont été exclus de la sélection.";
         }
 
         errorMessage = null;
@@ -1795,7 +1769,7 @@
         {
             var response = await Http.PostAsJsonAsync("api/finance/cnam-bordereau-execute-bulk", new
             {
-                ProgramIds = selectedBordereauProgramIds.ToList()
+                ProgramIds = selectedProgramIds
             });
 
             if (!response.IsSuccessStatusCode)
@@ -1817,7 +1791,7 @@
     {
         var isChecked = args.Value is bool value && value;
         var row = cnamBordereau.FirstOrDefault(r => r.ProgramId == programId);
-        if (row == null || !row.IsExecutable)
+        if (isChecked && row != null && IsBordereauRowBlocked(row))
         {
             return;
         }
@@ -1834,63 +1808,16 @@
 
     private bool IsSelectedBordereau(int programId) => selectedBordereauProgramIds.Contains(programId);
 
-    private bool HasSelectedBordereau => selectedBordereauProgramIds.Any();
+    private bool IsBordereauRowBlocked(CnamBordereauEntryDto row)
+    {
+        return row.DateFin.HasValue && row.DateFin.Value.Date > DateTime.Today;
+    }
+
+    private bool HasSelectedBordereau => selectedBordereauProgramIds.Any(id => cnamBordereau.Any(r => r.ProgramId == id && !IsBordereauRowBlocked(r)));
 
     private void ClearBordereauSelection()
     {
         selectedBordereauProgramIds.Clear();
-    }
-
-    private void PreviousBordereauPage()
-    {
-        if (bordereauPageIndex > 0)
-        {
-            bordereauPageIndex--;
-        }
-    }
-
-    private void NextBordereauPage()
-    {
-        var pageCount = Math.Max(1, (int)Math.Ceiling(FilteredBordereau.Count() / (double)bordereauPageSize));
-        if (bordereauPageIndex < pageCount - 1)
-        {
-            bordereauPageIndex++;
-        }
-    }
-
-    private IEnumerable<CnamBordereauEntryDto> FilteredBordereau => cnamBordereau
-        .Where(r => string.IsNullOrWhiteSpace(bordereauFilter)
-            || (r.FactureNumber?.Contains(bordereauFilter, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (r.PatientName?.Contains(bordereauFilter, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (r.NumeroAssuree?.Contains(bordereauFilter, StringComparison.OrdinalIgnoreCase) ?? false))
-        .Where(r => !onlyExecutableBordereau || r.IsExecutable);
-
-    private IEnumerable<CnamBordereauEntryDto> PagedBordereauEntries
-    {
-        get
-        {
-            var filtered = FilteredBordereau.ToList();
-            if (filtered.Count == 0)
-            {
-                return filtered;
-            }
-
-            var pageCount = (int)Math.Ceiling(filtered.Count / (double)bordereauPageSize);
-            if (bordereauPageIndex >= pageCount)
-            {
-                bordereauPageIndex = Math.Max(0, pageCount - 1);
-            }
-
-            return filtered
-                .Skip(bordereauPageIndex * bordereauPageSize)
-                .Take(bordereauPageSize);
-        }
-    }
-
-    private void ResetBordereauPagination()
-    {
-        bordereauPageIndex = 0;
-        selectedBordereauProgramIds.RemoveWhere(id => !cnamBordereau.Any(r => r.ProgramId == id && r.IsExecutable));
     }
 
     private enum CnamSection

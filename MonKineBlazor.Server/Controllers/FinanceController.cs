@@ -995,7 +995,7 @@ public class FinanceController : ControllerBase
                 WHERE pp.id = @programId
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
-                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
+                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= CURRENT_DATE)
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
@@ -1007,13 +1007,11 @@ public class FinanceController : ControllerBase
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
                   AND p.cabinet_id = @cabinet_id
-                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
+                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= CURRENT_DATE)
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
             ";
-            checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
-            checkCmd.Parameters.AddWithValue("@today", DateTime.Today);
             checkCmd.Parameters.AddWithValue("@programId", request.ProgramId);
             if (!IsAdmin())
             {
@@ -1116,7 +1114,6 @@ public class FinanceController : ControllerBase
                         pp.id,
                         COALESCE(e.bordereau_number, 0),
                         pp.date_debut,
-                        pp.date_fin,
                         COALESCE(p.code_patient, ''),
                         COALESCE(p.n_assuree, ''),
                         COALESCE(p.nom || ' ' || p.prenom, ''),
@@ -1210,7 +1207,7 @@ public class FinanceController : ControllerBase
             WHERE pp.id = ANY(@programIds)
               AND COALESCE(p.couverture, '') <> ''
               AND COALESCE(p.n_assuree, '') <> ''
-              AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= @today)
+              AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= CURRENT_DATE)
               AND e.program_id IS NULL
         ";
         if (!IsAdmin())
@@ -1219,7 +1216,6 @@ public class FinanceController : ControllerBase
             checkCmd.Parameters.AddWithValue("@cabinet_id", currentCabinetId.Value);
         }
         checkCmd.Parameters.AddWithValue("@programIds", request.ProgramIds.ToArray());
-        checkCmd.Parameters.AddWithValue("@today", DateTime.Today);
 
         var validPrograms = new HashSet<int>();
         using (var reader = checkCmd.ExecuteReader())
