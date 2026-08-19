@@ -169,23 +169,31 @@
                                         <th>Choisir</th>
                                     </tr>
                                 </thead>
-                            <tbody>
-                                @foreach (var patient in existingPatients)
-                                {
-                                    <tr>
-                                        <td>@patient.Nom</td>
-                                        <td>@patient.Prenom</td>
-                                        <td>@patient.CodePatient</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectExistingPatient(patient)">Sélectionner</button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                <tbody>
+                                    @foreach (var patient in existingPatients)
+                                    {
+                                        <tr>
+                                            <td>@patient.Nom</td>
+                                            <td>@patient.Prenom</td>
+                                            <td>@patient.CodePatient</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectExistingPatient(patient)">Sélectionner</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                }
                 <div class="col-md-12">
+                    @if (selectedExistingPatient != null)
+                    {
+                        <div class="alert alert-success">
+                            Patient sélectionné : <strong>@selectedExistingPatient.Nom @selectedExistingPatient.Prenom</strong> - @selectedExistingPatient.CodePatient
+                            <button class="btn btn-sm btn-outline-secondary ms-3" @onclick="ClearSelectedExistingPatient">Changer de patient</button>
+                        </div>
+                    }
                     <h5 class="mt-4">Programme</h5>
                 </div>
                 <div class="col-md-4">
@@ -747,7 +755,27 @@
         }
 
         var trimmed = orderNumber.Trim();
-        return trimmed.Trim('-').Length == 0;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return true;
+        }
+
+        if (System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^[-\s]+(?:/\d{4})?$"))
+        {
+            return true;
+        }
+
+        var parts = trimmed.Split('/');
+        if (parts.Length > 0)
+        {
+            var prefix = parts[0].Trim();
+            if (string.IsNullOrWhiteSpace(prefix) || prefix.Trim('-').Length == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string GetProgramInvoiceNumber(PatientProgramDto program)
@@ -755,13 +783,13 @@
         var numeroOrdre = program.NumeroOrdre?.Trim();
         var hasValidNumeroOrdre = !IsPlaceholderOrderNumber(numeroOrdre);
 
-        if (hasValidNumeroOrdre && !string.IsNullOrWhiteSpace(program.Annee))
-        {
-            return numeroOrdre!.Contains('/') ? numeroOrdre : $"{numeroOrdre}/{program.Annee}";
-        }
-
         if (hasValidNumeroOrdre)
         {
+            if (!string.IsNullOrWhiteSpace(program.Annee) && !numeroOrdre!.Contains('/'))
+            {
+                return $"{numeroOrdre}/{program.Annee}";
+            }
+
             return numeroOrdre!;
         }
 
@@ -939,6 +967,14 @@
         createSectionMessage = $"Patient existant sélectionné : {patient.Nom} {patient.Prenom}.";
     }
 
+    private void ClearSelectedExistingPatient()
+    {
+        selectedExistingPatient = null;
+        createSectionMessage = null;
+        existingPatientSearchPerformed = false;
+        existingPatients.Clear();
+    }
+
     private async Task SearchExistingPatients()
     {
         selectedExistingPatient = null;
@@ -1074,6 +1110,9 @@
             PrixTTC = 0,
             PrixSeanceTTC = 0
         };
+        selectedExistingPatient = null;
+        existingPatients.Clear();
+        existingPatientSearchPerformed = false;
         createSectionMessage = null;
     }
 

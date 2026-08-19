@@ -29,6 +29,7 @@ public static class DatabaseInitializer
         EnsureCabinetInfoTable(connection);
         EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
         EnsureColumnExists(connection, "cnam_bordereau_executed", "encaisse", "BOOLEAN DEFAULT FALSE");
+        EnsurePatientsCnamUniqueIndex(connection);
     }
 
     private static void EnsureCabinetsTable(NpgsqlConnection connection)
@@ -192,6 +193,21 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "cabinet_info", "nom_cabinet_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinet_info", "nom_kine_arabe", "TEXT");
         EnsureColumnExists(connection, "cabinet_info", "adresse_kine_arabe", "TEXT");
+    }
+
+    private static void EnsurePatientsCnamUniqueIndex(NpgsqlConnection connection)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_patients_cnam_unique
+            ON patients (
+                cabinet_id,
+                lower(trim(coalesce(racine, ''))),
+                lower(trim(coalesce(cle, ''))),
+                lower(trim(coalesce(qualite, '')))
+            )
+        ";
+        cmd.ExecuteNonQuery();
     }
 
     private static void EnsureColumnExists(NpgsqlConnection connection, string tableName, string columnName, string columnType)

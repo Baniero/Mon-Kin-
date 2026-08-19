@@ -468,6 +468,26 @@
             return titleY + 20;
         };
 
+        const renderPdfFooter = (doc) => {
+            const margin = 40;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const totalPages = typeof doc.getNumberOfPages === 'function'
+                ? doc.getNumberOfPages()
+                : (doc.internal && typeof doc.internal.getNumberOfPages === 'function' ? doc.internal.getNumberOfPages() : 1);
+            const footerY = pageHeight - 20;
+            const todayText = `Généré le ${new Date().toLocaleDateString('fr-FR')}`;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            for (let page = 1; page <= totalPages; page++) {
+                doc.setPage(page);
+                const footerText = `Page ${page} / ${totalPages}`;
+                doc.text(footerText, pageWidth / 2, footerY, { align: 'center' });
+                doc.text(todayText, margin, footerY);
+            }
+        };
+
         window.generateInvoicePdf = async (filename, data) => {
             console.log('generateInvoicePdf', filename, data);
             const jsPDFClass = await ensureJsPdfAvailable();
@@ -541,6 +561,7 @@
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
             doc.text('Merci de conserver cette facture pour le dossier CNAM.', margin, y);
+            renderPdfFooter(doc);
             doc.save(filename);
         };
 
@@ -689,32 +710,7 @@
             y += 24;
             doc.setFontSize(9);
             doc.text('Remarques :', margin, y);
-            doc.save(filename);
-        };
-
-        window.generateBordereauPdf = async (filename, data) => {
-            const jsPDFClass = await ensureJsPdfAvailable();
-            if (!jsPDFClass) {
-                throw new Error('jsPDF n\'est pas disponible. Vérifiez que le script jsPDF est chargé.');
-            }
-
-            const doc = new jsPDFClass({ unit: 'pt', format: 'a4' });
-            const margin = 40;
-            const iconDataUrl = await loadImageDataUrl('icon_caduceus.png');
-            let y = await renderPdfHeader(doc, data, 'BORDEREAU CNAM', iconDataUrl);
-            const formatNumber = (value) => Number(value ?? 0).toFixed(3);
-            const summary = data.summary ?? data.Summary ?? {};
-            const rows = data.rows ?? data.Rows ?? [];
-
-            doc.setFontSize(10);
-            doc.text(`Date : ${summary.Date ?? summary.date ?? ''}`, margin, y);
-            doc.text(`Centre : ${summary.Centre ?? summary.centre ?? ''}`, 260, y);
-            doc.text(`N° bordereau : ${summary.BordereauNumber ?? summary.bordereauNumber ?? ''}`, 520, y, { align: 'right' });
-            y += 16;
-            doc.text(`Année : ${summary.Annee ?? summary.annee ?? ''}`, margin, y);
-            doc.text(`Nb factures : ${summary.NbFactures ?? summary.nbFactures ?? 0}`, 260, y);
-            doc.text(`Montant total TTC : ${formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC)} DT`, 520, y, { align: 'right' });
-            y += 20;
+        renderPdfFooter(doc);
 
             doc.setLineWidth(0.5);
             doc.line(margin, y, 555, y);

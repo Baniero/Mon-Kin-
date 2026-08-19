@@ -27,6 +27,36 @@ public class PatientsController : ControllerBase
         return string.IsNullOrWhiteSpace(numeroAssuree) ? string.Empty : numeroAssuree.Trim();
     }
 
+    private static string NormalizeKeyValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
+    }
+
+    private static bool PatientExists(NpgsqlConnection connection, int? cabinetId, string? racine, string? cle, string? qualite, int? excludeId = null)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT 1
+            FROM patients
+            WHERE ((@cabinet_id IS NULL AND cabinet_id IS NULL) OR cabinet_id = @cabinet_id)
+              AND lower(trim(coalesce(racine, ''))) = @racine
+              AND lower(trim(coalesce(cle, ''))) = @cle
+              AND lower(trim(coalesce(qualite, ''))) = @qualite
+        ";
+        if (excludeId.HasValue)
+        {
+            cmd.CommandText += "\n            AND id <> @excludeId";
+            cmd.Parameters.AddWithValue("@excludeId", excludeId.Value);
+        }
+
+        cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.HasValue ? (object)cabinetId.Value : DBNull.Value);
+        cmd.Parameters.AddWithValue("@racine", NormalizeKeyValue(racine));
+        cmd.Parameters.AddWithValue("@cle", NormalizeKeyValue(cle));
+        cmd.Parameters.AddWithValue("@qualite", NormalizeKeyValue(qualite));
+
+        return cmd.ExecuteScalar() != null;
+    }
+
     [HttpGet]
     public ActionResult<IEnumerable<PatientDto>> GetAll()
     {
@@ -354,6 +384,11 @@ public class PatientsController : ControllerBase
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
+        if (PatientExists(conn, patient.CabinetId, patient.Racine, patient.Cle, patient.Qualite))
+        {
+            return Conflict("Un patient CNAM avec cette racine, clé et qualité existe déjà.");
+        }
+
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO patients (
@@ -385,6 +420,7 @@ public class PatientsController : ControllerBase
 
         var createdId = Convert.ToInt32(cmd.ExecuteScalar());
         patient.Id = createdId;
+        patient.NumeroAssuree = nAssureeValue;
 
         return CreatedAtAction(nameof(GetById), new { id = createdId }, patient);
     }
@@ -423,6 +459,11 @@ public class PatientsController : ControllerBase
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
+
+        if (PatientExists(conn, patient.CabinetId, patient.Racine, patient.Cle, patient.Qualite, id))
+        {
+            return Conflict("Un patient CNAM avec cette racine, clé et qualité existe déjà.");
+        }
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
