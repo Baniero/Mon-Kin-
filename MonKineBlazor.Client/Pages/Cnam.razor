@@ -512,6 +512,7 @@
                                         <td>@summary.ExecutedAt?.ToString("yyyy-MM-dd HH:mm")</td>
                                         <td>@(summary.IsEncaisse ? "Encaisse" : "Non encaissé")</td>
                                         <td>
+                                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowExecutedBordereau(summary.BordereauNumber)">Voir</button>
                                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ToggleEncaisseStatus(summary.BordereauNumber, !summary.IsEncaisse)">
                                                 @(summary.IsEncaisse ? "Décocher encaissé" : "Marquer encaissé")
                                             </button>
