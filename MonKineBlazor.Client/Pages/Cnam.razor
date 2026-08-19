@@ -25,26 +25,29 @@
     </div>
 </div>
 
-<div class="card section-card mb-4">
-    <div class="card-body">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label">Du</label>
-                <InputDate class="form-control" @bind-Value="cnamStart" />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Au</label>
-                <InputDate class="form-control" @bind-Value="cnamEnd" />
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary btn-icon w-100" @onclick="RefreshCurrentSection"><i class="bi bi-arrow-repeat"></i>Charger</button>
-            </div>
-            <div class="col-md-3 text-end">
-                <span class="badge-soft">Période active</span>
+@if (activeSection != CnamSection.Bordereau)
+{
+    <div class="card section-card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Du</label>
+                    <InputDate class="form-control" @bind-Value="cnamStart" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Au</label>
+                    <InputDate class="form-control" @bind-Value="cnamEnd" />
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-icon w-100" @onclick="RefreshCurrentSection"><i class="bi bi-arrow-repeat"></i>Charger</button>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span class="badge-soft">Période active</span>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 @if (activeSection == CnamSection.Recovery)
 {
@@ -387,6 +390,28 @@
             }
             else
             {
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Programme" @bind-Value="invoiceSearchProgramme" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Patient" @bind-Value="invoiceSearchPatient" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="N° assurée" @bind-Value="invoiceSearchNumeroAssuree" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Montant TTC" @bind-Value="invoiceSearchMontantTTC" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Date début" @bind-Value="invoiceSearchDateDebut" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Date fin" @bind-Value="invoiceSearchDateFin" />
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
@@ -401,7 +426,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var program in cnamPrograms)
+                            @foreach (var program in FilteredCnamPrograms)
                             {
                                 <tr class="@(selectedProgram?.ProgramId == program.ProgramId ? "table-primary" : string.Empty)">
                                     <td>@program.Titre</td>
@@ -447,11 +472,39 @@
             }
             else
             {
+                <div class="mb-3">
+                    <div class="row g-2">
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Patient" @bind-Value="bordereauSearchPatient" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Facture" @bind-Value="bordereauSearchFacture" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="N° assurée" @bind-Value="bordereauSearchNumeroAssuree" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Montant TTC" @bind-Value="bordereauSearchMontantTTC" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputText class="form-control" placeholder="Date facture" @bind-Value="bordereauSearchDateFacture" />
+                        </div>
+                        <div class="col-sm-2">
+                            <InputSelect class="form-select" @bind-Value="bordereauSearchEtat">
+                                <option value="">Tous états</option>
+                                <option value="OK">OK</option>
+                                <option value="Bloqué">Bloqué</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
                             <tr>
-                                <th></th>
+                                <th>
+                                    <input type="checkbox" checked="@IsAllVisibleBordereauSelected()" @onchange="OnToggleSelectAllBordereau" />
+                                </th>
                                 <th>Patient</th>
                                 <th>Facture</th>
                                 <th>N° assurée</th>
@@ -461,7 +514,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in cnamBordereau)
+                            @foreach (var row in FilteredCnamBordereau)
                             {
                                 <tr class="@GetBordereauRowClass(row)">
                                     <td>
@@ -586,9 +639,21 @@
     private CnamSection activeSection = CnamSection.Recovery;
     private List<CnamRecoveryDto> cnamRecovery = new();
     private List<CnamProgramInvoiceDto> cnamPrograms = new();
+    private string invoiceSearchProgramme = string.Empty;
+    private string invoiceSearchPatient = string.Empty;
+    private string invoiceSearchNumeroAssuree = string.Empty;
+    private string invoiceSearchMontantTTC = string.Empty;
+    private string invoiceSearchDateDebut = string.Empty;
+    private string invoiceSearchDateFin = string.Empty;
     private List<CnamBordereauEntryDto> cnamBordereau = new();
     private List<CnamBordereauEntryDto> cnamBordereauExecuted = new();
     private HashSet<int> selectedBordereauProgramIds = new();
+    private string bordereauSearchPatient = string.Empty;
+    private string bordereauSearchFacture = string.Empty;
+    private string bordereauSearchNumeroAssuree = string.Empty;
+    private string bordereauSearchMontantTTC = string.Empty;
+    private string bordereauSearchDateFacture = string.Empty;
+    private string bordereauSearchEtat = string.Empty;
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
     private PatientDto createPatient = new() { Couverture = "CNAM", Age = 0 };
@@ -1318,9 +1383,24 @@
         }
     }
 
+    private IEnumerable<CnamProgramInvoiceDto> FilteredCnamPrograms => cnamPrograms.Where(program =>
+        (string.IsNullOrWhiteSpace(invoiceSearchProgramme) || (program.Titre ?? string.Empty).Contains(invoiceSearchProgramme, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(invoiceSearchPatient) || (program.PatientName ?? string.Empty).Contains(invoiceSearchPatient, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(invoiceSearchNumeroAssuree) || (program.NumeroAssuree ?? string.Empty).Contains(invoiceSearchNumeroAssuree, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(invoiceSearchMontantTTC) || (program.PrixTTC.ToString("F2") ?? string.Empty).Contains(invoiceSearchMontantTTC, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(invoiceSearchDateDebut) || (program.DateDebut?.ToString("yyyy-MM-dd") ?? string.Empty).Contains(invoiceSearchDateDebut, StringComparison.OrdinalIgnoreCase) || (program.DateDebut?.ToString("dd/MM/yyyy") ?? string.Empty).Contains(invoiceSearchDateDebut, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(invoiceSearchDateFin) || (program.DateFin?.ToString("yyyy-MM-dd") ?? string.Empty).Contains(invoiceSearchDateFin, StringComparison.OrdinalIgnoreCase) || (program.DateFin?.ToString("dd/MM/yyyy") ?? string.Empty).Contains(invoiceSearchDateFin, StringComparison.OrdinalIgnoreCase))
+    );
+
     private async Task LoadCnamBordereau()
     {
         selectedBordereauProgramIds.Clear();
+        bordereauSearchPatient = string.Empty;
+        bordereauSearchFacture = string.Empty;
+        bordereauSearchNumeroAssuree = string.Empty;
+        bordereauSearchMontantTTC = string.Empty;
+        bordereauSearchDateFacture = string.Empty;
+        bordereauSearchEtat = string.Empty;
 
         try
         {
@@ -1806,6 +1886,41 @@
     }
 
     private bool IsSelectedBordereau(int programId) => selectedBordereauProgramIds.Contains(programId);
+
+    private bool IsAllVisibleBordereauSelected()
+    {
+        var visibleRows = FilteredCnamBordereau.Where(r => !IsBordereauRowBlocked(r)).ToList();
+        return visibleRows.Any() && visibleRows.All(r => selectedBordereauProgramIds.Contains(r.ProgramId));
+    }
+
+    private void OnToggleSelectAllBordereau(ChangeEventArgs args)
+    {
+        var isChecked = args.Value is bool value && value;
+        var visibleRows = FilteredCnamBordereau.Where(r => !IsBordereauRowBlocked(r)).ToList();
+        if (isChecked)
+        {
+            foreach (var row in visibleRows)
+            {
+                selectedBordereauProgramIds.Add(row.ProgramId);
+            }
+        }
+        else
+        {
+            foreach (var row in visibleRows)
+            {
+                selectedBordereauProgramIds.Remove(row.ProgramId);
+            }
+        }
+    }
+
+    private IEnumerable<CnamBordereauEntryDto> FilteredCnamBordereau => cnamBordereau.Where(row =>
+        (string.IsNullOrWhiteSpace(bordereauSearchPatient) || (row.PatientName ?? string.Empty).Contains(bordereauSearchPatient, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(bordereauSearchFacture) || (row.FactureNumber ?? string.Empty).Contains(bordereauSearchFacture, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(bordereauSearchNumeroAssuree) || (row.NumeroAssuree ?? string.Empty).Contains(bordereauSearchNumeroAssuree, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(bordereauSearchMontantTTC) || (row.TotalTTC.ToString("F2") ?? string.Empty).Contains(bordereauSearchMontantTTC, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(bordereauSearchDateFacture) || (row.DateFacture?.ToString("yyyy-MM-dd") ?? string.Empty).Contains(bordereauSearchDateFacture, StringComparison.OrdinalIgnoreCase) || (row.DateFacture?.ToString("dd/MM/yyyy") ?? string.Empty).Contains(bordereauSearchDateFacture, StringComparison.OrdinalIgnoreCase)) &&
+        (string.IsNullOrWhiteSpace(bordereauSearchEtat) || (IsBordereauRowBlocked(row) ? "Bloqué" : "OK").Equals(bordereauSearchEtat, StringComparison.OrdinalIgnoreCase))
+    );
 
     private bool IsBordereauRowBlocked(CnamBordereauEntryDto row)
     {
