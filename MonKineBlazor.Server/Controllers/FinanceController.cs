@@ -996,7 +996,6 @@ public class FinanceController : ControllerBase
                 WHERE pp.id = @programId
                   AND COALESCE(p.couverture, '') <> ''
                   AND COALESCE(p.n_assuree, '') <> ''
-                  AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= CURRENT_DATE)
                   AND NOT EXISTS (
                       SELECT 1 FROM cnam_bordereau_executed e WHERE e.program_id = pp.id
                   )
@@ -1208,7 +1207,6 @@ public class FinanceController : ControllerBase
             WHERE pp.id = ANY(@programIds)
               AND COALESCE(p.couverture, '') <> ''
               AND COALESCE(p.n_assuree, '') <> ''
-              AND (pp.date_fin IS NULL OR DATE(pp.date_fin) <= CURRENT_DATE)
               AND e.program_id IS NULL
         ";
         if (!IsAdmin())

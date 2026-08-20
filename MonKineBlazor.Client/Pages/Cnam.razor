@@ -2106,7 +2106,7 @@
         return IsBordereauRowBlocked(row) ? "table-danger" : string.Empty;
     }
 
-    private bool HasSelectedBordereau => selectedBordereauProgramIds.Any(id => cnamBordereau.Any(r => r.ProgramId == id && !IsBordereauRowBlocked(r)));
+    private bool HasSelectedBordereau => selectedBordereauProgramIds.Any();
 
     private void ClearBordereauSelection()
     {
