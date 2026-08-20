@@ -13,7 +13,16 @@
 }
 @if (!string.IsNullOrEmpty(successMessage))
 {
-    <div class="alert alert-success">@successMessage</div>
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+        <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    @successMessage
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissSuccessMessage"></button>
+            </div>
+        </div>
+    </div>
 }
 
 <div class="mb-4">
@@ -639,6 +648,7 @@
 @code {
     private string? errorMessage;
     private string? successMessage;
+    private CancellationTokenSource? successMessageCts;
     private CnamSection activeSection = CnamSection.Recovery;
     private List<CnamRecoveryDto> cnamRecovery = new();
     private List<CnamProgramInvoiceDto> cnamPrograms = new();
@@ -1048,7 +1058,7 @@
         }
 
         await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
-        createSectionMessage = "Patient et programme CNAM créés avec succès. Facture et fiche signature générées.";
+        await ShowSuccessMessage("Patient et programme CNAM créés avec succès. Facture et fiche signature générées.");
         await LoadCnamPrograms();
     }
     finally
@@ -1083,8 +1093,33 @@
         }
 
         await GenerateInvoiceAndSignatureAsync(patient, createdProgram);
-        createSectionMessage = "Programme CNAM créé avec succès pour le patient existant. Facture et fiche signature générées.";
+        await ShowSuccessMessage("Programme CNAM créé avec succès pour le patient existant. Facture et fiche signature générées.");
         await LoadCnamPrograms();
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        successMessageCts?.Cancel();
+        successMessage = message;
+        StateHasChanged();
+
+        successMessageCts = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(5000, successMessageCts.Token);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (TaskCanceledException)
+        {
+            // Ignorer l'annulation lorsque l'utilisateur ferme manuellement.
+        }
+    }
+
+    private void DismissSuccessMessage()
+    {
+        successMessageCts?.Cancel();
+        successMessage = null;
     }
 
     private async Task SelectExistingPatient(PatientDto patient)
