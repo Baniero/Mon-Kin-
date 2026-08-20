@@ -687,6 +687,14 @@
         try
         {
             patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
+            var excludedPlanifieCount = patientPrograms.Count(p => string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase));
+            patientPrograms = patientPrograms
+                .Where(p => !string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (excludedPlanifieCount > 0)
+            {
+                programInfoMessage = $"{excludedPlanifieCount} programme(s) en statut planifié ont été exclus de la liste.";
+            }
             ApplyProgramSchedulingFilter(patientId);
             if (previousProgramId.HasValue)
             {
@@ -738,7 +746,6 @@
 
     private void ApplyProgramSchedulingFilter(int patientId)
     {
-        programInfoMessage = null;
         if (appointments == null || !appointments.Any())
         {
             return;
@@ -764,7 +771,8 @@
         var hiddenCount = initialCount - patientPrograms.Count;
         if (hiddenCount > 0)
         {
-            programInfoMessage = $"{hiddenCount} programme(s) déjà planifié(s) ont été exclus de la liste.";
+            var prefix = string.IsNullOrWhiteSpace(programInfoMessage) ? string.Empty : programInfoMessage + " ";
+            programInfoMessage = $"{prefix}{hiddenCount} programme(s) déjà planifié(s) ont été exclus de la liste.";
         }
     }
 
