@@ -1482,6 +1482,67 @@
         }
     }
 
+    private async Task ExportProgramInvoicePdf(CnamProgramInvoiceDto program)
+    {
+        if (program == null)
+        {
+            errorMessage = "Programme invalide pour l'export PDF.";
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        var montantHT = program.PrixTTC / 1.07m;
+        var montantTVA = program.PrixTTC - montantHT;
+
+        var pdfData = new
+        {
+            cabinet = cabinetInfo,
+            invoiceNumber = program.FactureNumber,
+            invoiceDate = DateTime.Today.ToString("yyyy-MM-dd"),
+            program = new
+            {
+                program.ProgramId,
+                program.PatientId,
+                program.PatientName,
+                program.CodePatient,
+                program.NumeroAssuree,
+                program.Couverture,
+                program.Qualite,
+                program.Titre,
+                program.NatureSeances,
+                program.DateDebut,
+                program.DateFin,
+                program.NbSeances,
+                program.DureeSeanceMinutes,
+                program.PrixUnitaire,
+                program.PrixTTC,
+                program.CodeBureau,
+                program.Annee,
+                program.NumeroDecision,
+                program.NumeroOrdre,
+                program.FactureNumber,
+                MontantHT = montantHT,
+                MontantTVA = montantTVA
+            }
+        };
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("generateInvoicePdf", $"facture_cnam_{program.ProgramId}_{DateTime.Today:yyyyMMdd}.pdf", pdfData);
+            successMessage = "Facture PDF générée.";
+        }
+        catch (JSException jsEx)
+        {
+            errorMessage = $"Erreur PDF : {jsEx.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur lors de l'export PDF : {ex.Message}";
+        }
+    }
+
     private async Task ExportBordereauPdf()
     {
         if (!HasSelectedBordereau)
