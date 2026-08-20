@@ -603,7 +603,7 @@
             if (Number.isNaN(number)) {
                 return '0.00';
             }
-            return number.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return number.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\u202F|\u00A0/g, ' ');
         };
 
         window.generateBordereauPdf = async (filename, data) => {
