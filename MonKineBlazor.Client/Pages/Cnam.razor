@@ -7,21 +7,31 @@
 
 <h1>CNAM</h1>
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger">@errorMessage</div>
-}
-@if (!string.IsNullOrEmpty(successMessage))
+@if (!string.IsNullOrEmpty(errorMessage) || !string.IsNullOrEmpty(successMessage))
 {
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
-        <div class="toast show align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    @successMessage
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="toast show align-items-center text-white bg-success border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        @successMessage
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissSuccessMessage"></button>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissSuccessMessage"></button>
             </div>
-        </div>
+        }
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="toast show align-items-center text-white bg-danger border-0" role="alert" aria-live="polite" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        @errorMessage
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close" @onclick="DismissErrorMessage"></button>
+                </div>
+            </div>
+        }
     </div>
 }
 
@@ -390,7 +400,17 @@
     <div class="card section-card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Facture séance CNAM</span>
-            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCnamPrograms">Rafraîchir</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCnamPrograms" disabled="@(isLoadingPrograms)">
+                @if (isLoadingPrograms)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <text>Chargement</text>
+                }
+                else
+                {
+                    <text>Rafraîchir</text>
+                }
+            </button>
         </div>
         <div class="card-body">
             @if (!cnamPrograms.Any())
@@ -421,6 +441,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="text-muted">Résultats : @FilteredCnamPrograms.Count()</div>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ClearInvoiceFilters">Effacer les filtres</button>
+                </div>
+                @if (isLoadingPrograms)
+                {
+                    <div class="alert alert-info">Chargement des factures en cours...</div>
+                }
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
@@ -475,7 +503,17 @@
     <div class="card section-card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Bordereau CNAM</span>
-            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCnamBordereau">Rafraîchir</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="LoadCnamBordereau" disabled="@(isLoadingBordereau)">
+                @if (isLoadingBordereau)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    <text>Chargement</text>
+                }
+                else
+                {
+                    <text>Rafraîchir</text>
+                }
+            </button>
         </div>
         <div class="card-body">
             @if (!cnamBordereau.Any())
@@ -510,6 +548,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="text-muted">Résultats : @FilteredCnamBordereau.Count()</div>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ClearBordereauFilters">Effacer les filtres</button>
+                </div>
+                @if (isLoadingBordereau)
+                {
+                    <div class="alert alert-info">Chargement du bordereau en cours...</div>
+                }
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
@@ -658,15 +704,18 @@
     private string invoiceSearchMontantTTC = string.Empty;
     private string invoiceSearchDateDebut = string.Empty;
     private string invoiceSearchDateFin = string.Empty;
-    private List<CnamBordereauEntryDto> cnamBordereau = new();
-    private List<CnamBordereauEntryDto> cnamBordereauExecuted = new();
-    private HashSet<int> selectedBordereauProgramIds = new();
     private string bordereauSearchPatient = string.Empty;
     private string bordereauSearchFacture = string.Empty;
     private string bordereauSearchNumeroAssuree = string.Empty;
     private string bordereauSearchMontantTTC = string.Empty;
     private string bordereauSearchDateFacture = string.Empty;
     private string bordereauSearchEtat = string.Empty;
+    private bool isLoadingRecovery;
+    private bool isLoadingPrograms;
+    private bool isLoadingBordereau;
+    private List<CnamBordereauEntryDto> cnamBordereau = new();
+    private List<CnamBordereauEntryDto> cnamBordereauExecuted = new();
+    private HashSet<int> selectedBordereauProgramIds = new();
     private CnamProgramInvoiceDto? selectedProgram;
     private CabinetInfoDto cabinetInfo = new();
     private PatientDto createPatient = new() { Couverture = "CNAM", Age = 0 };
@@ -1122,6 +1171,31 @@
         successMessage = null;
     }
 
+    private void DismissErrorMessage()
+    {
+        errorMessage = null;
+    }
+
+    private void ClearInvoiceFilters()
+    {
+        invoiceSearchProgramme = string.Empty;
+        invoiceSearchPatient = string.Empty;
+        invoiceSearchNumeroAssuree = string.Empty;
+        invoiceSearchMontantTTC = string.Empty;
+        invoiceSearchDateDebut = string.Empty;
+        invoiceSearchDateFin = string.Empty;
+    }
+
+    private void ClearBordereauFilters()
+    {
+        bordereauSearchPatient = string.Empty;
+        bordereauSearchFacture = string.Empty;
+        bordereauSearchNumeroAssuree = string.Empty;
+        bordereauSearchMontantTTC = string.Empty;
+        bordereauSearchDateFacture = string.Empty;
+        bordereauSearchEtat = string.Empty;
+    }
+
     private async Task SelectExistingPatient(PatientDto patient)
     {
         selectedExistingPatient = patient;
@@ -1399,6 +1473,8 @@
 
     private async Task LoadCnamRecovery()
     {
+        errorMessage = null;
+        isLoadingRecovery = true;
         try
         {
             cnamRecovery = await Http.GetFromJsonAsync<List<CnamRecoveryDto>>($"api/finance/cnam-recovery?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamRecoveryDto>();
@@ -1407,10 +1483,16 @@
         {
             errorMessage = ex.Message;
         }
+        finally
+        {
+            isLoadingRecovery = false;
+        }
     }
 
     private async Task LoadCnamPrograms()
     {
+        selectedProgram = null;
+        isLoadingPrograms = true;
         try
         {
             cnamPrograms = await Http.GetFromJsonAsync<List<CnamProgramInvoiceDto>>($"api/finance/cnam-programs?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamProgramInvoiceDto>();
@@ -1418,6 +1500,10 @@
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoadingPrograms = false;
         }
     }
 
@@ -1433,13 +1519,8 @@
     private async Task LoadCnamBordereau()
     {
         selectedBordereauProgramIds.Clear();
-        bordereauSearchPatient = string.Empty;
-        bordereauSearchFacture = string.Empty;
-        bordereauSearchNumeroAssuree = string.Empty;
-        bordereauSearchMontantTTC = string.Empty;
-        bordereauSearchDateFacture = string.Empty;
-        bordereauSearchEtat = string.Empty;
 
+        isLoadingBordereau = true;
         try
         {
             cnamBordereau = await Http.GetFromJsonAsync<List<CnamBordereauEntryDto>>($"api/finance/cnam-bordereau?start={cnamStart:yyyy-MM-dd}&end={cnamEnd:yyyy-MM-dd}") ?? new List<CnamBordereauEntryDto>();
@@ -1448,6 +1529,10 @@
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoadingBordereau = false;
         }
     }
 
