@@ -706,6 +706,7 @@ public class FinanceController : ControllerBase
                 {
                     ProgramId = item.ProgramId,
                     FactureNumber = $"{currentSequence:000}/{year}",
+                    DateDebut = item.DateDebut,
                     DateFacture = item.DateDebut,
                     DateFin = item.DateFin,
                     CodePatient = item.CodePatient,

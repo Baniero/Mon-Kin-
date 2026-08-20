@@ -225,6 +225,7 @@ public class CnamBordereauEntryDto
     public int ProgramId { get; set; }
     public int? BordereauNumber { get; set; }
     public string? FactureNumber { get; set; }
+    public DateTime? DateDebut { get; set; }
     public DateTime? DateFacture { get; set; }
     public DateTime? DateFin { get; set; }
     public string? CodePatient { get; set; }

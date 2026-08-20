@@ -565,6 +565,8 @@
                                 </th>
                                 <th>Patient</th>
                                 <th>Facture</th>
+                                <th>Date début</th>
+                                <th>Date fin</th>
                                 <th>N° assurée</th>
                                 <th>Montant TTC</th>
                                 <th>Date facture</th>
@@ -576,13 +578,14 @@
                             {
                                 <tr class="@GetBordereauRowClass(row)">
                                     <td>
-                                        <input type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" @onchange="args => ToggleBordereauSelection(row.ProgramId, args)" disabled="@(IsBordereauRowBlocked(row))" />
+                                        <input type="checkbox" checked="@IsSelectedBordereau(row.ProgramId)" @onchange="args => ToggleBordereauSelection(row.ProgramId, args)" />
                                     </td>
                                     <td>@row.PatientName</td>
                                     <td>@row.FactureNumber</td>
+                                    <td>@row.DateDebut?.ToString("yyyy-MM-dd")</td>
+                                    <td>@row.DateFin?.ToString("yyyy-MM-dd")</td>
                                     <td>@row.NumeroAssuree</td>
                                     <td>@(row.TotalTTC.ToString("F2")) DT</td>
-                                    <td>@row.DateFacture?.ToString("yyyy-MM-dd")</td>
                                     <td>@(IsBordereauRowBlocked(row) ? "Bloqué" : "OK")</td>
                                 </tr>
                             }
@@ -2010,19 +2013,12 @@
 
     private async Task ExecuteSelectedBordereau()
     {
-        var selectedProgramIds = selectedBordereauProgramIds
-            .Where(id => cnamBordereau.Any(r => r.ProgramId == id && !IsBordereauRowBlocked(r)))
-            .ToList();
+        var selectedProgramIds = selectedBordereauProgramIds.ToList();
 
         if (!selectedProgramIds.Any())
         {
             errorMessage = "Sélectionnez au moins une facture à exécuter.";
             return;
-        }
-
-        if (selectedProgramIds.Count != selectedBordereauProgramIds.Count)
-        {
-            errorMessage = "Les programmes non terminés ont été exclus de la sélection.";
         }
 
         errorMessage = null;
@@ -2053,12 +2049,6 @@
     private void ToggleBordereauSelection(int programId, ChangeEventArgs args)
     {
         var isChecked = args.Value is bool value && value;
-        var row = cnamBordereau.FirstOrDefault(r => r.ProgramId == programId);
-        if (isChecked && row != null && IsBordereauRowBlocked(row))
-        {
-            return;
-        }
-
         if (isChecked)
         {
             selectedBordereauProgramIds.Add(programId);
@@ -2073,14 +2063,14 @@
 
     private bool IsAllVisibleBordereauSelected()
     {
-        var visibleRows = FilteredCnamBordereau.Where(r => !IsBordereauRowBlocked(r)).ToList();
+        var visibleRows = FilteredCnamBordereau.ToList();
         return visibleRows.Any() && visibleRows.All(r => selectedBordereauProgramIds.Contains(r.ProgramId));
     }
 
     private void OnToggleSelectAllBordereau(ChangeEventArgs args)
     {
         var isChecked = args.Value is bool value && value;
-        var visibleRows = FilteredCnamBordereau.Where(r => !IsBordereauRowBlocked(r)).ToList();
+        var visibleRows = FilteredCnamBordereau.ToList();
         if (isChecked)
         {
             foreach (var row in visibleRows)
