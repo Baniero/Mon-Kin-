@@ -436,7 +436,10 @@
                                     <td>@program.DateDebut?.ToString("yyyy-MM-dd")</td>
                                     <td>@program.DateFin?.ToString("yyyy-MM-dd")</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectProgram(program)">Sélectionner</button>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SelectProgram(program)">Sélectionner</button>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => ExportProgramInvoicePdf(program)">PDF</button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
