@@ -278,6 +278,7 @@ public class CabinetInfoDto
     public string? AdresseKineArabe { get; set; }
     public string? Telephone { get; set; }
     public string? Rib { get; set; }
+    public decimal PrixSeanceTTC { get; set; }
 }
 
 public class CabinetInfoRequestDto

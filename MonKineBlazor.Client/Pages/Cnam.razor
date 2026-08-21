@@ -345,16 +345,16 @@
                     <InputText class="form-control" @bind-Value="createProgram.NumeroDecision" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">N° ordre</label>
-                    <InputText class="form-control" @bind-Value="createProgram.NumeroOrdre" />
-                </div>
-                <div class="col-md-3">
                     <label class="form-label">Prix séance TTC</label>
                     <InputNumber class="form-control" step="0.001" @bind-Value="createProgram.PrixSeanceTTC" @onchange="_ => RecalculateCreateProgram()" />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Prix TTC</label>
                     <InputNumber class="form-control" step="0.001" @bind-Value="createProgram.PrixTTC" disabled />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Espèce</label>
+                    <InputNumber class="form-control" step="0.001" @bind-Value="createProgram.PrixEspece" />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">TVA (%)</label>
@@ -841,9 +841,16 @@
                     NomKineArabe = cabinet.NomKineArabe,
                     AdresseKineArabe = cabinet.AdresseKineArabe,
                     Telephone = cabinet.Telephone,
-                    Rib = cabinet.Rib
+                    Rib = cabinet.Rib,
+                    PrixSeanceTTC = cabinet.PrixSeanceTTC
                 }
                 : new CabinetInfoDto();
+
+            if (cabinetInfo.PrixSeanceTTC > 0)
+            {
+                createProgram.PrixSeanceTTC = cabinetInfo.PrixSeanceTTC;
+                RecalculateCreateProgram();
+            }
         }
         catch (Exception ex)
         {
@@ -1293,9 +1300,9 @@
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(createPatient.Cle) || createPatient.Cle.Trim().Length < 2)
+        if (string.IsNullOrWhiteSpace(createPatient.Cle))
         {
-            validationMessage = "La clé CNAM est requise et doit contenir au moins 2 caractères.";
+            validationMessage = "La clé CNAM est requise.";
             return false;
         }
 
@@ -1466,7 +1473,7 @@
             PrixHT = 0,
             MontantTVA = 0,
             PrixTTC = 0,
-            PrixSeanceTTC = 0
+            PrixSeanceTTC = cabinetInfo.PrixSeanceTTC > 0 ? cabinetInfo.PrixSeanceTTC : 0
         };
         selectedExistingPatient = null;
         existingPatients.Clear();
