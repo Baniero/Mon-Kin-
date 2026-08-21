@@ -112,6 +112,7 @@ public static class DatabaseInitializer
                 active BOOLEAN DEFAULT TRUE,
                 password_hash TEXT,
                 cabinet_id INTEGER REFERENCES cabinets(id),
+                allowed_modules TEXT,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         ";
@@ -119,6 +120,7 @@ public static class DatabaseInitializer
 
         EnsureColumnExists(connection, "users", "password_hash", "TEXT");
         EnsureColumnExists(connection, "users", "cabinet_id", "INTEGER REFERENCES cabinets(id)");
+        EnsureColumnExists(connection, "users", "allowed_modules", "TEXT");
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection, int adminCabinetId)

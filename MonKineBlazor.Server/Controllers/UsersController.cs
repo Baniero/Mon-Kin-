@@ -21,6 +21,32 @@ public class UsersController : ControllerBase
         return currentUser != null && (currentUser.Role == "admin" || currentUser.Id == id);
     }
 
+    private static List<string> ParseAllowedModules(string? modulesJson)
+    {
+        if (string.IsNullOrWhiteSpace(modulesJson))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<string>>(modulesJson) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    private static string SerializeAllowedModules(IEnumerable<string>? modules)
+    {
+        if (modules == null)
+        {
+            return "[]";
+        }
+        return System.Text.Json.JsonSerializer.Serialize(modules.Distinct().Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => m.Trim()).ToList());
+    }
+
     [HttpGet]
     public ActionResult<IEnumerable<UserDto>> GetAll()
     {
@@ -38,7 +64,7 @@ public class UsersController : ControllerBase
         if (currentUser.Role == "admin")
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]')
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 ORDER BY u.full_name, u.username
@@ -47,7 +73,7 @@ public class UsersController : ControllerBase
         else if (currentUser.CabinetId.HasValue)
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]')
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 WHERE u.cabinet_id = @cabinet_id
@@ -72,7 +98,8 @@ public class UsersController : ControllerBase
                 Active = reader.GetBoolean(4),
                 CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
                 CabinetName = reader.GetString(6),
-                Telephone = reader.IsDBNull(7) ? null : reader.GetString(7)
+                Telephone = reader.IsDBNull(7) ? null : reader.GetString(7),
+                Modules = ParseAllowedModules(reader.GetString(8))
             });
         }
 
@@ -141,7 +168,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone, COALESCE(allowed_modules, '[]')
             FROM users
             WHERE id = @id
         ";
@@ -167,7 +194,8 @@ public class UsersController : ControllerBase
             Role = reader.GetString(3),
             Active = reader.GetBoolean(4),
             CabinetId = targetCabinetId,
-            Telephone = reader.IsDBNull(6) ? null : reader.GetString(6)
+            Telephone = reader.IsDBNull(6) ? null : reader.GetString(6),
+            Modules = ParseAllowedModules(reader.GetString(7))
         });
     }
 
@@ -201,8 +229,8 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id, telephone)
-            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id, @telephone)
+            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id, telephone, allowed_modules)
+            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id, @telephone, @allowed_modules)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@username", request.Username);
@@ -212,6 +240,7 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@password_hash", passwordHash);
         cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@telephone", (object?)request.Telephone ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@allowed_modules", SerializeAllowedModules(request.Modules));
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());
         return CreatedAtAction(nameof(GetById), new { id }, new UserDto
@@ -221,7 +250,8 @@ public class UsersController : ControllerBase
             FullName = request.FullName,
             Role = request.Role ?? "kine",
             Active = request.Active,
-            Telephone = request.Telephone
+            Telephone = request.Telephone,
+            Modules = request.Modules
         });
     }
 
@@ -252,7 +282,8 @@ public class UsersController : ControllerBase
                 role = @role,
                 active = @active,
                 cabinet_id = @cabinet_id,
-                telephone = @telephone";
+                telephone = @telephone,
+                allowed_modules = @allowed_modules";
 
         if (!string.IsNullOrWhiteSpace(request.Password))
         {
@@ -276,6 +307,8 @@ public class UsersController : ControllerBase
             var newHash = PasswordHasher.Hash(request.Password);
             cmd.Parameters.AddWithValue("@password_hash", newHash);
         }
+
+        cmd.Parameters.AddWithValue("@allowed_modules", SerializeAllowedModules(request.Modules));
 
         var rows = cmd.ExecuteNonQuery();
         return rows == 0 ? NotFound() : NoContent();
@@ -334,7 +367,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash, cabinet_id, telephone
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), password_hash, cabinet_id, telephone, COALESCE(allowed_modules, '[]')
             FROM users
             WHERE username = @username
         ";
@@ -354,6 +387,7 @@ public class UsersController : ControllerBase
         var passwordHash = reader.IsDBNull(5) ? string.Empty : reader.GetString(5);
         int? cabinetId = reader.IsDBNull(6) ? null : reader.GetInt32(6);
         var telephone = reader.IsDBNull(7) ? null : reader.GetString(7);
+        var modules = ParseAllowedModules(reader.GetString(8));
 
         if (!active || string.IsNullOrWhiteSpace(passwordHash) || !PasswordHasher.Verify(passwordHash, request.Password))
         {
@@ -368,7 +402,8 @@ public class UsersController : ControllerBase
             Role = role,
             Active = active,
             CabinetId = cabinetId,
-            Telephone = telephone
+            Telephone = telephone,
+            Modules = modules
         });
     }
 }

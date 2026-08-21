@@ -41,6 +41,22 @@ else
                             <label class="form-label">Mot de passe</label>
                             <InputText type="password" class="form-control" @bind-Value="newUser.Password" />
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Modules autorisés</label>
+                            <div class="row">
+                                @foreach (var module in moduleOptions)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@newUser.Modules.Contains(module.Id)"
+                                                   @onchange="() => ToggleModule(newUser.Modules, module.Id)" />
+                                            <label class="form-check-label">@module.Label</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                         <div class="form-check mb-3">
                             <InputCheckbox class="form-check-input" @bind-Value="newUser.Active" />
                             <label class="form-check-label">Actif</label>
@@ -51,6 +67,58 @@ else
             </div>
         </div>
     </div>
+
+    @if (editingUser is not null)
+    {
+        <div class="card mb-4">
+            <div class="card-header">Modifier l'utilisateur</div>
+            <div class="card-body">
+                <EditForm Model="editingUser" OnValidSubmit="UpdateUser">
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur</label>
+                        <InputText class="form-control" @bind-Value="editingUser.Username" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nom complet</label>
+                        <InputText class="form-control" @bind-Value="editingUser.FullName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rôle</label>
+                        <InputSelect class="form-select" @bind-Value="editingUser.Role">
+                            <option value="kine">Kiné</option>
+                            <option value="admin">Admin</option>
+                        </InputSelect>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe</label>
+                        <InputText type="password" class="form-control" @bind-Value="editingUser.Password" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Modules autorisés</label>
+                        <div class="row">
+                            @foreach (var module in moduleOptions)
+                            {
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input"
+                                               checked="@editingUser.Modules.Contains(module.Id)"
+                                               @onchange="() => ToggleModule(editingUser.Modules, module.Id)" />
+                                        <label class="form-check-label">@module.Label</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <InputCheckbox class="form-check-input" @bind-Value="editingUser.Active" />
+                        <label class="form-check-label">Actif</label>
+                    </div>
+                    <button class="btn btn-primary me-2" type="submit">Enregistrer</button>
+                    <button class="btn btn-secondary" type="button" @onclick="CancelEdit">Annuler</button>
+                </EditForm>
+            </div>
+        </div>
+    }
 
     <div class="card">
         <div class="card-header">Liste des utilisateurs</div>
@@ -63,6 +131,8 @@ else
                             <th>Nom complet</th>
                             <th>Rôle</th>
                             <th>Actif</th>
+                            <th>Modules</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,6 +143,10 @@ else
                                 <td>@user.FullName</td>
                                 <td>@user.Role</td>
                                 <td>@(user.Active ? "Oui" : "Non")</td>
+                                <td>@string.Join(", ", user.Modules)</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditUser(user)">Modifier</button>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -86,6 +160,16 @@ else
     private string? errorMessage;
     private List<UserDto> users = new();
     private UserCreateRequestDto newUser = new() { Role = "kine", Active = true };
+    private UserUpdateRequestDto? editingUser;
+
+    private readonly List<ModuleOption> moduleOptions = new()
+    {
+        new("cnam", "CNAM"),
+        new("agenda", "Agenda"),
+        new("finance", "Finance"),
+        new("patients", "Patients"),
+        new("settings", "Paramètres")
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -126,6 +210,77 @@ else
         catch (Exception ex)
         {
             errorMessage = ex.Message;
+        }
+    }
+
+    private void ToggleModule(List<string> modules, string moduleId)
+    {
+        if (modules.Contains(moduleId))
+        {
+            modules.Remove(moduleId);
+        }
+        else
+        {
+            modules.Add(moduleId);
+        }
+    }
+
+    private void ShowEditUser(UserDto user)
+    {
+        editingUser = new UserUpdateRequestDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = user.FullName,
+            Role = user.Role,
+            Active = user.Active,
+            CabinetId = user.CabinetId,
+            Telephone = user.Telephone,
+            Modules = user.Modules.ToList()
+        };
+    }
+
+    private async Task UpdateUser()
+    {
+        if (editingUser == null)
+        {
+            return;
+        }
+
+        errorMessage = null;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/users/{editingUser.Id}", editingUser);
+            if (response.IsSuccessStatusCode)
+            {
+                editingUser = null;
+                await LoadUsers();
+            }
+            else
+            {
+                errorMessage = "Impossible de mettre à jour l'utilisateur.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingUser = null;
+    }
+
+    public class ModuleOption
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+
+        public ModuleOption(string id, string label)
+        {
+            Id = id;
+            Label = label;
         }
     }
 }
