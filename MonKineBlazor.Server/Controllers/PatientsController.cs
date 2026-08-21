@@ -62,6 +62,22 @@ public class PatientsController : ControllerBase
         return cmd.ExecuteScalar() != null;
     }
 
+    private static string GenerateNextCodePatient(NpgsqlConnection connection, int? cabinetId)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            SELECT MAX(CAST(REGEXP_REPLACE(COALESCE(code_patient, ''), '^P([0-9]+)$', '\1') AS INTEGER))
+            FROM patients
+            WHERE ((@cabinet_id IS NULL AND cabinet_id IS NULL) OR cabinet_id = @cabinet_id)
+              AND code_patient ~ '^P[0-9]+$'
+        ";
+        cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.HasValue ? (object)cabinetId.Value : DBNull.Value);
+
+        var result = cmd.ExecuteScalar();
+        var maxValue = result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
+        return $"P{maxValue + 1}";
+    }
+
     [HttpGet]
     public ActionResult<IEnumerable<PatientDto>> GetAll()
     {
@@ -467,6 +483,8 @@ public class PatientsController : ControllerBase
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
+        patient.CodePatient = GenerateNextCodePatient(conn, patient.CabinetId);
+
         if (PatientExists(conn, patient.CabinetId, patient.Racine, patient.Cle, patient.Qualite))
         {
             return Conflict("Un patient CNAM avec cette racine, clé et qualité existe déjà.");
@@ -547,7 +565,7 @@ public class PatientsController : ControllerBase
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
-
+        patient.CodePatient = GenerateNextCodePatient(conn, patient.CabinetId);
         if (PatientExists(conn, patient.CabinetId, patient.Racine, patient.Cle, patient.Qualite, id))
         {
             return Conflict("Un patient CNAM avec cette racine, clé et qualité existe déjà.");
