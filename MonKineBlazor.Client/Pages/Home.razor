@@ -1,6 +1,7 @@
 ﻿@page "/"
 @attribute [AllowAnonymous]
 @using MonKineBlazor.Shared.Models
+@using System.Globalization
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject MonKineBlazor.Client.Services.AuthService AuthService
@@ -120,11 +121,17 @@ else
                     <span>Dernière mise à jour : @lastUpdated</span>
                 </div>
             </div>
-            <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-outline-secondary btn-sm" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Patients</a>
-                <a class="btn btn-outline-secondary btn-sm" href="appointments"><i class="bi bi-calendar-check me-2"></i>Rendez-vous</a>
-                <a class="btn btn-outline-secondary btn-sm" href="cnam"><i class="bi bi-file-earmark-medical me-2"></i>CNAM</a>
-                <a class="btn btn-outline-secondary btn-sm" href="manage-cabinet"><i class="bi bi-building me-2"></i>Cabinet</a>
+            <div class="d-flex flex-column flex-md-row gap-2 align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="mb-0 text-muted">Mois :</label>
+                    <input type="month" class="form-control form-control-sm" value="@selectedMonth" @onchange="OnSelectedMonthChanged" />
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary btn-sm" href="patients"><i class="bi bi-person-lines-fill me-2"></i>Patients</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="appointments"><i class="bi bi-calendar-check me-2"></i>Rendez-vous</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="cnam"><i class="bi bi-file-earmark-medical me-2"></i>CNAM</a>
+                    <a class="btn btn-outline-secondary btn-sm" href="manage-cabinet"><i class="bi bi-building me-2"></i>Cabinet</a>
+                </div>
             </div>
         </div>
     </div>
@@ -276,6 +283,7 @@ else
     private decimal expectedRevenue;
     private decimal collectedRevenue;
     private int satisfactionRate;
+    private string selectedMonth = DateTime.Today.ToString("yyyy-MM");
     private string averagePatientAge = "-";
     private string lastUpdated = "-";
 
@@ -303,8 +311,7 @@ else
 
             appointments = await Http.GetFromJsonAsync<List<AppointmentDto>>("api/appointments") ?? new List<AppointmentDto>();
             todayAppointments = appointments.Count(a => a.Start.HasValue && a.Start.Value.Date == today);
-            expectedRevenue = appointments.Sum(a => a.Amount);
-            collectedRevenue = appointments.Sum(a => a.PaidAmount);
+            UpdateMonthlyMetrics();
 
             var startDate = today.AddMonths(-1).ToString("yyyy-MM-dd");
             var endDate = today.AddDays(30).ToString("yyyy-MM-dd");
@@ -368,5 +375,30 @@ else
         {
             cabinetInfo = new CabinetDto();
         }
+    }
+
+    private void UpdateMonthlyMetrics()
+    {
+        if (!DateTime.TryParseExact(selectedMonth + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthDate))
+        {
+            monthDate = DateTime.Today;
+        }
+
+        var monthAppointments = appointments
+            .Where(a => a.Start.HasValue && a.Start.Value.Year == monthDate.Year && a.Start.Value.Month == monthDate.Month)
+            .ToList();
+
+        expectedRevenue = monthAppointments.Sum(a => a.Amount);
+        collectedRevenue = monthAppointments.Sum(a => a.PaidAmount);
+
+        satisfactionRate = expectedRevenue > 0
+            ? (int)Math.Round((collectedRevenue / expectedRevenue) * 100)
+            : 0;
+    }
+
+    private void OnSelectedMonthChanged(ChangeEventArgs e)
+    {
+        selectedMonth = e.Value?.ToString() ?? selectedMonth;
+        UpdateMonthlyMetrics();
     }
 }
