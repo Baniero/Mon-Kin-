@@ -1108,9 +1108,19 @@
             return;
         }
 
-        await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
-        await ShowSuccessMessage("Patient et programme CNAM créés avec succès. Facture et fiche signature générées.");
-        await LoadCnamPrograms();
+        try
+        {
+            await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
+            await ShowSuccessMessage("Patient et programme CNAM créés avec succès. Facture et fiche signature générées.");
+        }
+        catch (Exception ex)
+        {
+            createSectionMessage = "Le patient et le programme ont été créés, mais la génération du PDF a échoué : " + ex.Message;
+        }
+        finally
+        {
+            await LoadCnamPrograms();
+        }
     }
     finally
     {
@@ -1143,9 +1153,19 @@
             return;
         }
 
-        await GenerateInvoiceAndSignatureAsync(patient, createdProgram);
-        await ShowSuccessMessage("Programme CNAM créé avec succès pour le patient existant. Facture et fiche signature générées.");
-        await LoadCnamPrograms();
+        try
+        {
+            await GenerateInvoiceAndSignatureAsync(patient, createdProgram);
+            await ShowSuccessMessage("Programme CNAM créé avec succès pour le patient existant. Facture et fiche signature générées.");
+        }
+        catch (Exception ex)
+        {
+            createSectionMessage = "Le programme a été créé, mais la génération du PDF a échoué : " + ex.Message;
+        }
+        finally
+        {
+            await LoadCnamPrograms();
+        }
     }
 
     private async Task ShowSuccessMessage(string message)
