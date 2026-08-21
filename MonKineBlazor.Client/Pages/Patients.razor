@@ -389,7 +389,7 @@ else
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Titre</label>
-                                    <InputText class="form-control" @bind-Value="newProgram.Titre" />
+                                    <InputText class="form-control" @bind-Value="newProgram.Titre" readonly placeholder="Séances de kinestherapie" />
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Type</label>
@@ -1014,6 +1014,7 @@ else
 
         RecalculateProgram();
         newProgram.PatientId = selectedPatient.Id;
+        newProgram.Titre = "Séances de kinestherapie";
 
         if (isEditingProgram && editingProgram != null)
         {
@@ -1271,7 +1272,8 @@ else
             PrixHT = 0,
             MontantTVA = 0,
             PrixTTC = 0,
-            PrixSeanceTTC = cabinetInfo?.PrixSeanceTTC ?? 0
+            PrixSeanceTTC = cabinetInfo?.PrixSeanceTTC ?? 0,
+            Titre = string.Empty
         };
     }
 }

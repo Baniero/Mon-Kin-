@@ -277,7 +277,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Titre</label>
-                    <InputText class="form-control" @bind-Value="createProgram.Titre" />
+                    <InputText class="form-control" @bind-Value="createProgram.Titre" readonly placeholder="Séances de kinestherapie" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Nature</label>
@@ -1047,6 +1047,8 @@
             return;
         }
 
+        createProgram.Titre = "Séances de kinestherapie";
+
         isBusy = true;
         try
         {
@@ -1056,6 +1058,7 @@
                 createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
 
                 await CreateProgramAndPrint(selectedExistingPatient);
+                createProgram.Titre = string.Empty;
                 return;
             }
 
@@ -1084,10 +1087,12 @@
 
         createProgram.PatientId = createdPatient.Id;
         createProgram.DateFin = GetProgramEndDate(createProgram.DateDebut, createProgram.NbSeances, createProgram.NbSeancesParSemaine);
+        createProgram.Titre = "Séances de kinestherapie";
 
         PatientProgramDto? createdProgram = null;
         try
         {
+            createProgram.Titre = "Séances de kinestherapie";
             var programResponse = await Http.PostAsJsonAsync("api/patientprograms", createProgram);
             if (!programResponse.IsSuccessStatusCode)
             {
@@ -1112,6 +1117,7 @@
         {
             await GenerateInvoiceAndSignatureAsync(createdPatient, createdProgram);
             await ShowSuccessMessage("Patient et programme CNAM créés avec succès. Facture et fiche signature générées.");
+            createProgram.Titre = string.Empty;
         }
         catch (Exception ex)
         {
@@ -1133,6 +1139,7 @@
         PatientProgramDto? createdProgram = null;
         try
         {
+            createProgram.Titre = "Séances de kinestherapie";
             var programResponse = await Http.PostAsJsonAsync("api/patientprograms", createProgram);
             if (!programResponse.IsSuccessStatusCode)
             {
@@ -1485,7 +1492,8 @@
             PrixHT = 0,
             MontantTVA = 0,
             PrixTTC = 0,
-            PrixSeanceTTC = cabinetInfo.PrixSeanceTTC > 0 ? cabinetInfo.PrixSeanceTTC : 0
+            PrixSeanceTTC = cabinetInfo.PrixSeanceTTC > 0 ? cabinetInfo.PrixSeanceTTC : 0,
+            Titre = string.Empty
         };
         selectedExistingPatient = null;
         existingPatients.Clear();
