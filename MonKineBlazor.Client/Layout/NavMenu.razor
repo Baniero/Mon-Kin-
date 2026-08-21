@@ -18,30 +18,42 @@
                 <span class="nav-text">Tableau de bord</span>
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="patients">
-                <span class="nav-icon bi bi-person-lines-fill" aria-hidden="true"></span>
-                <span class="nav-text">Patients</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="appointments">
-                <span class="nav-icon bi bi-calendar-check" aria-hidden="true"></span>
-                <span class="nav-text">Rendez-vous</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="finance">
-                <span class="nav-icon bi bi-wallet2" aria-hidden="true"></span>
-                <span class="nav-text">Finance</span>
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="cnam">
-                <span class="nav-icon bi bi-file-earmark-medical" aria-hidden="true"></span>
-                <span class="nav-text">CNAM</span>
-            </NavLink>
-        </div>
+        @if (AuthService.CurrentUser?.Role == "admin" || AuthService.CurrentUser?.Modules.Contains("patients") == true)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="patients">
+                    <span class="nav-icon bi bi-person-lines-fill" aria-hidden="true"></span>
+                    <span class="nav-text">Patients</span>
+                </NavLink>
+            </div>
+        }
+        @if (AuthService.CurrentUser?.Role == "admin" || AuthService.CurrentUser?.Modules.Contains("appointments") == true)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="appointments">
+                    <span class="nav-icon bi bi-calendar-check" aria-hidden="true"></span>
+                    <span class="nav-text">Rendez-vous</span>
+                </NavLink>
+            </div>
+        }
+        @if (AuthService.CurrentUser?.Role == "admin" || AuthService.CurrentUser?.Modules.Contains("finance") == true)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="finance">
+                    <span class="nav-icon bi bi-wallet2" aria-hidden="true"></span>
+                    <span class="nav-text">Finance</span>
+                </NavLink>
+            </div>
+        }
+        @if (AuthService.CurrentUser?.Role == "admin" || AuthService.CurrentUser?.Modules.Contains("cnam") == true)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="cnam">
+                    <span class="nav-icon bi bi-file-earmark-medical" aria-hidden="true"></span>
+                    <span class="nav-text">CNAM</span>
+                </NavLink>
+            </div>
+        }
                 <div class="nav-item px-3">
             <NavLink class="nav-link" href="manage-cabinet">
                 <span class="nav-icon bi bi-building" aria-hidden="true"></span>

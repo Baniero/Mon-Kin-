@@ -620,4 +620,29 @@ public class PatientsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpDelete("{id}")]
+    public IActionResult Delete(int id)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!IsAdmin() && !IsPatientAccessible(id))
+        {
+            return Forbid();
+        }
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM patients WHERE id = @id";
+        cmd.Parameters.AddWithValue("@id", id);
+
+        var rowsDeleted = cmd.ExecuteNonQuery();
+        return rowsDeleted == 0 ? NotFound() : NoContent();
+    }
 }

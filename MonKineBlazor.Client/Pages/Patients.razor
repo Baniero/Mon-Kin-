@@ -1,4 +1,5 @@
 @page "/patients"
+@attribute [ModuleAccess("patients")]
 @using MonKineBlazor.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
@@ -68,10 +69,13 @@ else
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>@(patientForm.Id == 0 ? "Créer un patient" : "Modifier un patient")</span>
-                    @if (patientForm.Id != 0)
-                    {
+                    <div class="d-flex gap-2">
+                        @if (patientForm.Id != 0)
+                        {
+                            <button class="btn btn-danger btn-sm" @onclick="DeletePatientAsync">Supprimer</button>
+                        }
                         <button class="btn btn-outline-secondary btn-sm" @onclick="CreateNewPatient">Nouveau</button>
-                    }
+                    </div>
                 </div>
                 <div class="card-body">
                     <EditForm Model="patientForm" OnValidSubmit="SavePatientAsync">
@@ -872,6 +876,31 @@ else
             {
                 statusMessage = "Erreur lors de la mise à jour du patient.";
             }
+        }
+    }
+
+    private async Task DeletePatientAsync()
+    {
+        if (patientForm?.Id == 0)
+        {
+            return;
+        }
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Voulez-vous vraiment supprimer ce patient ?"))
+        {
+            return;
+        }
+
+        var response = await Http.DeleteAsync($"api/patients/{patientForm.Id}");
+        if (response.IsSuccessStatusCode)
+        {
+            CreateNewPatient();
+            await LoadPatients();
+            statusMessage = "Patient supprimé avec succès.";
+        }
+        else
+        {
+            statusMessage = "Erreur lors de la suppression du patient.";
         }
     }
 

@@ -36,6 +36,13 @@
     {
         NavigationManager.NavigateTo("/access-denied", true);
     }
+    else if (pageType.GetCustomAttribute<ModuleAccessAttribute>() is ModuleAccessAttribute moduleAccess &&
+             !string.IsNullOrWhiteSpace(moduleAccess.ModuleId) &&
+             !(AuthService.CurrentUser?.Modules?.Contains(moduleAccess.ModuleId) ?? false) &&
+             AuthService.CurrentUser?.Role != "admin")
+    {
+        NavigationManager.NavigateTo("/access-denied", true);
+    }
     else
     {
         <RouteView RouteData="RouteData" DefaultLayout="DefaultLayout" />
