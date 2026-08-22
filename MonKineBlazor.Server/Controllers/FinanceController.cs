@@ -1923,6 +1923,9 @@ public class FinanceController : ControllerBase
         decimal totalAdvances = 0;
         int partialPaymentsCount = 0;
         decimal outstandingAmount = 0;
+        decimal expectedProgramRevenueThisMonth = 0;
+        decimal expectedPatientPriceEspeceRevenue = 0;
+        decimal expectedCnamRevenue = 0;
 
         using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
@@ -1948,7 +1951,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
 
-            expectedAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+            expectedAmount = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
         }
 
         using (var cmd = conn.CreateCommand())
@@ -1968,7 +1971,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
-            var patientPriceRevenue = Convert.ToDecimal(cmd.ExecuteScalar());
+            var patientPriceRevenue = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
 
             expectedProgramRevenueThisMonth = patientPriceRevenue;
             expectedPatientPriceEspeceRevenue = patientPriceRevenue;
@@ -1995,7 +1998,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
-            expectedCnamRevenue = Convert.ToDecimal(cmd.ExecuteScalar());
+            expectedCnamRevenue = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
         }
 
         using (var cmd = conn.CreateCommand())
@@ -2007,7 +2010,7 @@ public class FinanceController : ControllerBase
             ";
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
-            actualAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+            actualAmount = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
         }
 
         using (var cmd = conn.CreateCommand())
@@ -2026,7 +2029,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
-            totalAdvances = Convert.ToDecimal(cmd.ExecuteScalar());
+            totalAdvances = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
         }
 
         using (var cmd = conn.CreateCommand())
@@ -2066,7 +2069,7 @@ public class FinanceController : ControllerBase
             cmd.Parameters.AddWithValue("@start", start.Date);
             cmd.Parameters.AddWithValue("@end", end.Date);
             if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
-            outstandingAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+            outstandingAmount = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
         }
 
         return new MonthlyFinanceStatsDto
@@ -2501,7 +2504,7 @@ public class FinanceController : ControllerBase
         cmd.Parameters.AddWithValue("@start", startDate.Date);
         cmd.Parameters.AddWithValue("@end", endDate.Date);
 
-        var sessionsCash = Convert.ToDecimal(cmd.ExecuteScalar());
+        var sessionsCash = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
 
         using var cmd2 = conn.CreateCommand();
         cmd2.CommandText = @"
@@ -2512,7 +2515,7 @@ public class FinanceController : ControllerBase
         cmd2.Parameters.AddWithValue("@start", startDate.Date);
         cmd2.Parameters.AddWithValue("@end", endDate.Date);
 
-        var advancesCash = Convert.ToDecimal(cmd2.ExecuteScalar());
+        var advancesCash = Convert.ToDecimal(cmd2.ExecuteScalar() ?? 0);
         return sessionsCash + advancesCash;
     }
 
