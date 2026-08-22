@@ -41,6 +41,31 @@ public static class UserContextHelper
                 cabinetId = parsedCabinetId;
             }
 
+            var needsDbLookup = !cabinetId.HasValue || string.IsNullOrWhiteSpace(role) || string.IsNullOrWhiteSpace(username);
+            if (needsDbLookup)
+            {
+                using var conn = DatabaseConnectionProvider.CreateConnection();
+                conn.Open();
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT username, COALESCE(full_name, ''), COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
+                    FROM users
+                    WHERE id = @id
+                ";
+                cmd.Parameters.AddWithValue("@id", userId);
+
+                using var reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    username = reader.IsDBNull(0) ? username : reader.GetString(0);
+                    fullName = reader.IsDBNull(1) ? fullName : reader.GetString(1);
+                    role = reader.IsDBNull(2) ? role : reader.GetString(2);
+                    var active = reader.IsDBNull(3) ? true : reader.GetBoolean(3);
+                    cabinetId = reader.IsDBNull(4) ? cabinetId : reader.GetInt32(4);
+                }
+            }
+
             return new UserDto
             {
                 Id = userId,
