@@ -255,8 +255,8 @@ public class PatientsController : ControllerBase
             Racine = reader.GetString(13),
             Cle = reader.GetString(14),
             Qualite = reader.GetString(15),
-                    Statut = reader.GetString(16),
-                    NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
+            Statut = reader.GetString(16),
+            NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
 
     [HttpGet("{id}/cnam-history")]
     public ActionResult<IEnumerable<PatientProgramDto>> GetCnamHistory(int id)
@@ -520,6 +520,7 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@statut", (object?)(patient.Statut ?? "actif") ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@n_assuree", (object?)nAssureeValue ?? DBNull.Value);
 
         var createdId = Convert.ToInt32(cmd.ExecuteScalar());
@@ -612,7 +613,6 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@statut", (object?)(patient.Statut ?? "actif") ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@statut", (object?)(patient.Statut ?? "actif") ?? DBNull.Value);
         var nAssureeValue = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
         cmd.Parameters.AddWithValue("@n_assuree", (object?)nAssureeValue ?? DBNull.Value);
