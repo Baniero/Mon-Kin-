@@ -19,6 +19,7 @@ public class PatientDto
     public string? Racine { get; set; }
     public string? Cle { get; set; }
     public string? NumeroAssuree { get; set; }
+    public string? Statut { get; set; }
 }
 
 public class PatientProgramDto

@@ -29,6 +29,7 @@ public static class DatabaseInitializer
         EnsureCabinetInfoTable(connection);
         EnsureColumnExists(connection, "cnam_bordereau_executed", "facture_number", "TEXT");
         EnsureColumnExists(connection, "cnam_bordereau_executed", "encaisse", "BOOLEAN DEFAULT FALSE");
+        EnsureColumnExists(connection, "patients", "statut", "TEXT DEFAULT 'actif'");
         EnsurePatientsCnamUniqueIndex(connection);
     }
 

@@ -1841,7 +1841,7 @@ public class FinanceController : ControllerBase
             ";
             cmd.Parameters.AddWithValue("@patientId", patientId);
 
-            var result = Convert.ToDecimal(cmd.ExecuteScalar());
+            var result = Convert.ToDecimal(cmd.ExecuteScalar() ?? 0);
             advanceBalance = result;
         }
 

@@ -4,6 +4,7 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <h1>Patients</h1>
 
@@ -39,9 +40,12 @@ else
                         <thead>
                             <tr>
                                 <th style="width: 80px">Fiche</th>
-                                <th>Code</th>
                                 <th>Nom</th>
                                 <th>Prénom</th>
+                                <th>Âge</th>
+                                <th>N° dossier</th>
+                                <th>Statut</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -51,9 +55,15 @@ else
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary" @onclick="@(async () => await ShowPatientDetails(patient))">Fiche</button>
                                     </td>
-                                    <td @onclick="() => SelectPatient(patient)">@patient.CodePatient</td>
-                                    <td @onclick="() => SelectPatient(patient)">@patient.Nom</td>
-                                    <td @onclick="() => SelectPatient(patient)">@patient.Prenom</td>
+                                    <td>@patient.Nom</td>
+                                    <td>@patient.Prenom</td>
+                                    <td>@patient.Age</td>
+                                    <td>@patient.DossierPatient</td>
+                                    <td>@patient.Statut</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => SelectPatient(patient)">Modifier</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeletePatient(patient)">Supprimer</button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
@@ -68,8 +78,12 @@ else
         <div class="col-md-7">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>@(patientForm.Id == 0 ? "Créer un patient" : "Modifier un patient")</span>
+                    <span>@(patientForm.Id == 0 ? "Créer un patient" : $"Modifier le patient : {patientForm.Nom} {patientForm.Prenom}")</span>
                     <div class="d-flex gap-2">
+                        @if (selectedPatient != null && selectedPatient.Id != 0)
+                        {
+                            <button class="btn btn-success btn-sm" @onclick="AddAppointment">Ajouter séance</button>
+                        }
                         @if (patientForm.Id != 0)
                         {
                             <button class="btn btn-danger btn-sm" @onclick="DeletePatientAsync">Supprimer</button>
@@ -91,6 +105,15 @@ else
                             <div class="col-md-6">
                                 <label class="form-label">Prénom</label>
                                 <InputText class="form-control" @bind-Value="patientForm.Prenom" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Statut patient</label>
+                                <InputSelect class="form-select" @bind-Value="patientForm.Statut">
+                                    <option value="">-- Sélectionnez --</option>
+                                    <option value="actif">Actif</option>
+                                    <option value="en cours">En cours</option>
+                                    <option value="terminé">Terminé</option>
+                                </InputSelect>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Date de naissance</label>
@@ -172,6 +195,26 @@ else
 
             @if (selectedPatient != null)
             {
+                <div class="card mb-4">
+                    <div class="card-header">Informations patient</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <strong>Dernière visite</strong>
+                                <div>@GetLastVisitText()</div>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Rendez-vous totaux</strong>
+                                <div>@(patientAppointments?.Count ?? 0)</div>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Programmes commencés</strong>
+                                <div>@(programs?.Count(p => !string.IsNullOrWhiteSpace(p.Statut) && p.Statut != "planifie") ?? 0)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card mb-4">
                     <div class="card-header">Programmes du patient</div>
                     <div class="card-body p-0">
@@ -693,7 +736,24 @@ else
         selectedPatient = patient;
         CopyPatientToForm(patient);
         await LoadPrograms();
+        await LoadPatientAppointments();
         showPatientDetails = false;
+    }
+
+    private async Task ConfirmDeletePatient(PatientDto patient)
+    {
+        selectedPatient = patient;
+        CopyPatientToForm(patient);
+        await DeletePatientAsync();
+    }
+
+    private void AddAppointment()
+    {
+        if (selectedPatient == null)
+        {
+            return;
+        }
+        NavigationManager.NavigateTo("/appointments");
     }
 
     private async Task ShowPatientDetails(PatientDto patient)
@@ -814,6 +874,26 @@ else
 
     private string ComputedNumeroAssuree => FormatNumeroAssuree(patientForm.Racine, patientForm.Cle, patientForm.NumeroAssuree);
 
+    private string GetLastVisitText()
+    {
+        if (patientAppointments == null || !patientAppointments.Any())
+        {
+            return "Aucune visite enregistrée.";
+        }
+
+        var lastVisit = patientAppointments
+            .Where(a => a.Start.HasValue)
+            .OrderByDescending(a => a.Start)
+            .FirstOrDefault();
+
+        if (lastVisit == null)
+        {
+            return "Aucune visite enregistrée.";
+        }
+
+        return $"{lastVisit.Start:dd/MM/yyyy HH:mm} - {lastVisit.Acte} ({lastVisit.Status})";
+    }
+
     private static string FormatNumeroAssuree(string? racine, string? cle, string? fallback = null)
     {
         var cleanRacine = string.IsNullOrWhiteSpace(racine) ? string.Empty : racine.Trim();
@@ -903,7 +983,7 @@ else
     private void CreateNewPatient()
     {
         selectedPatient = null;
-        patientForm = new PatientDto();
+        patientForm = new PatientDto { Statut = "actif" };
         isCnam = false;
         programs = null;
         statusMessage = null;

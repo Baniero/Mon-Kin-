@@ -116,6 +116,7 @@ public class PatientsController : ControllerBase
                     COALESCE(racine, ''),
                     COALESCE(cle, ''),
                     COALESCE(qualite, ''),
+                    COALESCE(statut, 'actif'),
                     COALESCE(n_assuree, '')
                 FROM patients
                 ORDER BY nom, prenom
@@ -145,6 +146,7 @@ public class PatientsController : ControllerBase
                     COALESCE(racine, ''),
                     COALESCE(cle, ''),
                     COALESCE(qualite, ''),
+                    COALESCE(statut, 'actif'),
                     COALESCE(n_assuree, '')
                 FROM patients
                 WHERE cabinet_id = @cabinet_id
@@ -174,7 +176,8 @@ public class PatientsController : ControllerBase
                 Racine = reader.GetString(13),
                 Cle = reader.GetString(14),
                 Qualite = reader.GetString(15),
-                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
+                Statut = reader.GetString(16),
+                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
             });
         }
 
@@ -252,11 +255,8 @@ public class PatientsController : ControllerBase
             Racine = reader.GetString(13),
             Cle = reader.GetString(14),
             Qualite = reader.GetString(15),
-            NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
-        };
-
-        return Ok(patient);
-    }
+                    Statut = reader.GetString(16),
+                    NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
 
     [HttpGet("{id}/cnam-history")]
     public ActionResult<IEnumerable<PatientProgramDto>> GetCnamHistory(int id)
@@ -378,6 +378,7 @@ public class PatientsController : ControllerBase
                     COALESCE(racine, ''),
                     COALESCE(cle, ''),
                     COALESCE(qualite, ''),
+                    COALESCE(statut, 'actif'),
                     COALESCE(n_assuree, '')
                 FROM patients
                 WHERE lower(trim(COALESCE(racine, ''))) = @racine
@@ -410,6 +411,7 @@ public class PatientsController : ControllerBase
                     COALESCE(racine, ''),
                     COALESCE(cle, ''),
                     COALESCE(qualite, ''),
+                    COALESCE(statut, 'actif'),
                     COALESCE(n_assuree, '')
                 FROM patients
                 WHERE cabinet_id = @cabinet_id
@@ -446,7 +448,8 @@ public class PatientsController : ControllerBase
                 Racine = reader.GetString(13),
                 Cle = reader.GetString(14),
                 Qualite = reader.GetString(15),
-                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(16)),
+                Statut = reader.GetString(16),
+                NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
             });
         }
 
@@ -494,10 +497,10 @@ public class PatientsController : ControllerBase
         cmd.CommandText = @"
             INSERT INTO patients (
                 cabinet_id, code_patient, dossier_patient, nom, prenom, age, date_naissance,
-                sexe, telephone1, telephone2, adresse, couverture, racine, cle, qualite, n_assuree
+                sexe, telephone1, telephone2, adresse, couverture, racine, cle, qualite, statut, n_assuree
             ) VALUES (
                 @cabinet_id, @code_patient, @dossier_patient, @nom, @prenom, @age, @date_naissance,
-                @sexe, @telephone1, @telephone2, @adresse, @couverture, @racine, @cle, @qualite, @n_assuree
+                @sexe, @telephone1, @telephone2, @adresse, @couverture, @racine, @cle, @qualite, @statut, @n_assuree
             )
             RETURNING id
         ";
@@ -586,10 +589,11 @@ public class PatientsController : ControllerBase
                 telephone1 = @telephone1,
                 telephone2 = @telephone2,
                 adresse = @adresse,
-                couverture = @couverture,
+                    couverture = @couverture,
                 racine = @racine,
                 cle = @cle,
                 qualite = @qualite,
+                statut = @statut,
                 n_assuree = @n_assuree
             WHERE id = @id
         ";
@@ -608,6 +612,8 @@ public class PatientsController : ControllerBase
         cmd.Parameters.AddWithValue("@racine", (object?)patient.Racine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@cle", (object?)patient.Cle ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@qualite", (object?)patient.Qualite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@statut", (object?)(patient.Statut ?? "actif") ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@statut", (object?)(patient.Statut ?? "actif") ?? DBNull.Value);
         var nAssureeValue = ComputeNumeroAssuree(patient.Racine, patient.Cle, patient.NumeroAssuree);
         cmd.Parameters.AddWithValue("@n_assuree", (object?)nAssureeValue ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", id);
