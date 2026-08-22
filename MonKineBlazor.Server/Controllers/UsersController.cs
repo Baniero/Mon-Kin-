@@ -274,6 +274,10 @@ public class UsersController : ControllerBase
             Role = request.Role ?? "kine",
             Active = request.Active,
             Telephone = request.Telephone,
+            CabinetId = request.CabinetId,
+            RequestedCabinetName = request.RequestedCabinetName,
+            RequestedNumeroEmployeur = request.RequestedNumeroEmployeur,
+            RequestMessage = request.RequestMessage,
             Modules = request.Modules
         });
     }
