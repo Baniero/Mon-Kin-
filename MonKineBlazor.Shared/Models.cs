@@ -200,6 +200,28 @@ public class PaymentProjectionEntryDto
     public string? SourceStatus { get; set; }
 }
 
+public class MonthlyFinanceStatsDto
+{
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public decimal ExpectedAmount { get; set; }
+    public decimal ActualAmount { get; set; }
+    public decimal Diff { get; set; }
+    public decimal TotalAdvances { get; set; }
+    public int PartialPaymentsCount { get; set; }
+    public decimal OutstandingAmount { get; set; }
+}
+
+public class FinancialHistoryEntryDto
+{
+    public DateTime Date { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public decimal Balance { get; set; }
+    public string? Status { get; set; }
+}
+
 public class CnamProgramInvoiceDto
 {
     public int ProgramId { get; set; }

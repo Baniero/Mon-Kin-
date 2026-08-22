@@ -376,7 +376,7 @@ public class UsersController : ControllerBase
             return Unauthorized();
         }
 
-        using var conn = DatabaseInitializer.CreateConnection();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
@@ -416,8 +416,8 @@ public class UsersController : ControllerBase
         {
             new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, id.ToString()),
-            new Claim(ClaimTypes.Name, username),
-            new Claim(ClaimTypes.Role, role)
+            new Claim(ClaimTypes.Name, username ?? string.Empty),
+            new Claim(ClaimTypes.Role, role ?? "kine")
         };
 
         if (!string.IsNullOrWhiteSpace(fullName))

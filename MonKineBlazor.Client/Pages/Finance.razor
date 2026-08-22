@@ -101,6 +101,12 @@
     <div class="col-md-3">
         <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Transactions)"><i class="bi bi-list-check me-2"></i>Transactions</button>
     </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.Stats)"><i class="bi bi-graph-up me-2"></i>Stats mensuelles</button>
+    </div>
+    <div class="col-md-3">
+        <button class="btn btn-outline-primary w-100" @onclick="() => SetSection(FinanceSection.History)"><i class="bi bi-clock-history me-2"></i>Historique</button>
+    </div>
 </div>
 
 @if (activeSection == FinanceSection.Cash)
@@ -215,7 +221,10 @@
                 <div class="mb-3">
                     <strong>Solde avance :</strong> @($"{(patientFinance?.AdvanceBalance ?? 0m):F2} DT")<br />
                     <strong>Avances totales :</strong> @($"{(patientFinance?.TotalAdvancePaid ?? 0m):F2} DT")<br />
-                    <strong>Avances utilisées :</strong> @($"{GetUsedAdvanceAmount():F2} DT")
+                    <strong>Total dû :</strong> @($"{(patientSummary?.TotalAmountDue ?? 0m):F2} DT")<br />
+                    <strong>Total payé :</strong> @($"{(patientSummary?.TotalPaid ?? 0m):F2} DT")<br />
+                    <strong>Reste à payer :</strong> @($"{(patientSummary?.OutstandingAmount ?? 0m):F2} DT")<br />
+                    <strong>Reste après avances :</strong> @($"{(patientSummary?.OutstandingAfterAdvance ?? 0m):F2} DT")
                 </div>
                 <div class="row g-3 mb-3">
                     <div class="col-md-3">
@@ -441,6 +450,183 @@
     </div>
 }
 
+@if (activeSection == FinanceSection.Stats)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Statistiques financières mensuelles</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(monthlyStatsRange.Any() ? monthlyStatsRange : (monthlyStats is null ? Enumerable.Empty<MonthlyFinanceStatsDto>() : new [] { monthlyStats }), "statistiques_mensuelles.csv")' disabled="@(monthlyStatsRange.Count == 0 && monthlyStats == null)">Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            <div class="row g-3 mb-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Début</label>
+                    <div class="input-group">
+                        <InputNumber class="form-control" @bind-Value="statsStartYear" />
+                        <InputSelect class="form-select" @bind-Value="statsStartMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fin</label>
+                    <div class="input-group">
+                        <InputNumber class="form-control" @bind-Value="statsEndYear" />
+                        <InputSelect class="form-select" @bind-Value="statsEndMonth">
+                            @for (var m = 1; m <= 12; m++)
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" @onclick="LoadMonthlyStatsRange">Charger plage</button>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" @onclick="LoadMonthlyStats">Charger mois</button>
+                </div>
+            </div>
+
+            @if (monthlyStatsRange.Any())
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Année</th>
+                                <th>Mois</th>
+                                <th>Attendu</th>
+                                <th>Réel</th>
+                                <th>Écart</th>
+                                <th>Avances</th>
+                                <th>Partiels</th>
+                                <th>Impayé</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in monthlyStatsRange)
+                            {
+                                <tr>
+                                    <td>@row.Year</td>
+                                    <td>@row.Month</td>
+                                    <td>@($"{row.ExpectedAmount:F2} DT")</td>
+                                    <td>@($"{row.ActualAmount:F2} DT")</td>
+                                    <td>@($"{row.Diff:F2} DT")</td>
+                                    <td>@($"{row.TotalAdvances:F2} DT")</td>
+                                    <td>@row.PartialPaymentsCount</td>
+                                    <td>@($"{row.OutstandingAmount:F2} DT")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (monthlyStats == null)
+            {
+                <div class="alert alert-info">Aucune statistique calculée pour ce mois.</div>
+            }
+
+            @if (monthlyStats != null)
+            {
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Attendu</div>
+                            <div class="h4">@($"{monthlyStats.ExpectedAmount:F2} DT")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Réel</div>
+                            <div class="h4">@($"{monthlyStats.ActualAmount:F2} DT")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Écart</div>
+                            <div class="h4">@($"{monthlyStats.Diff:F2} DT")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Avances</div>
+                            <div class="h4">@($"{monthlyStats.TotalAdvances:F2} DT")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-3">
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Paiements partiels</div>
+                            <div class="h4">@monthlyStats.PartialPaymentsCount</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Montant impayé</div>
+                            <div class="h4">@($"{monthlyStats.OutstandingAmount:F2} DT")</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (activeSection == FinanceSection.History)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Historique financier patient</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => ExportCsv(patientHistory, "historique_financier.csv")'>Exporter CSV</button>
+        </div>
+        <div class="card-body">
+            @if (selectedPatientId == 0)
+            {
+                <div class="alert alert-info">Sélectionnez un patient pour afficher l'historique financier.</div>
+            }
+            else if (!patientHistory.Any())
+            {
+                <div class="alert alert-info">Aucun historique financier trouvé pour ce patient.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Montant</th>
+                                <th>Solde</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in patientHistory)
+                            {
+                                <tr>
+                                    <td>@entry.Date.ToString("yyyy-MM-dd")</td>
+                                    <td>@entry.Type</td>
+                                    <td>@entry.Description</td>
+                                    <td>@($"{entry.Amount:F2} DT")</td>
+                                    <td>@($"{entry.Balance:F2} DT")</td>
+                                    <td>@entry.Status</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @code {
     private string? errorMessage;
     private string? successMessage;
@@ -455,7 +641,15 @@
     private List<PaymentProjectionEntryDto> paymentProjections = new();
     private List<CnamRecoveryDto> cnamRecovery = new();
     private PatientFinanceDto? patientFinance;
+    private PatientFinancialSummaryDto? patientSummary;
+    private MonthlyFinanceStatsDto? monthlyStats;
+    private List<MonthlyFinanceStatsDto> monthlyStatsRange = new();
+    private List<FinancialHistoryEntryDto> patientHistory = new();
     private int selectedPatientId;
+    private int statsStartYear = DateTime.Today.Year;
+    private int statsStartMonth = DateTime.Today.Month;
+    private int statsEndYear = DateTime.Today.Year;
+    private int statsEndMonth = DateTime.Today.Month;
     private string patientSearch = string.Empty;
     private DateTime cashStart = DateTime.Today.AddDays(-7);
     private DateTime cashEnd = DateTime.Today;
@@ -495,6 +689,14 @@
                 await LoadAdvanceData();
                 await LoadAdvanceLots();
                 await LoadPaymentProjections();
+                if (activeSection == FinanceSection.History)
+                {
+                    await LoadPatientHistory();
+                }
+            }
+            if (activeSection == FinanceSection.Stats)
+            {
+                await LoadMonthlyStats();
             }
         }
         catch (Exception ex)
@@ -519,11 +721,13 @@
         {
             advanceTransactions = new();
             patientFinance = null;
+            patientSummary = null;
             return;
         }
 
         advanceTransactions = await Http.GetFromJsonAsync<List<AdvanceTransactionDto>>($"api/finance/advance-transactions/patient/{selectedPatientId}") ?? new List<AdvanceTransactionDto>();
         patientFinance = await Http.GetFromJsonAsync<PatientFinanceDto>($"api/finance/patient-finance/{selectedPatientId}");
+        patientSummary = await Http.GetFromJsonAsync<PatientFinancialSummaryDto>($"api/finance/patient-summary/{selectedPatientId}");
     }
 
     private async Task LoadAllTransactions()
@@ -553,6 +757,55 @@
         paymentProjections = await Http.GetFromJsonAsync<List<PaymentProjectionEntryDto>>($"api/finance/payment-projections/patient/{selectedPatientId}") ?? new List<PaymentProjectionEntryDto>();
     }
 
+    private async Task LoadMonthlyStats()
+    {
+        errorMessage = null;
+        try
+        {
+            monthlyStatsRange.Clear();
+            monthlyStats = await Http.GetFromJsonAsync<MonthlyFinanceStatsDto>($"api/finance/monthly-stats?year={statsStartYear}&month={statsStartMonth}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            monthlyStats = null;
+        }
+    }
+
+    private async Task LoadMonthlyStatsRange()
+    {
+        errorMessage = null;
+        try
+        {
+            monthlyStats = null;
+            monthlyStatsRange = await Http.GetFromJsonAsync<List<MonthlyFinanceStatsDto>>($"api/finance/monthly-stats/range?startYear={statsStartYear}&startMonth={statsStartMonth}&endYear={statsEndYear}&endMonth={statsEndMonth}") ?? new List<MonthlyFinanceStatsDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            monthlyStatsRange = new();
+        }
+    }
+
+    private async Task LoadPatientHistory()
+    {
+        if (selectedPatientId <= 0)
+        {
+            patientHistory = new();
+            return;
+        }
+
+        try
+        {
+            patientHistory = await Http.GetFromJsonAsync<List<FinancialHistoryEntryDto>>($"api/finance/patient-history/{selectedPatientId}") ?? new List<FinancialHistoryEntryDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            patientHistory = new();
+        }
+    }
+
     private async Task FilterFinance()
     {
         await LoadFinanceData();
@@ -577,6 +830,14 @@
         if ((section == FinanceSection.Advances || section == FinanceSection.Projections) && selectedPatientId > 0)
         {
             await LoadFinanceData();
+        }
+        if (section == FinanceSection.Stats)
+        {
+            await LoadMonthlyStats();
+        }
+        if (section == FinanceSection.History && selectedPatientId > 0)
+        {
+            await LoadPatientHistory();
         }
     }
 
@@ -845,6 +1106,8 @@
         Advances,
         Projections,
         Cnam,
-        Transactions
+        Transactions,
+        Stats,
+        History
     }
 }

@@ -1860,6 +1860,259 @@ public class FinanceController : ControllerBase
         });
     }
 
+    [HttpGet("monthly-stats")]
+    public ActionResult<MonthlyFinanceStatsDto> GetMonthlyStats(int year, int month)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? cabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !cabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        return Ok(ComputeMonthlyStats(year, month, cabinetId, IsAdmin()));
+    }
+
+    [HttpGet("monthly-stats/range")]
+    public ActionResult<IEnumerable<MonthlyFinanceStatsDto>> GetMonthlyStatsRange(int startYear, int startMonth, int endYear, int endMonth)
+    {
+        var currentUser = GetCurrentUser();
+        if (currentUser == null)
+        {
+            return Unauthorized();
+        }
+
+        int? cabinetId = currentUser.CabinetId;
+        if (!IsAdmin() && !cabinetId.HasValue)
+        {
+            return Forbid();
+        }
+
+        var start = new DateTime(startYear, startMonth, 1);
+        var end = new DateTime(endYear, endMonth, 1);
+        if (start > end)
+        {
+            var temp = start;
+            start = end;
+            end = temp;
+        }
+
+        var stats = new List<MonthlyFinanceStatsDto>();
+        var cursor = start;
+        while (cursor <= end)
+        {
+            stats.Add(ComputeMonthlyStats(cursor.Year, cursor.Month, cabinetId, IsAdmin()));
+            cursor = cursor.AddMonths(1);
+        }
+
+        return Ok(stats);
+    }
+
+    private MonthlyFinanceStatsDto ComputeMonthlyStats(int year, int month, int? cabinetId, bool isAdmin)
+    {
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+
+        decimal expectedAmount = 0;
+        decimal actualAmount = 0;
+        decimal totalAdvances = 0;
+        int partialPaymentsCount = 0;
+        decimal outstandingAmount = 0;
+
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COALESCE(SUM(a.paid_amount - COALESCE(au.amount_used, 0)), 0)
+                FROM appointments a
+                LEFT JOIN advance_usage au ON au.appointment_id = a.id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.status IN ('present', 'effectue')
+            " : @"
+                SELECT COALESCE(SUM(a.paid_amount - COALESCE(au.amount_used, 0)), 0)
+                FROM appointments a
+                LEFT JOIN advance_usage au ON au.appointment_id = a.id
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.status IN ('present', 'effectue')
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+
+            expectedAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT COALESCE(SUM(actual_amount), 0)
+                FROM cash_closings
+                WHERE DATE(date_jour) BETWEEN @start AND @end
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            actualAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COALESCE(SUM(amount), 0)
+                FROM advance_transactions
+                WHERE DATE(transaction_date) BETWEEN @start AND @end
+            " : @"
+                SELECT COALESCE(SUM(t.amount), 0)
+                FROM advance_transactions t
+                JOIN patients p ON p.id = t.patient_id
+                WHERE DATE(t.transaction_date) BETWEEN @start AND @end
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            totalAdvances = Convert.ToDecimal(cmd.ExecuteScalar());
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COUNT(*)
+                FROM appointments
+                WHERE DATE(start_datetime) BETWEEN @start AND @end
+                  AND payment_status = 'partiel'
+            " : @"
+                SELECT COUNT(*)
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.payment_status = 'partiel'
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            partialPaymentsCount = Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COALESCE(SUM(GREATEST(amount - paid_amount, 0)), 0)
+                FROM appointments
+                WHERE DATE(start_datetime) BETWEEN @start AND @end
+            " : @"
+                SELECT COALESCE(SUM(GREATEST(a.amount - a.paid_amount, 0)), 0)
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            outstandingAmount = Convert.ToDecimal(cmd.ExecuteScalar());
+        }
+
+        return new MonthlyFinanceStatsDto
+        {
+            Year = year,
+            Month = month,
+            ExpectedAmount = expectedAmount,
+            ActualAmount = actualAmount,
+            Diff = actualAmount - expectedAmount,
+            TotalAdvances = totalAdvances,
+            PartialPaymentsCount = partialPaymentsCount,
+            OutstandingAmount = outstandingAmount
+        };
+    }
+
+    [HttpGet("patient-history/{patientId}")]
+    public ActionResult<IEnumerable<FinancialHistoryEntryDto>> GetPatientHistory(int patientId)
+    {
+        if (!IsAdmin() && !IsPatientAccessible(patientId))
+        {
+            return Forbid();
+        }
+
+        var history = new List<FinancialHistoryEntryDto>();
+        using var conn = DatabaseConnectionProvider.CreateConnection();
+        conn.Open();
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT start_datetime, 'Rendez-vous' AS type, COALESCE(acte, '') AS description,
+                       COALESCE(amount, 0) AS amount, COALESCE(paid_amount, 0) AS paid_amount, COALESCE(payment_status, '') AS status
+                FROM appointments
+                WHERE patient_id = @patientId
+                  AND COALESCE(status, '') <> 'annule'
+                ORDER BY start_datetime
+            ";
+            cmd.Parameters.AddWithValue("@patientId", patientId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var amount = reader.GetDecimal(3);
+                var paid = reader.GetDecimal(4);
+                history.Add(new FinancialHistoryEntryDto
+                {
+                    Date = reader.IsDBNull(0) ? DateTime.MinValue : reader.GetDateTime(0),
+                    Type = reader.GetString(1),
+                    Description = reader.GetString(2),
+                    Amount = amount - paid,
+                    Balance = amount - paid,
+                    Status = reader.GetString(5)
+                });
+            }
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT transaction_date, 'Avance' AS type, COALESCE(note, '') AS description,
+                       COALESCE(amount, 0) AS amount
+                FROM advance_transactions
+                WHERE patient_id = @patientId
+                ORDER BY transaction_date
+            ";
+            cmd.Parameters.AddWithValue("@patientId", patientId);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                history.Add(new FinancialHistoryEntryDto
+                {
+                    Date = reader.IsDBNull(0) ? DateTime.MinValue : reader.GetDateTime(0),
+                    Type = reader.GetString(1),
+                    Description = reader.GetString(2),
+                    Amount = reader.GetDecimal(3),
+                    Balance = reader.GetDecimal(3),
+                    Status = ""
+                });
+            }
+        }
+
+        var runningBalance = 0m;
+        var sorted = history.OrderBy(h => h.Date).ThenBy(h => h.Type).ToList();
+        foreach (var entry in sorted)
+        {
+            runningBalance += entry.Type == "Avance" ? entry.Amount : -entry.Amount;
+            entry.Balance = runningBalance;
+        }
+
+        return Ok(sorted);
+    }
+
     [HttpPost("advance-transactions")]
     public ActionResult<AdvanceTransactionDto> CreateAdvanceTransaction(AdvanceTransactionRequestDto request)
     {
