@@ -38,7 +38,7 @@
     }
     else if (pageType.GetCustomAttribute<ModuleAccessAttribute>() is ModuleAccessAttribute moduleAccess &&
              !string.IsNullOrWhiteSpace(moduleAccess.ModuleId) &&
-             !(AuthService.CurrentUser?.Modules?.Contains(moduleAccess.ModuleId) ?? false) &&
+             !IsModuleAuthorized(moduleAccess.ModuleId) &&
              AuthService.CurrentUser?.Role != "admin")
     {
         NavigationManager.NavigateTo("/access-denied", true);
@@ -48,10 +48,6 @@
         <RouteView RouteData="RouteData" DefaultLayout="DefaultLayout" />
     }
 }
-else
-{
-    <RouteView RouteData="RouteData" DefaultLayout="DefaultLayout" />
-}
 
 @code {
     [Parameter]
@@ -59,4 +55,23 @@ else
 
     [Parameter]
     public Type? DefaultLayout { get; set; }
+
+    private bool IsModuleAuthorized(string moduleId)
+    {
+        if (AuthService.CurrentUser?.Modules == null)
+        {
+            return false;
+        }
+
+        if (AuthService.CurrentUser.Modules.Contains(moduleId))
+        {
+            return true;
+        }
+
+        return moduleId switch
+        {
+            "appointments" => AuthService.CurrentUser.Modules.Contains("agenda"),
+            _ => false,
+        };
+    }
 }

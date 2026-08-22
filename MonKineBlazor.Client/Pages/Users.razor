@@ -2,6 +2,7 @@
 @attribute [AdminOnly]
 @inject MonKineBlazor.Client.Services.AuthService AuthService
 @inject HttpClient Http
+@inject IJSRuntime JSRuntime
 
 <h1>Utilisateurs</h1>
 
@@ -165,7 +166,7 @@ else
     private readonly List<ModuleOption> moduleOptions = new()
     {
         new("cnam", "CNAM"),
-        new("agenda", "Agenda"),
+        new("appointments", "Agenda"),
         new("finance", "Finance"),
         new("patients", "Patients"),
         new("settings", "Paramètres")
@@ -270,6 +271,36 @@ else
     private void CancelEdit()
     {
         editingUser = null;
+    }
+
+    private async Task DeleteUser(int userId, string username)
+    {
+        errorMessage = null;
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Supprimer l'utilisateur '{username}' ?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/users/{userId}");
+            if (response.IsSuccessStatusCode)
+            {
+                if (editingUser?.Id == userId)
+                {
+                    editingUser = null;
+                }
+                await LoadUsers();
+            }
+            else
+            {
+                errorMessage = "Impossible de supprimer l'utilisateur.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
     }
 
     public class ModuleOption
