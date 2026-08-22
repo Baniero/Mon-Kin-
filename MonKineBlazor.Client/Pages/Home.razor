@@ -11,98 +11,135 @@
 
 @if (!AuthService.IsAuthenticated)
 {
+    <header class="landing-header py-3">
+        <div class="container d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <a href="/" class="brand d-flex align-items-center gap-2 text-decoration-none text-white fw-bold">
+                <img src="icon_caduceus.png" alt="MonKiné" width="34" />
+                <span>MonKiné</span>
+            </a>
+            <nav class="landing-nav d-none d-lg-flex align-items-center gap-4 text-white fw-semibold">
+                <a href="#features" class="text-white text-decoration-none">Fonctionnalités</a>
+                <a href="#about" class="text-white text-decoration-none">À propos</a>
+                <a href="#pricing" class="text-white text-decoration-none">Tarifs</a>
+                <a href="#contact" class="text-white text-decoration-none">Contact</a>
+            </nav>
+            <div class="d-flex gap-2 align-items-center">
+                <a class="btn btn-outline-light btn-sm px-4" href="login">Se connecter</a>
+                <a class="btn btn-light btn-sm text-primary fw-bold px-4" href="register">Demander une démo</a>
+            </div>
+        </div>
+    </header>
+
     <div class="landing-hero py-6">
         <div class="container">
             <div class="row align-items-center gy-5">
                 <div class="col-lg-6 order-2 order-lg-1">
                     <span class="hero-badge">Solution complète pour kinés</span>
-                    <h1 class="display-4 fw-bold text-white">Gérez votre cabinet kiné avec élégance et performance</h1>
-                    <p class="lead text-white-75 mb-4">Mon kiné vous aide à centraliser les patients, piloter les exports CNAM, organiser les rendez-vous et optimiser chaque séance.</p>
+                    <h1 class="display-4 fw-bold text-white">Gérez votre cabinet en toute simplicité</h1>
+                    <p class="lead text-white-75 mb-5">MonKiné réunit patients, planning, CNAM, facturation et trésorerie dans une interface moderne dédiée aux kinésithérapeutes.</p>
 
-                    <div class="hero-actions d-flex flex-wrap gap-3 mb-5">
-                        <a class="btn btn-primary btn-lg" href="register">S'inscrire</a>
-                        <a class="btn btn-outline-light btn-lg" href="login">Se connecter</a>
+                    <div class="hero-actions d-flex flex-column flex-sm-row gap-3 mb-5">
+                        <a class="btn btn-light btn-lg text-primary fw-bold rounded-pill px-4" href="register">Demander une démo</a>
+                        <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="login">Se connecter</a>
                     </div>
 
                     <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="feature-card text-white">
-                                <div class="feature-dot bg-light"></div>
-                                <h5>Gestion patients</h5>
-                                <p class="mb-0">Dossiers, couverture et historique en un seul endroit.</p>
+                        <div class="col-12">
+                            <div class="feature-card text-white d-flex align-items-start gap-3">
+                                <div class="feature-dot bg-light mt-2"></div>
+                                <div>
+                                    <h5>Gestion complète des patients</h5>
+                                    <p class="mb-0">Dossiers patients, historique, couvertures et protocoles centralisés.</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-sm-6">
-                            <div class="feature-card text-white">
-                                <div class="feature-dot bg-light"></div>
-                                <h5>Facturation CNAM</h5>
-                                <p class="mb-0">Bordereaux, exports TXT/PDF et suivi d'exécution.</p>
+                        <div class="col-12">
+                            <div class="feature-card text-white d-flex align-items-start gap-3">
+                                <div class="feature-dot bg-light mt-2"></div>
+                                <div>
+                                    <h5>Rendez-vous & planning</h5>
+                                    <p class="mb-0">Planifiez et suivez vos séances avec un agenda clair et réactif.</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-sm-6">
-                            <div class="feature-card text-white">
-                                <div class="feature-dot bg-light"></div>
-                                <h5>Agenda intégré</h5>
-                                <p class="mb-0">Rendez-vous clairs et suivi de séances simplifié.</p>
+                        <div class="col-12">
+                            <div class="feature-card text-white d-flex align-items-start gap-3">
+                                <div class="feature-dot bg-light mt-2"></div>
+                                <div>
+                                    <h5>CNAM & facturation</h5>
+                                    <p class="mb-0">Bordereaux CNAM, factures et exports prêts à l’envoi.</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-sm-6">
-                            <div class="feature-card text-white">
-                                <div class="feature-dot bg-light"></div>
-                                <h5>Paramètres cabinet</h5>
-                                <p class="mb-0">Options de programme et nature des séances configurables.</p>
+                        <div class="col-12">
+                            <div class="feature-card text-white d-flex align-items-start gap-3">
+                                <div class="feature-dot bg-light mt-2"></div>
+                                <div>
+                                    <h5>Tableau de bord & statistiques</h5>
+                                    <p class="mb-0">Suivez vos indicateurs clés, encaissements et restes à payer.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-6 text-center order-1 order-lg-2">
                     <div class="hero-image-wrap mx-auto shadow-lg rounded-4">
-                        <img src="affiche.png" alt="Affiche Mon kiné" class="img-fluid rounded-4" />
+                        <img src="affiche.png" alt="Aperçu MonKiné" class="img-fluid rounded-4" />
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="container py-5">
-        <div class="row align-items-center gy-4 mb-5">
-            <div class="col-lg-7">
-                <h2 class="fw-bold">Une plateforme professionnelle pour les kinés exigeants</h2>
-                <p class="text-muted">Mon kiné regroupe le suivi patient, les commandes CNAM, l'agenda et les paramètres cabinet dans une interface moderne et réactive.</p>
-            </div>
-            <div class="col-lg-5">
-                <div class="info-panel p-4 rounded-4 shadow-sm">
-                    <h5>Fonctionnalités clés</h5>
-                    <ul class="list-unstyled mt-3 mb-0">
-                        <li class="mb-3"><strong>Patients</strong> : fiches, couverture et historique.</li>
-                        <li class="mb-3"><strong>CNAM</strong> : bordereaux, export et suivi.</li>
-                        <li class="mb-3"><strong>Agenda</strong> : rendez-vous et statut de séance.</li>
-                        <li><strong>Paramètres</strong> : options cabinet et natures de séances.</li>
+    <section class="dashboard-preview py-5" id="features">
+        <div class="container">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <h2 class="fw-bold">Un tableau de bord visuel et actionnable</h2>
+                    <p class="text-muted mb-4">Visualisez les performances de votre cabinet, suivez les factures CNAM et identifiez rapidement les actions prioritaires.</p>
+                    <ul class="list-unstyled feature-list mb-0">
+                        <li><i class="bi bi-check2-circle text-primary me-2"></i>Suivi des rendez-vous et des séances</li>
+                        <li><i class="bi bi-check2-circle text-primary me-2"></i>Analyse des encaissements et des impayés</li>
+                        <li><i class="bi bi-check2-circle text-primary me-2"></i>Accès direct aux programmes et factures</li>
                     </ul>
+                </div>
+                <div class="col-lg-6">
+                    <div class="dashboard-screenshot rounded-4 shadow-lg overflow-hidden">
+                        <img src="affiche.png" alt="Capture du tableau de bord" class="img-fluid" />
+                    </div>
                 </div>
             </div>
         </div>
+    </section>
 
-        <div class="row g-4">
-            <div class="col-md-4">
+    <div class="container py-5" id="about">
+        <div class="row g-4 text-center mb-5">
+            <div class="col-md-3">
                 <div class="stat-card rounded-4 shadow-sm p-4 h-100">
-                    <span class="stat-icon bg-primary-soft text-primary">1</span>
-                    <h5 class="mt-3">Inscription simplifiée</h5>
-                    <p class="text-muted mb-0">Demandez un compte et l'administrateur validera votre cabinet.</p>
+                    <div class="icon-circle bg-primary-soft text-primary mb-3"><i class="bi bi-gem"></i></div>
+                    <h5>Tout-en-un</h5>
+                    <p class="text-muted mb-0">Tous les outils dont vous avez besoin dans une seule plateforme.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-card rounded-4 shadow-sm p-4 h-100">
-                    <span class="stat-icon bg-secondary-soft text-secondary">2</span>
-                    <h5 class="mt-3">Design épuré</h5>
-                    <p class="text-muted mb-0">Une interface claire pour travailler rapidement et en toute confiance.</p>
+                    <div class="icon-circle bg-info-soft text-info mb-3"><i class="bi bi-file-earmark-medical"></i></div>
+                    <h5>Conforme CNAM</h5>
+                    <p class="text-muted mb-0">Gestion simplifiée des bordereaux et factures CNAM.</p>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="stat-card rounded-4 shadow-sm p-4 h-100">
-                    <span class="stat-icon bg-success-soft text-success">3</span>
-                    <h5 class="mt-3">Soutien administratif</h5>
-                    <p class="text-muted mb-0">Un accès contrôlé par l'administrateur pour une gestion sécurisée.</p>
+                    <div class="icon-circle bg-success-soft text-success mb-3"><i class="bi bi-phone"></i></div>
+                    <h5>Accessible partout</h5>
+                    <p class="text-muted mb-0">Accédez à votre cabinet depuis votre ordinateur ou mobile.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card rounded-4 shadow-sm p-4 h-100">
+                    <div class="icon-circle bg-secondary-soft text-secondary mb-3"><i class="bi bi-shield-lock"></i></div>
+                    <h5>Données sécurisées</h5>
+                    <p class="text-muted mb-0">Vos données sont protégées et sauvegardées en toute sécurité.</p>
                 </div>
             </div>
         </div>

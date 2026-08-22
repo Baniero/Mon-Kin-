@@ -88,13 +88,47 @@ html, body {
     background: rgba(255, 255, 255, 0.15);
 }
 
-.feature-card {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 1.5rem;
-    padding: 1.25rem;
-    min-height: 10rem;
+.landing-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding-top: 1.5rem;
+}
+
+.landing-header .brand {
     color: #ffffff;
+    font-size: 1.1rem;
+}
+
+.landing-nav a {
+    color: rgba(255, 255, 255, 0.9);
+    transition: color 0.2s ease;
+}
+
+.landing-nav a:hover {
+    color: #ffffff;
+}
+
+.dashboard-preview {
+    background: #ffffff;
+}
+
+.dashboard-screenshot {
+    border-radius: 2rem;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(23, 44, 110, 0.14);
+}
+
+.feature-list li {
+    margin-bottom: 1rem;
+    color: #5f6d92;
+    font-size: 0.95rem;
+}
+
+.feature-list li i {
+    font-size: 1rem;
 }
 
 .feature-card h5,
