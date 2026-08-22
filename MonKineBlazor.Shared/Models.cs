@@ -78,6 +78,9 @@ public class UserDto
     public int? CabinetId { get; set; }
     public string? CabinetName { get; set; }
     public string? Telephone { get; set; }
+    public string? RequestedCabinetName { get; set; }
+    public string? RequestedNumeroEmployeur { get; set; }
+    public string? RequestMessage { get; set; }
     public List<string> Modules { get; set; } = new List<string>();
 }
 
@@ -90,6 +93,9 @@ public class UserCreateRequestDto
     public int? CabinetId { get; set; }
     public string Password { get; set; } = string.Empty;
     public string? Telephone { get; set; }
+    public string? RequestedCabinetName { get; set; }
+    public string? RequestedNumeroEmployeur { get; set; }
+    public string? RequestMessage { get; set; }
     public List<string> Modules { get; set; } = new List<string>();
 }
 
@@ -103,6 +109,9 @@ public class UserUpdateRequestDto
     public int? CabinetId { get; set; }
     public string? Password { get; set; }
     public string? Telephone { get; set; }
+    public string? RequestedCabinetName { get; set; }
+    public string? RequestedNumeroEmployeur { get; set; }
+    public string? RequestMessage { get; set; }
     public List<string> Modules { get; set; } = new List<string>();
 }
 

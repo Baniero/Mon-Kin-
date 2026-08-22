@@ -77,7 +77,7 @@ public class UsersController : ControllerBase
         if (currentUser.Role == "admin")
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]')
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]'), u.requested_cabinet_name, u.requested_numero_employeur, u.request_message
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 ORDER BY u.full_name, u.username
@@ -86,7 +86,7 @@ public class UsersController : ControllerBase
         else if (currentUser.CabinetId.HasValue)
         {
             cmd.CommandText = @"
-                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]')
+                SELECT u.id, u.username, u.full_name, COALESCE(u.role, 'kine'), COALESCE(u.active, TRUE), u.cabinet_id, COALESCE(c.nom_cabinet, ''), u.telephone, COALESCE(u.allowed_modules, '[]'), u.requested_cabinet_name, u.requested_numero_employeur, u.request_message
                 FROM users u
                 LEFT JOIN cabinets c ON c.id = u.cabinet_id
                 WHERE u.cabinet_id = @cabinet_id
@@ -112,7 +112,10 @@ public class UsersController : ControllerBase
                 CabinetId = reader.IsDBNull(5) ? null : reader.GetInt32(5),
                 CabinetName = reader.GetString(6),
                 Telephone = reader.IsDBNull(7) ? null : reader.GetString(7),
-                Modules = ParseAllowedModules(reader.GetString(8))
+                Modules = ParseAllowedModules(reader.GetString(8)),
+                RequestedCabinetName = reader.IsDBNull(9) ? null : reader.GetString(9),
+                RequestedNumeroEmployeur = reader.IsDBNull(10) ? null : reader.GetString(10),
+                RequestMessage = reader.IsDBNull(11) ? null : reader.GetString(11)
             });
         }
 
@@ -181,7 +184,7 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone, COALESCE(allowed_modules, '[]')
+            SELECT id, username, full_name, COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id, telephone, COALESCE(allowed_modules, '[]'), requested_cabinet_name, requested_numero_employeur, request_message
             FROM users
             WHERE id = @id
         ";
@@ -208,10 +211,14 @@ public class UsersController : ControllerBase
             Active = reader.GetBoolean(4),
             CabinetId = targetCabinetId,
             Telephone = reader.IsDBNull(6) ? null : reader.GetString(6),
-            Modules = ParseAllowedModules(reader.GetString(7))
+            Modules = ParseAllowedModules(reader.GetString(7)),
+            RequestedCabinetName = reader.IsDBNull(8) ? null : reader.GetString(8),
+            RequestedNumeroEmployeur = reader.IsDBNull(9) ? null : reader.GetString(9),
+            RequestMessage = reader.IsDBNull(10) ? null : reader.GetString(10)
         });
     }
 
+    [AllowAnonymous]
     [HttpPost]
     public ActionResult<UserDto> Create(UserCreateRequestDto request)
     {
@@ -242,8 +249,8 @@ public class UsersController : ControllerBase
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
-            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id, telephone, allowed_modules)
-            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id, @telephone, @allowed_modules)
+            INSERT INTO users (username, full_name, role, active, password_hash, cabinet_id, telephone, requested_cabinet_name, requested_numero_employeur, request_message, allowed_modules)
+            VALUES (@username, @full_name, @role, @active, @password_hash, @cabinet_id, @telephone, @requested_cabinet_name, @requested_numero_employeur, @request_message, @allowed_modules)
             RETURNING id
         ";
         cmd.Parameters.AddWithValue("@username", request.Username);
@@ -253,6 +260,9 @@ public class UsersController : ControllerBase
         cmd.Parameters.AddWithValue("@password_hash", passwordHash);
         cmd.Parameters.AddWithValue("@cabinet_id", (object?)request.CabinetId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@telephone", (object?)request.Telephone ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@requested_cabinet_name", (object?)request.RequestedCabinetName ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@requested_numero_employeur", (object?)request.RequestedNumeroEmployeur ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@request_message", (object?)request.RequestMessage ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@allowed_modules", SerializeAllowedModules(request.Modules));
 
         var id = Convert.ToInt32(cmd.ExecuteScalar());

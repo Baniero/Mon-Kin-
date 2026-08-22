@@ -121,6 +121,9 @@ public static class DatabaseInitializer
         EnsureColumnExists(connection, "users", "password_hash", "TEXT");
         EnsureColumnExists(connection, "users", "cabinet_id", "INTEGER REFERENCES cabinets(id)");
         EnsureColumnExists(connection, "users", "allowed_modules", "TEXT");
+        EnsureColumnExists(connection, "users", "requested_cabinet_name", "TEXT");
+        EnsureColumnExists(connection, "users", "requested_numero_employeur", "TEXT");
+        EnsureColumnExists(connection, "users", "request_message", "TEXT");
     }
 
     private static void EnsureAdminUser(NpgsqlConnection connection, int adminCabinetId)

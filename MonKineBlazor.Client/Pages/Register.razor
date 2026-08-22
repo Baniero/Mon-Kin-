@@ -12,7 +12,7 @@
             <div>
                 <span class="badge bg-light text-primary mb-3">Inscription kiné</span>
                 <h2 class="fw-bold mb-3">Demandez un accès pour votre cabinet</h2>
-                <p class="text-white-75">Complétez votre demande et l'administrateur pourra la valider depuis l’espace utilisateurs.</p>
+                <p class="text-white-75">Accès complet pour toute la page : 200 DT / an. Accès seulement gestion CNAM et bordereau CNAM : 120 DT / an. Installation sur PC local avec accès complet : 300 DT à vie. CNAM : 150 DT à vie.</p>
             </div>
             <div class="mt-4">
                 <div class="d-flex align-items-center gap-3 mb-3">
@@ -185,7 +185,10 @@
                 Role = "kine",
                 Active = false,
                 CabinetId = null,
-                Telephone = registrationModel.Telephone
+                Telephone = registrationModel.Telephone,
+                RequestedCabinetName = cabinetName,
+                RequestedNumeroEmployeur = numeroEmployeur,
+                RequestMessage = requestMessage
             };
 
             var response = await Http.PostAsJsonAsync("api/users", createRequest);
