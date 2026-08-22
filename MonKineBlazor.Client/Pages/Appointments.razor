@@ -1369,6 +1369,16 @@
         return Math.Max(0, appointment.Amount - appointment.PaidAmount);
     }
 
+    private static string ComputePaymentStatus(decimal amount, decimal paidAmount)
+    {
+        if (amount <= 0)
+        {
+            return "paye";
+        }
+
+        return paidAmount >= amount ? "paye" : (paidAmount > 0 ? "partiel" : "non_paye");
+    }
+
     private async Task ProcessAppointmentPayment()
     {
         if (paymentAppointment == null)
