@@ -34,9 +34,33 @@ html, body {
 }
 
 .landing-hero {
-    background: radial-gradient(circle at top left, rgba(71, 92, 255, 0.65), transparent 28%), linear-gradient(135deg, #1f3bb8 0%, #20263f 100%);
+    background-image: url("affiche.png"), radial-gradient(circle at top left, rgba(71, 92, 255, 0.75), transparent 32%), linear-gradient(135deg, rgba(31, 47, 95, 0.88), rgba(15, 23, 70, 0.92) 100%);
+    background-size: cover, cover, cover;
+    background-position: center center, center center, center center;
+    background-repeat: no-repeat, no-repeat, no-repeat;
     position: relative;
     overflow: hidden;
+    min-height: 100vh;
+}
+
+.landing-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(7, 16, 52, 0.55), rgba(7, 16, 52, 0.16));
+}
+
+.landing-hero .container,
+.landing-hero .row,
+.landing-hero .col-lg-6,
+.landing-hero .feature-card,
+.landing-hero .hero-image-wrap {
+    position: relative;
+    z-index: 1;
+}
+
+.landing-hero .hero-image-wrap {
+    display: none;
 }
 
 .landing-hero::before {
