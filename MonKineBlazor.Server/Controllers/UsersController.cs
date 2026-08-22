@@ -335,12 +335,12 @@ public class UsersController : ControllerBase
         checkCmd.Parameters.AddWithValue("@id", id);
 
         var result = checkCmd.ExecuteScalar();
-        if (result == null || result == DBNull.Value)
+        if (result == null)
         {
             return NotFound();
         }
 
-        var targetCabinetId = Convert.ToInt32(result);
+        int? targetCabinetId = result == DBNull.Value ? null : Convert.ToInt32(result);
         if (currentUser.Role != "admin" && currentUser.CabinetId != targetCabinetId)
         {
             return Forbid();
