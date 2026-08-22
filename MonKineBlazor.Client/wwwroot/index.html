@@ -566,8 +566,7 @@
             const tableCols = [margin, 220, 400, 520];
             const tableRows = [
                 ['Date début', formatPdfDate(getString(program, 'DateDebut', 'dateDebut')), 'Date fin', formatPdfDate(getString(program, 'DateFin', 'dateFin'))],
-                ['Montant HT', `${prixHT.toFixed(2)} DT`, 'Montant TVA', `${montantTVA.toFixed(2)} DT`],
-                ['Total TTC', `${prixTTC.toFixed(2)} DT`, 'Total lettres', totalTtcWords]
+                ['Montant HT', `${prixHT.toFixed(2)} DT`, 'Montant TVA', `${montantTVA.toFixed(2)} DT`]
             ];
 
             doc.setFont('helvetica', 'normal');
@@ -588,6 +587,11 @@
             doc.text('Montant total TTC', margin, y);
             doc.text(`${prixTTC.toFixed(2)} DT`, pageWidth - margin, y, { align: 'right' });
             y += 22;
+
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(10);
+            doc.text(`Total lettres : ${totalTtcWords}`, margin, y);
+            y += 18;
 
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(10);
