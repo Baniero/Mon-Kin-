@@ -115,6 +115,7 @@ public class LoginRequestDto
 public class LoginResponseDto
 {
     public UserDto User { get; set; } = new UserDto();
+    public string? Token { get; set; }
 }
 
 public class CashClosingDto

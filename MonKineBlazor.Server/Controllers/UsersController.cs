@@ -1,4 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using MonKineBlazor.Server.Data;
 using MonKineBlazor.Server.Services;
 using MonKineBlazor.Shared.Models;
@@ -10,6 +16,13 @@ namespace MonKineBlazor.Server.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
+    private readonly IConfiguration _configuration;
+
+    public UsersController(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     private bool IsAdmin()
     {
         return UserContextHelper.IsAdmin(HttpContext);
@@ -354,15 +367,16 @@ public class UsersController : ControllerBase
         return rows == 0 ? NotFound() : NoContent();
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
-    public ActionResult<UserDto> Login(LoginRequestDto request)
+    public ActionResult<LoginResponseDto> Login(LoginRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         {
             return Unauthorized();
         }
 
-        using var conn = DatabaseConnectionProvider.CreateConnection();
+        using var conn = DatabaseInitializer.CreateConnection();
         conn.Open();
 
         using var cmd = conn.CreateCommand();
@@ -394,16 +408,53 @@ public class UsersController : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(new UserDto
+        var jwtKey = _configuration["Jwt:Key"] ?? "ChangeThisSecretKeyForProduction1234567890";
+        var jwtIssuer = _configuration["Jwt:Issuer"] ?? "MonKineBlazor";
+        var jwtAudience = _configuration["Jwt:Audience"] ?? "MonKineBlazorClient";
+
+        var claims = new List<Claim>
         {
-            Id = id,
-            Username = username,
-            FullName = fullName,
-            Role = role,
-            Active = active,
-            CabinetId = cabinetId,
-            Telephone = telephone,
-            Modules = modules
+            new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, id.ToString()),
+            new Claim(ClaimTypes.Name, username),
+            new Claim(ClaimTypes.Role, role)
+        };
+
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            claims.Add(new Claim("full_name", fullName));
+        }
+
+        if (cabinetId.HasValue)
+        {
+            claims.Add(new Claim("cabinet_id", cabinetId.Value.ToString()));
+        }
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            issuer: jwtIssuer,
+            audience: jwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(8),
+            signingCredentials: creds);
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        return Ok(new LoginResponseDto
+        {
+            Token = tokenString,
+            User = new UserDto
+            {
+                Id = id,
+                Username = username,
+                FullName = fullName,
+                Role = role,
+                Active = active,
+                CabinetId = cabinetId,
+                Telephone = telephone,
+                Modules = modules
+            }
         });
     }
 }

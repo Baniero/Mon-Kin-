@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.JSInterop;
 using MonKineBlazor.Shared.Models;
@@ -8,10 +9,12 @@ public class AuthService
 {
     private readonly HttpClient _http;
     private readonly IJSRuntime _jsRuntime;
-    private const string StorageKey = "monkine.user";
+    private const string StorageKey = "monkine.auth";
+
+    private string? _authToken;
 
     public UserDto? CurrentUser { get; private set; }
-    public bool IsAuthenticated => CurrentUser != null;
+    public bool IsAuthenticated => CurrentUser != null && !string.IsNullOrWhiteSpace(_authToken);
     public bool IsInitialized { get; private set; }
     public event Action? OnChange;
 
@@ -28,18 +31,30 @@ public class AuthService
             var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", StorageKey);
             if (!string.IsNullOrWhiteSpace(json))
             {
-                CurrentUser = System.Text.Json.JsonSerializer.Deserialize<UserDto>(json);
-                NormalizeCurrentUserModules();
-                ApplyCurrentUserHeader();
+                var authState = System.Text.Json.JsonSerializer.Deserialize<AuthState>(json);
+                if (authState?.User != null && !string.IsNullOrWhiteSpace(authState.Token))
+                {
+                    CurrentUser = authState.User;
+                    _authToken = authState.Token;
+                    NormalizeCurrentUserModules();
+                    ApplyCurrentUserHeader();
+                }
+                else
+                {
+                    CurrentUser = null;
+                    _authToken = null;
+                }
             }
             else
             {
                 CurrentUser = null;
+                _authToken = null;
             }
         }
         catch
         {
             CurrentUser = null;
+            _authToken = null;
         }
         finally
         {
@@ -57,13 +72,20 @@ public class AuthService
             return false;
         }
 
-        CurrentUser = await response.Content.ReadFromJsonAsync<UserDto>();
-        if (CurrentUser != null)
+        var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+        if (loginResponse?.User != null && !string.IsNullOrWhiteSpace(loginResponse.Token))
         {
+            CurrentUser = loginResponse.User;
+            _authToken = loginResponse.Token;
             NormalizeCurrentUserModules();
             ApplyCurrentUserHeader();
             LogHeaderState("LoginAsync");
-            var json = System.Text.Json.JsonSerializer.Serialize(CurrentUser);
+            var authState = new AuthState
+            {
+                User = CurrentUser,
+                Token = _authToken
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(authState);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", StorageKey, json);
             NotifyStateChanged();
             return true;
@@ -75,18 +97,19 @@ public class AuthService
     public async Task LogoutAsync()
     {
         CurrentUser = null;
-        _http.DefaultRequestHeaders.Remove("X-User-Id");
+        _authToken = null;
+        _http.DefaultRequestHeaders.Authorization = null;
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", StorageKey);
         NotifyStateChanged();
     }
 
     private void ApplyCurrentUserHeader()
     {
-        _http.DefaultRequestHeaders.Remove("X-User-Id");
-        if (CurrentUser != null)
+        _http.DefaultRequestHeaders.Authorization = null;
+        if (CurrentUser != null && !string.IsNullOrWhiteSpace(_authToken))
         {
             NormalizeCurrentUserModules();
-            _http.DefaultRequestHeaders.Add("X-User-Id", CurrentUser.Id.ToString());
+            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _authToken);
         }
     }
 
@@ -110,9 +133,15 @@ public class AuthService
 
     private void LogHeaderState(string origin)
     {
-        var hasHeader = _http.DefaultRequestHeaders.Contains("X-User-Id");
-        var headerValue = hasHeader ? string.Join(",", _http.DefaultRequestHeaders.GetValues("X-User-Id")) : "<missing>";
-        Console.WriteLine($"[AuthService] {origin}: X-User-Id present={hasHeader}, value={headerValue}");
+        var hasAuthorization = _http.DefaultRequestHeaders.Authorization != null;
+        var headerValue = hasAuthorization ? _http.DefaultRequestHeaders.Authorization.ToString() : "<missing>";
+        Console.WriteLine($"[AuthService] {origin}: Authorization present={hasAuthorization}, value={headerValue}");
+    }
+
+    private class AuthState
+    {
+        public UserDto? User { get; set; }
+        public string? Token { get; set; }
     }
 
     private void NotifyStateChanged() => OnChange?.Invoke();

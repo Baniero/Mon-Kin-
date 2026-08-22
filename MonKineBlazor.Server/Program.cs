@@ -1,4 +1,8 @@
-using Microsoft.AspNetCore.Authentication;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using MonKineBlazor.Server.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,10 +22,34 @@ builder.Configuration
     .AddCommandLine(args);
 
 // Add services to the container.
-builder.Services.AddAuthentication("NoOp")
-    .AddScheme<AuthenticationSchemeOptions, MonKineBlazor.Server.Services.NoOpAuthenticationHandler>("NoOp", options => { });
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "ChangeThisSecretKeyForProduction1234567890";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MonKineBlazor";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MonKineBlazorClient";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew = TimeSpan.FromMinutes(2)
+        };
+    });
+
 builder.Services.AddAuthorization();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.Filters.Add(new AuthorizeFilter(policy));
+});
 builder.Services.AddRazorPages();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

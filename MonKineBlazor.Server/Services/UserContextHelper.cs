@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,36 @@ public static class UserContextHelper
 
         var logger = httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("UserContextHelper");
 
+        if (httpContext.User?.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.User.FindFirst("sub")?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                logger?.LogWarning("GetCurrentUser failed: invalid JWT user id claim '{UserIdClaim}' for request {Method} {Path}.", userIdClaim, httpContext.Request.Method, httpContext.Request.Path);
+                return null;
+            }
+
+            var username = httpContext.User.FindFirst(ClaimTypes.Name)?.Value ?? string.Empty;
+            var role = httpContext.User.FindFirst(ClaimTypes.Role)?.Value ?? "kine";
+            var fullName = httpContext.User.FindFirst("full_name")?.Value;
+            var cabinetIdClaim = httpContext.User.FindFirst("cabinet_id")?.Value;
+            int? cabinetId = null;
+            if (!string.IsNullOrWhiteSpace(cabinetIdClaim) && int.TryParse(cabinetIdClaim, out var parsedCabinetId))
+            {
+                cabinetId = parsedCabinetId;
+            }
+
+            return new UserDto
+            {
+                Id = userId,
+                Username = username,
+                FullName = fullName,
+                Role = role,
+                Active = true,
+                CabinetId = cabinetId
+            };
+        }
+
         if (!httpContext.Request.Headers.TryGetValue(UserIdHeader, out var headerValues))
         {
             logger?.LogWarning("GetCurrentUser failed: missing X-User-Id header for request {Method} {Path}.", httpContext.Request.Method, httpContext.Request.Path);
@@ -28,7 +59,7 @@ public static class UserContextHelper
         }
 
         var headerValue = headerValues.FirstOrDefault();
-        if (!int.TryParse(headerValue, out var userId))
+        if (!int.TryParse(headerValue, out var userIdFromHeader))
         {
             logger?.LogWarning("GetCurrentUser failed: invalid X-User-Id header value '{HeaderValue}' for request {Method} {Path}.", headerValue, httpContext.Request.Method, httpContext.Request.Path);
             return null;
@@ -43,12 +74,12 @@ public static class UserContextHelper
             FROM users
             WHERE id = @id
         ";
-        cmd.Parameters.AddWithValue("@id", userId);
+        cmd.Parameters.AddWithValue("@id", userIdFromHeader);
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read())
         {
-            logger?.LogWarning("GetCurrentUser failed: no user found for X-User-Id={UserId} on request {Method} {Path}.", userId, httpContext.Request.Method, httpContext.Request.Path);
+            logger?.LogWarning("GetCurrentUser failed: no user found for X-User-Id={UserId} on request {Method} {Path}.", userIdFromHeader, httpContext.Request.Method, httpContext.Request.Path);
             return null;
         }
 
