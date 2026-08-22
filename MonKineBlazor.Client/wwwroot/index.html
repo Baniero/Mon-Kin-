@@ -837,70 +837,7 @@
             y += 24;
             doc.setFontSize(9);
             doc.text('Remarques :', margin, y);
-        renderPdfFooter(doc);
-
-            doc.setLineWidth(0.5);
-            doc.line(margin, y, 555, y);
-            y += 16;
-
-            const summaryHeaders = ['Patient', 'N° assuré', 'N° décision', 'N° facture', 'TTC'];
-            const summaryWidths = [140, 90, 120, 70, 80];
-            let x2 = margin;
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            summaryHeaders.forEach((header, index) => {
-                doc.text(header, x2, y);
-                x2 += summaryWidths[index];
-            });
-            y += 16;
-            doc.setLineWidth(0.25);
-            doc.line(margin, y, 555, y);
-            y += 14;
-            doc.setFont('helvetica', 'normal');
-
-            (rows || []).forEach((row) => {
-                const numeroDecision = row.NumeroDecision ?? row.numeroDecision ?? '';
-                const codeBureau = row.CodeBureau ?? row.codeBureau ?? '';
-                const annee = row.Annee ?? row.annee ?? '';
-                const decisionNumber = numeroDecision ? `${codeBureau}/${annee}/${numeroDecision}` : `${codeBureau}/${annee}`;
-
-                const values = [
-                    row.PatientName ?? row.patientName ?? '',
-                    row.NumeroAssuree ?? row.numeroAssuree ?? '',
-                    decisionNumber,
-                    row.FactureNumber ?? row.factureNumber ?? '',
-                    formatNumber(row.MontantTTC ?? row.montantTTC)
-                ];
-                const cellLines = values.map((value, index) => splitCellLines(doc, value, summaryWidths[index]));
-                const rowHeight = Math.max(...cellLines.map((lines) => Array.isArray(lines) ? lines.length : 1)) * 14 + 8;
-                if (y + rowHeight > 760) {
-                    doc.addPage();
-                    y = margin;
-                }
-
-                x2 = margin;
-                cellLines.forEach((lines, index) => {
-                    doc.text(lines, x2 + 2, y);
-                    x2 += summaryWidths[index];
-                });
-                y += rowHeight;
-            });
-
-            y += 18;
-            doc.setLineWidth(0.5);
-            doc.line(margin, y, 555, y);
-            y += 16;
-            doc.setFont('helvetica', 'bold');
-            doc.text('TOTAL HT :', 420, y);
-            doc.text(formatNumber(summary.MontantHT ?? summary.montantHT) + ' DT', 540, y, { align: 'right' });
-            y += 16;
-            doc.text('MNT TVA :', 420, y);
-            doc.text(formatNumber(summary.MontantTVA ?? summary.montantTVA) + ' DT', 540, y, { align: 'right' });
-            y += 16;
-            doc.text('TOTAL TTC :', 420, y);
-            doc.text(formatNumber(summary.MontantTotalTTC ?? summary.montantTotalTTC) + ' DT', 540, y, { align: 'right' });
-
+            renderPdfFooter(doc);
             doc.save(filename);
         };
     </script>
