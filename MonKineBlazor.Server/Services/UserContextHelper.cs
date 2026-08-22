@@ -44,25 +44,25 @@ public static class UserContextHelper
             var needsDbLookup = !cabinetId.HasValue || string.IsNullOrWhiteSpace(role) || string.IsNullOrWhiteSpace(username);
             if (needsDbLookup)
             {
-                using var conn = DatabaseConnectionProvider.CreateConnection();
-                conn.Open();
+                using var dbConn = DatabaseConnectionProvider.CreateConnection();
+                dbConn.Open();
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = @"
+                using var dbCmd = dbConn.CreateCommand();
+                dbCmd.CommandText = @"
                     SELECT username, COALESCE(full_name, ''), COALESCE(role, 'kine'), COALESCE(active, TRUE), cabinet_id
                     FROM users
                     WHERE id = @id
                 ";
-                cmd.Parameters.AddWithValue("@id", userId);
+                dbCmd.Parameters.AddWithValue("@id", userId);
 
-                using var reader = cmd.ExecuteReader();
-                if (reader.Read())
+                using var dbReader = dbCmd.ExecuteReader();
+                if (dbReader.Read())
                 {
-                    username = reader.IsDBNull(0) ? username : reader.GetString(0);
-                    fullName = reader.IsDBNull(1) ? fullName : reader.GetString(1);
-                    role = reader.IsDBNull(2) ? role : reader.GetString(2);
-                    var active = reader.IsDBNull(3) ? true : reader.GetBoolean(3);
-                    cabinetId = reader.IsDBNull(4) ? cabinetId : reader.GetInt32(4);
+                    username = dbReader.IsDBNull(0) ? username : dbReader.GetString(0);
+                    fullName = dbReader.IsDBNull(1) ? fullName : dbReader.GetString(1);
+                    role = dbReader.IsDBNull(2) ? role : dbReader.GetString(2);
+                    var active = dbReader.IsDBNull(3) ? true : dbReader.GetBoolean(3);
+                    cabinetId = dbReader.IsDBNull(4) ? cabinetId : dbReader.GetInt32(4);
                 }
             }
 
