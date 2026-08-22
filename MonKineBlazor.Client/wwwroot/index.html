@@ -797,6 +797,7 @@
             y += 14;
             doc.setFont('helvetica', 'normal');
 
+            const summary = data.summary ?? data.Summary ?? {};
             const rows = data.rows ?? data.Rows ?? [];
             rows.forEach((row) => {
                 const values = [
