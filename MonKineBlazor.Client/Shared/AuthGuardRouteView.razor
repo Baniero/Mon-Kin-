@@ -63,15 +63,6 @@
             return false;
         }
 
-        if (AuthService.CurrentUser.Modules.Contains(moduleId))
-        {
-            return true;
-        }
-
-        return moduleId switch
-        {
-            "appointments" => AuthService.CurrentUser.Modules.Contains("agenda"),
-            _ => false,
-        };
+        return AuthService.CurrentUser.Modules.Contains(moduleId);
     }
 }
