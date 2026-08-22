@@ -219,6 +219,7 @@ public class PatientsController : ControllerBase
                 COALESCE(racine, ''),
                 COALESCE(cle, ''),
                 COALESCE(qualite, ''),
+                COALESCE(statut, 'actif'),
                 COALESCE(n_assuree, '')
             FROM patients
             WHERE id = @id
@@ -257,6 +258,10 @@ public class PatientsController : ControllerBase
             Qualite = reader.GetString(15),
             Statut = reader.GetString(16),
             NumeroAssuree = ComputeNumeroAssuree(reader.GetString(13), reader.GetString(14), reader.GetString(17)),
+        };
+
+        return Ok(patient);
+    }
 
     [HttpGet("{id}/cnam-history")]
     public ActionResult<IEnumerable<PatientProgramDto>> GetCnamHistory(int id)
