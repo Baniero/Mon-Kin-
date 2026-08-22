@@ -1953,6 +1953,53 @@ public class FinanceController : ControllerBase
 
         using (var cmd = conn.CreateCommand())
         {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COALESCE(SUM(pp.prix_espece * pp.nb_seances), 0)
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+            " : @"
+                SELECT COALESCE(SUM(pp.prix_espece * pp.nb_seances), 0)
+                FROM patient_programs pp
+                JOIN patients p ON p.id = pp.patient_id
+                WHERE DATE(pp.date_debut) BETWEEN @start AND @end
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            var patientPriceRevenue = Convert.ToDecimal(cmd.ExecuteScalar());
+
+            expectedProgramRevenueThisMonth = patientPriceRevenue;
+            expectedPatientPriceEspeceRevenue = patientPriceRevenue;
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = isAdmin ? @"
+                SELECT COALESCE(SUM(a.cnam_covered), 0)
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.status IN ('present', 'effectue')
+                  AND COALESCE(a.cnam_covered, 0) > 0
+            " : @"
+                SELECT COALESCE(SUM(a.cnam_covered), 0)
+                FROM appointments a
+                JOIN patients p ON p.id = a.patient_id
+                WHERE DATE(a.start_datetime) BETWEEN @start AND @end
+                  AND a.status IN ('present', 'effectue')
+                  AND COALESCE(a.cnam_covered, 0) > 0
+                  AND p.cabinet_id = @cabinet_id
+            ";
+            cmd.Parameters.AddWithValue("@start", start.Date);
+            cmd.Parameters.AddWithValue("@end", end.Date);
+            if (!isAdmin) cmd.Parameters.AddWithValue("@cabinet_id", cabinetId.Value);
+            expectedCnamRevenue = Convert.ToDecimal(cmd.ExecuteScalar());
+        }
+
+        using (var cmd = conn.CreateCommand())
+        {
             cmd.CommandText = @"
                 SELECT COALESCE(SUM(actual_amount), 0)
                 FROM cash_closings
@@ -2031,7 +2078,11 @@ public class FinanceController : ControllerBase
             Diff = actualAmount - expectedAmount,
             TotalAdvances = totalAdvances,
             PartialPaymentsCount = partialPaymentsCount,
-            OutstandingAmount = outstandingAmount
+            OutstandingAmount = outstandingAmount,
+            ExpectedProgramRevenueThisMonth = expectedProgramRevenueThisMonth,
+            ExpectedPatientPriceEspeceRevenue = expectedPatientPriceEspeceRevenue,
+            ExpectedCnamRevenue = expectedCnamRevenue,
+            ExpectedTotalRevenue = expectedPatientPriceEspeceRevenue + expectedCnamRevenue
         };
     }
 

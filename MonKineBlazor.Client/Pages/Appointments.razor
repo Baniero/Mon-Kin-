@@ -363,7 +363,7 @@
                                     <td>
                                         <button class="btn btn-sm btn-success me-1" @onclick="() => MarkAppointmentPresent(appointment)">Présent</button>
                                         <button class="btn btn-sm btn-danger me-1" @onclick="() => MarkAppointmentAbsent(appointment)">Absent</button>
-                                        <button class="btn btn-sm btn-primary me-1" @onclick="() => MarkAppointmentPaid(appointment)">Payé</button>
+                                        <button class="btn btn-sm btn-primary me-1" @onclick="() => OpenPaymentModal(appointment)">Paiement</button>
                                         <button class="btn btn-sm btn-warning" @onclick="() => MarkAppointmentUnpaid(appointment)">Non payé</button>
                                     </td>
                                 </tr>
@@ -479,6 +479,42 @@
     </div>
 }
 
+@if (showPaymentModal && paymentAppointment != null)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Paiement rendez-vous</h5>
+                    <button type="button" class="btn-close" aria-label="Fermer" @onclick="ClosePaymentModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(paymentErrorMessage))
+                    {
+                        <div class="alert alert-danger">@paymentErrorMessage</div>
+                    }
+                    <div class="mb-3">
+                        <strong>Patient :</strong> @paymentAppointment.PatientName<br />
+                        <strong>Montant total :</strong> @($"{paymentAppointment.Amount:F2} DT")<br />
+                        <strong>Montant déjà payé :</strong> @($"{paymentAppointment.PaidAmount:F2} DT")<br />
+                        <strong>Montant restant attendu :</strong> @($"{GetAppointmentRemainingAmount(paymentAppointment):F2} DT")
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Montant apporté</label>
+                        <InputNumber class="form-control" @bind-Value="paymentInputAmount" />
+                    </div>
+                    <div class="text-muted">Si le patient apporte plus que le montant attendu, le surplus sera enregistré comme avance.</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="ClosePaymentModal">Annuler</button>
+                    <button class="btn btn-primary" @onclick="ProcessAppointmentPayment">Valider le paiement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (activeSubmodule == AppointmentSubmodule.List)
 {
     <div class="mb-3 d-flex justify-content-between align-items-center">
@@ -547,6 +583,10 @@
     private string startTime = "08:00";
     private int durationMinutes = 30;
     private string? errorMessage;
+    private string? paymentErrorMessage;
+    private bool showPaymentModal;
+    private AppointmentDto? paymentAppointment;
+    private decimal paymentInputAmount;
     private string appointmentSearch = string.Empty;
     private string appointmentStatusFilter = string.Empty;
     private int selectedKineFilter = 0;
@@ -1309,9 +1349,95 @@
         await UpdateAppointmentStatus(appointment, "absent", "non_paye", 0);
     }
 
-    private async Task MarkAppointmentPaid(AppointmentDto appointment)
+    private void OpenPaymentModal(AppointmentDto appointment)
     {
-        await UpdateAppointmentStatus(appointment, appointment.Status ?? "present", "paye", appointment.Amount);
+        paymentAppointment = appointment;
+        paymentInputAmount = GetAppointmentRemainingAmount(appointment);
+        paymentErrorMessage = null;
+        showPaymentModal = true;
+    }
+
+    private void ClosePaymentModal()
+    {
+        showPaymentModal = false;
+        paymentAppointment = null;
+        paymentErrorMessage = null;
+    }
+
+    private decimal GetAppointmentRemainingAmount(AppointmentDto appointment)
+    {
+        return Math.Max(0, appointment.Amount - appointment.PaidAmount);
+    }
+
+    private async Task ProcessAppointmentPayment()
+    {
+        if (paymentAppointment == null)
+        {
+            return;
+        }
+
+        var remaining = GetAppointmentRemainingAmount(paymentAppointment);
+        if (paymentInputAmount <= 0)
+        {
+            paymentErrorMessage = "Entrez un montant valide.";
+            return;
+        }
+
+        var newPaidAmount = paymentAppointment.PaidAmount + Math.Min(paymentInputAmount, remaining);
+        var paymentStatus = ComputePaymentStatus(paymentAppointment.Amount, newPaidAmount);
+        var overpayment = paymentInputAmount - remaining;
+
+        var update = new AppointmentDto
+        {
+            Id = paymentAppointment.Id,
+            PatientId = paymentAppointment.PatientId,
+            PatientName = paymentAppointment.PatientName,
+            KineId = paymentAppointment.KineId,
+            KineName = paymentAppointment.KineName,
+            Start = paymentAppointment.Start,
+            End = paymentAppointment.End,
+            Acte = paymentAppointment.Acte,
+            Room = paymentAppointment.Room,
+            Status = paymentAppointment.Status,
+            PaymentStatus = paymentStatus,
+            Amount = paymentAppointment.Amount,
+            PaidAmount = newPaidAmount,
+            CnamCovered = paymentAppointment.CnamCovered,
+            Notes = paymentAppointment.Notes
+        };
+
+        var response = await Http.PutAsJsonAsync($"api/appointments/{paymentAppointment.Id}", update);
+        if (!response.IsSuccessStatusCode)
+        {
+            paymentErrorMessage = "Impossible de mettre à jour le paiement du rendez-vous.";
+            return;
+        }
+
+        if (overpayment > 0)
+        {
+            var advanceRequest = new AdvanceTransactionRequestDto
+            {
+                PatientId = paymentAppointment.PatientId,
+                Amount = overpayment,
+                TransactionDate = DateTime.UtcNow,
+                Note = $"Surplus de paiement RDV {paymentAppointment.Id}",
+                CreatedBy = "Web"
+            };
+
+            var advanceResponse = await Http.PostAsJsonAsync("api/finance/advance-transactions", advanceRequest);
+            if (!advanceResponse.IsSuccessStatusCode)
+            {
+                paymentErrorMessage = "Paiement enregistré, mais impossible de créer l'avance pour le surplus.";
+                await LoadAppointments();
+                showPaymentModal = false;
+                return;
+            }
+        }
+
+        await LoadAppointments();
+        showPaymentModal = false;
+        paymentAppointment = null;
+        paymentErrorMessage = null;
     }
 
     private async Task MarkAppointmentUnpaid(AppointmentDto appointment)

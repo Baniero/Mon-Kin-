@@ -219,6 +219,10 @@ public class MonthlyFinanceStatsDto
     public decimal TotalAdvances { get; set; }
     public int PartialPaymentsCount { get; set; }
     public decimal OutstandingAmount { get; set; }
+    public decimal ExpectedProgramRevenueThisMonth { get; set; }
+    public decimal ExpectedPatientPriceEspeceRevenue { get; set; }
+    public decimal ExpectedCnamRevenue { get; set; }
+    public decimal ExpectedTotalRevenue { get; set; }
 }
 
 public class FinancialHistoryEntryDto

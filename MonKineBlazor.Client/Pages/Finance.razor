@@ -571,6 +571,32 @@
                             <div class="h4">@($"{monthlyStats.OutstandingAmount:F2} DT")</div>
                         </div>
                     </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Revenu attendu ce mois</div>
+                            <div class="h4">@($"{monthlyStats.ExpectedProgramRevenueThisMonth:F2} DT")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Revenu total attendu</div>
+                            <div class="h4">@($"{monthlyStats.ExpectedTotalRevenue:F2} DT")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-3">
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Prix espèces patient</div>
+                            <div class="h4">@($"{monthlyStats.ExpectedPatientPriceEspeceRevenue:F2} DT")</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card text-center p-3">
+                            <div class="text-muted">Revenu CNAM</div>
+                            <div class="h4">@($"{monthlyStats.ExpectedCnamRevenue:F2} DT")</div>
+                        </div>
+                    </div>
                 </div>
             }
         </div>
