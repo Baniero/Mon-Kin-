@@ -688,13 +688,13 @@
         try
         {
             patientPrograms = await Http.GetFromJsonAsync<List<PatientProgramDto>>($"api/patientprograms/patient/{patientId}") ?? new List<PatientProgramDto>();
-            var excludedPlanifieCount = patientPrograms.Count(p => string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase));
+            var excludedNonPlanifieCount = patientPrograms.Count(p => !string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase));
             patientPrograms = patientPrograms
-                .Where(p => !string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase))
+                .Where(p => string.Equals(p.Statut?.Trim(), "planifie", StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            if (excludedPlanifieCount > 0)
+            if (excludedNonPlanifieCount > 0)
             {
-                programInfoMessage = $"{excludedPlanifieCount} programme(s) en statut planifié ont été exclus de la liste.";
+                programInfoMessage = $"{excludedNonPlanifieCount} programme(s) non planifié(s) ont été exclus de la liste.";
             }
             ApplyProgramSchedulingFilter(patientId);
             if (previousProgramId.HasValue)
